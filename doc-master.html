@@ -725,6 +725,7 @@ h1{font:700 clamp(22px,2.6vw,30px)/1.1 var(--disp);margin:2px 0 4px;letter-spaci
       let h = head.replace(/<dimension ref="A1:([A-Z]+)(\d+)"\/>/, (a, c, r) => `<dimension ref="A1:${cn(c) < cn('AP') ? 'AP' : c}${r}"/>`);
       h = h.replace(/<cols>[\s\S]*?<\/cols>/, cols => {
         const defs = cols.match(/<col [^>]*\/>/g) || []; const keep = [];
+        if (defs.some(d => +/min="(\d+)"/.exec(d)[1] <= 42 && +/max="(\d+)"/.exec(d)[1] >= 39)) return cols;   // user's widths / grouping win
         for (const d of defs) {
           const a = +/min="(\d+)"/.exec(d)[1], b = +/max="(\d+)"/.exec(d)[1];
           if (b < 39 || a > 42) { keep.push(d); continue; }
@@ -1797,7 +1798,7 @@ async function build(files, opts = {}) {
   report.ldPivot = await ldPivots(zip, rd, wr, wbx, rels, pathOf, SST, ld.batch2ld, cl(ldCol));
   // ---- Dye Q Combo Planner: 280 DB Body Type (B/G); Dye Q AM:AP Body Type, Combo Batch, Combo Qty, Batch Plan MC; Dye Q sorted by Combo Qty
   note(88, 'Body / Gusset combos (Dye Q Combo Planner)');
-  try { const dq = await root.DyeQEngine.runZip(zip, () => {}); report.combo = dq.summary; await sqStripe(zip, pathOf['Dye Q']); }
+  try { const dq = await root.DyeQEngine.runZip(zip, () => {}); report.combo = dq.summary; await pasteDyeQFormulaCols(zip, pathOf, SST, today, report); await sqStripe(zip, pathOf['Dye Q']); }
   catch (e) { report.warnings.push('Body/Gusset combo step failed: ' + (e.message || e)); }
   // ---- pivots: keep all, refresh on open
   let nPc = 0, nPt = 0, nRec = 0, recBytes = 0;
@@ -1875,7 +1876,7 @@ async function sqStripe(zip, path, firstRow = 3) {
   let hdrAP = null;
   x = x.replace(/<row r="(\d+)"[^>]*>[\s\S]*?<\/row>/g, (row, rn) => {
     rn = +rn;
-    if (rn === 2) { hdrAP = styleIn(row, 'AP'); return row.replace(/<c r="([A-Z]{1,3})2"([^>]*?)(\/?>)/g, (m, c, at, end) => ci(c) > ci('AP') ? `<c r="${c}2"${at.replace(/\s+s="\d+"/, '')} s="${hdrAP}"${end}` : m); }
+    if (rn === 2) return row;   // header colours stay as the user set them
     if (rn < firstRow) return row;
     const on = (rn - firstRow) % 2 === 0, ap = styleIn(row, 'AP');
     return row.replace(/<c r="([A-Z]{1,3})(\d+)"([^>]*?)(\/?>)/g, (m, c, r, at, end) => {
@@ -1886,6 +1887,135 @@ async function sqStripe(zip, path, firstRow = 3) {
   });
   st = st.replace(fillsM[0], `<fills count="${fills.length}">${fills.join('')}</fills>`).replace(xm[0], `<cellXfs count="${xfs.length}">${xfs.join('')}</cellXfs>`);
   zip.file('xl/styles.xml', st); zip.file(path, x);
+}
+
+/* ---- tiny Excel formula evaluator (for user-added Dye Q columns: formulas are worked out, then pasted as values) ---- */
+function xlEval(f, ctx) {
+  const src = f.replace(/^=/, ''); let i = 0;
+  const peek = () => src[i], ws = () => { while (src[i] === ' ' || src[i] === '\n') i++; };
+  const fail = m => { throw new Error('unsupported: ' + m); };
+  const num = v => v === null || v === '' ? 0 : typeof v === 'boolean' ? +v : typeof v === 'number' ? v : (isFinite(+v) ? +v : ERR('#VALUE!'));
+  const txt = v => v === null ? '' : typeof v === 'boolean' ? (v ? 'TRUE' : 'FALSE') : typeof v === 'number' ? numStr(v) : String(v);
+  const cmp = (a, b) => { if (a === null) a = typeof b === 'string' ? '' : 0; if (b === null) b = typeof a === 'string' ? '' : 0;
+    if (typeof a === 'string' && typeof b === 'string') { a = a.toLowerCase(); b = b.toLowerCase(); }
+    else if (typeof a !== typeof b) return typeof a === 'string' ? 1 : -1; return a < b ? -1 : a > b ? 1 : 0; };
+  const eqv = (a, b) => cmp(a, b) === 0;
+  const refRe = /^(?:('(?:[^']|'')+'|[A-Za-z_][A-Za-z0-9_. ]*)!)?(\$?[A-Z]{1,3})(\$?\d+)?(?::(\$?[A-Z]{1,3})(\$?\d+)?)?/;
+  function primary() {
+    ws(); const ch = peek();
+    if (ch === '(') { i++; const v = expr(); ws(); if (src[i] !== ')') fail(')'); i++; return v; }
+    if (ch === '"') { let j = i + 1, out = ''; for (;;) { if (src[j] === '"') { if (src[j + 1] === '"') { out += '"'; j += 2; continue; } break; } if (j >= src.length) fail('str'); out += src[j++]; } i = j + 1; return out; }
+    let m = /^\d+(\.\d+)?([eE][+-]?\d+)?/.exec(src.slice(i)); if (m) { i += m[0].length; return +m[0]; }
+    m = /^([A-Za-z][A-Za-z0-9.]*)\(/.exec(src.slice(i));
+    if (m && !/^[A-Z]{1,3}\d+$/.test(m[1])) { i += m[0].length; const name = m[1].toUpperCase().replace(/^_XLFN\./, ''); const args = [];
+      ws(); if (src[i] !== ')') for (;;) { args.push(() => { const k = i; return k; }); const st = i; let depth = 0, q = false;  // lazy: record arg spans
+        for (; i < src.length; i++) { const c = src[i]; if (c === '"') q = !q; else if (!q) { if (c === '(') depth++; else if (c === ')') { if (!depth) break; depth--; } else if (c === ',' && !depth) break; } }
+        args[args.length - 1] = src.slice(st, i); if (src[i] === ',') { i++; continue; } break; }
+      if (src[i] !== ')') fail('args'); i++;
+      return call(name, args.map(a => () => xlEval('=' + a, ctx)), args);
+    }
+    m = /^(TRUE|FALSE)(?![A-Za-z0-9(])/i.exec(src.slice(i)); if (m) { i += m[0].length; return m[1].toUpperCase() === 'TRUE'; }
+    m = refRe.exec(src.slice(i));
+    if (m && m[0]) { i += m[0].length; const sheet = m[1] ? m[1].replace(/^'|'$/g, '').replace(/''/g, "'") : null;
+      const c1 = m[2].replace('$', ''), r1 = m[3] ? +m[3].replace('$', '') : null;
+      if (m[4] || r1 === null) return { range: true, sheet, c1, c2: (m[4] || m[2]).replace('$', ''), r1, r2: m[5] ? +m[5].replace('$', '') : null };
+      return ctx.cell(sheet, c1, r1); }
+    if (ch === '#') { m = /^#[A-Z\/0!?]+/.exec(src.slice(i)); if (m) { i += m[0].length; return ERR(m[0]); } }
+    fail('token at ' + src.slice(i, i + 10));
+  }
+  function unary() { ws(); if (src[i] === '-') { i++; const v = unary(); const n = num(v); return isErr(n) ? n : -n; } if (src[i] === '+') { i++; return unary(); } return primary(); }
+  function pow() { let a = unary(); ws(); while (src[i] === '^') { i++; const b = unary(); a = Math.pow(num(a), num(b)); ws(); } return a; }
+  function term() { let a = pow(); for (;;) { ws(); const o = src[i]; if (o !== '*' && o !== '/') return a; i++; const b = pow(); if (isErr(a)) continue; if (isErr(b)) { a = b; continue; }
+      const x = num(a), y = num(b); if (isErr(x)) { a = x; continue; } if (isErr(y)) { a = y; continue; } a = o === '*' ? x * y : (y === 0 ? ERR('#DIV/0!') : x / y); } }
+  function add() { let a = term(); for (;;) { ws(); const o = src[i]; if (o !== '+' && o !== '-') return a; i++; const b = term(); if (isErr(a)) continue; if (isErr(b)) { a = b; continue; }
+      const x = num(a), y = num(b); if (isErr(x)) { a = x; continue; } if (isErr(y)) { a = y; continue; } a = o === '+' ? x + y : x - y; } }
+  function cat() { let a = add(); for (;;) { ws(); if (src[i] !== '&') return a; i++; const b = add(); if (isErr(a)) continue; if (isErr(b)) { a = b; continue; } a = txt(a) + txt(b); } }
+  function expr() { let a = cat(); for (;;) { ws(); const m = /^(<=|>=|<>|=|<|>)/.exec(src.slice(i)); if (!m) return a; i += m[0].length; const b = cat();
+      if (isErr(a)) continue; if (isErr(b)) { a = b; continue; } const c = cmp(a, b);
+      a = { '=': c === 0, '<>': c !== 0, '<': c < 0, '>': c > 0, '<=': c <= 0, '>=': c >= 0 }[m[0]]; } }
+  function call(n, A, raw) {
+    const v = k => A[k](), truthy = x => typeof x === 'string' ? (x.toUpperCase() === 'TRUE' ? true : fail('bool')) : !!num(x);
+    switch (n) {
+      case 'IF': { const c = v(0); if (isErr(c)) return c; return truthy(c) ? (A[1] ? v(1) : true) : (A[2] ? v(2) : false); }
+      case 'IFERROR': { const x = v(0); return isErr(x) ? v(1) : x; }
+      case 'IFNA': { const x = v(0); return isErr(x) && x.err === '#N/A' ? v(1) : x; }
+      case 'ISBLANK': { const x = v(0); return x === null; }
+      case 'ISERROR': return isErr(v(0)); case 'ISNA': { const x = v(0); return isErr(x) && x.err === '#N/A'; }
+      case 'ISNUMBER': return typeof v(0) === 'number'; case 'ISTEXT': return typeof v(0) === 'string';
+      case 'AND': return A.every((_, k) => truthy(v(k))); case 'OR': return A.some((_, k) => truthy(v(k))); case 'NOT': return !truthy(v(0));
+      case 'TRIM': return txt(v(0)).replace(/ +/g, ' ').trim(); case 'UPPER': return txt(v(0)).toUpperCase(); case 'LOWER': return txt(v(0)).toLowerCase();
+      case 'LEN': return txt(v(0)).length;
+      case 'LEFT': return txt(v(0)).slice(0, A[1] ? num(v(1)) : 1); case 'RIGHT': { const t = txt(v(0)), k = A[1] ? num(v(1)) : 1; return k ? t.slice(-k) : ''; }
+      case 'MID': return txt(v(0)).substr(num(v(1)) - 1, num(v(2)));
+      case 'CONCATENATE': case 'CONCAT': return A.map((_, k) => txt(v(k))).join('');
+      case 'VALUE': return num(v(0)); case 'TEXT': fail('TEXT');
+      case 'ROUND': { const x = num(v(0)), d = num(v(1)); const p = Math.pow(10, d); return Math.round(x * p) / p; }
+      case 'ABS': return Math.abs(num(v(0))); case 'INT': return Math.floor(num(v(0)));
+      case 'MAX': case 'MIN': case 'SUM': { const xs = A.map((_, k) => num(v(k))); return n === 'SUM' ? xs.reduce((a, b) => a + b, 0) : Math[n.toLowerCase()](...xs); }
+      case 'SEARCH': case 'FIND': { const needle = txt(v(0)), hay = txt(v(1)), st = A[2] ? num(v(2)) : 1;
+        const k = n === 'SEARCH' ? hay.toLowerCase().indexOf(needle.toLowerCase(), st - 1) : hay.indexOf(needle, st - 1); return k < 0 ? ERR('#VALUE!') : k + 1; }
+      case 'MATCH': { const key = v(0), rg = v(1), t = A[2] ? num(v(2)) : 1; if (t !== 0) fail('MATCH type'); if (isErr(key)) return key; return ctx.match(rg, key); }
+      case 'INDEX': { const rg = v(0), r = num(v(1)); if (isErr(r)) return r; const c = A[2] ? num(v(2)) : 1; return ctx.index(rg, r, c); }
+      case 'VLOOKUP': { const key = v(0), rg = v(1), c = num(v(2)), ex = A[3] ? v(3) : true; if (ex !== false && ex !== 0) fail('approx VLOOKUP'); if (isErr(key)) return key; return ctx.vlookup(rg, key, c); }
+      case 'TODAY': return ctx.today;
+      default: fail(n);
+    }
+  }
+  const out = expr(); ws(); if (i < src.length) fail('trailing ' + src.slice(i, i + 10)); return out;
+}
+// user formula columns on Dye Q (after AP): work out every formula, paste as values (row-1 'qq' text keeps the formula for next time)
+async function pasteDyeQFormulaCols(zip, pathOf, SST, today, report) {
+  const rdS = async name => new Sheet(await zip.file(pathOf[name]).async('string'));
+  const dq = await rdS('Dye Q');
+  const tmpl = new Map();
+  for (const [c, x] of (dq.rows.get(1) || ['', new Map()])[1]) {
+    if (c <= ci('AP')) continue; const v = cellValue(x, SST);
+    if (typeof v === 'string' && /^qq/i.test(v.trim())) tmpl.set(c, '=' + v.trim().slice(2));
+  }
+  { const masters = sharedMasters(dq);
+    for (const r of [...dq.rows.keys()].sort((a, b) => a - b)) if (r >= 3) for (const [c, x] of dq.rows.get(r)[1])
+      if (c > ci('AP') && !tmpl.has(c) && /<f[\s>\/]/.test(x)) { const f = formulaAt(dq, r, c, masters); if (f) tmpl.set(c, formulaGen('=' + f.replace(/^=/, ''), r, c)(3, c)); } }
+  if (!tmpl.size) return;
+  const other = new Map();
+  const sheetOf = async name => { if (!other.has(name)) { if (!pathOf[name]) throw new Error('sheet ' + name); other.set(name, await rdS(name)); } return other.get(name); };
+  // preload sheets the templates point at
+  const fsrc = [...tmpl.values(), ...[...((dq.rows.get(3) || ['', new Map()])[1]).values()].map(x => (/<f[^>]*>([\s\S]*?)<\/f>/.exec(x) || [0, ''])[1]).map(unx)];
+  for (const f of fsrc) for (const m of f.matchAll(/('(?:[^']|'')+'|[A-Za-z_][A-Za-z0-9_.]*)!/g)) { const n = m[1].replace(/^'|'$/g, '').replace(/''/g, "'"); if (n !== 'Dye Q' && pathOf[n]) await sheetOf(n); }
+  const colIdx = new Map();      // sheet|col -> Map(lowercased text -> first row)
+  const valAt = (sh, c, r) => cellValue(sh.get(r, ci(c)), SST);
+  const dqMasters = sharedMasters(dq), memo = new Map(), busy = new Set();
+  const dqVal = (c, r) => {
+    const k = c + r; if (memo.has(k)) return memo.get(k);
+    const x = dq.get(r, ci(c)); let v;
+    if (tmpl.has(ci(c)) && r >= 3) v = evalAt(ci(c), r);
+    else if (x && /<f[\s>\/]/.test(x) && !/<v>/.test(x)) { if (busy.has(k)) throw new Error('circular'); busy.add(k); v = xlEval('=' + formulaAt(dq, r, ci(c), dqMasters), mkCtx(r)); busy.delete(k); }
+    else v = cellValue(x, SST);
+    memo.set(k, v); return v;
+  };
+  const shOf = name => name === null || name === 'Dye Q' ? dq : other.get(name);
+  const mkCtx = r => ({
+    today,
+    cell: (sheet, c, row) => (sheet === null || sheet === 'Dye Q') ? dqVal(c, row) : (other.has(sheet) ? valAt(other.get(sheet), c, row) : (() => { throw new Error('sheet ' + sheet); })()),
+    match: (rg, key) => { if (!rg || !rg.range) throw new Error('range'); const sh = shOf(rg.sheet); const k = rg.sheet + '|' + rg.c1;
+      if (!colIdx.has(k)) { const m = new Map(); for (const rr of [...sh.rows.keys()].sort((a, b) => a - b)) { const vv = cellValue(sh.get(rr, ci(rg.c1)), SST); const t = vv === null ? null : String(vv).toLowerCase(); if (t !== null && !m.has(t)) m.set(t, rr); } colIdx.set(k, m); }
+      const rr = colIdx.get(k).get(String(key).toLowerCase()); return rr === undefined ? ERR('#N/A') : rr - (rg.r1 || 1) + 1; },
+    index: (rg, n, c) => { const sh = shOf(rg.sheet); return (sh === dq ? dqVal(cl(ci(rg.c1) + c - 1), (rg.r1 || 1) + n - 1) : valAt(sh, cl(ci(rg.c1) + c - 1), (rg.r1 || 1) + n - 1)); },
+    vlookup: (rg, key, c) => { const n = mkCtx(r).match(rg, key); if (isErr(n)) return n; const sh = shOf(rg.sheet); const rr = (rg.r1 || 1) + n - 1; const col = cl(ci(rg.c1) + c - 1); return sh === dq ? dqVal(col, rr) : valAt(sh, col, rr); },
+  });
+  const gens = new Map([...tmpl].map(([c, f]) => [c, formulaGen(f, 3, c)]));
+  const evalAt = (c, r) => xlEval(gens.get(c)(r, c), mkCtx(r));
+  let done = 0, kept = 0; const why = new Set();
+  for (const r of [...dq.rows.keys()].sort((a, b) => a - b)) {
+    if (r < 3) continue; const cells = dq.rows.get(r)[1];
+    if (!cellValue(cells.get(ci('F')), SST)) { for (const c of tmpl.keys()) cells.delete(c); continue; }
+    for (const c of tmpl.keys()) {
+      const st = styleOf(cells.get(c)) || styleOf(cells.get(ci('AP')));
+      try { let v = dqVal(cl(c), r); if (v === null) v = 0; cells.set(c, cellXml(cl(c) + r, st, v)); done++; }
+      catch (e) { cells.set(c, fcellXml(cl(c) + r, st, gens.get(c)(r, c).replace(/^=/, ''))); kept++; why.add(cl(c) + ': ' + e.message); }
+    }
+  }
+  zip.file(pathOf['Dye Q'], dq.serialize());
+  report.dyeqValueCols = { cols: [...tmpl.keys()].sort((a, b) => a - b).map(cl), values: done, keptAsFormula: kept, notes: [...why].slice(0, 6) };
 }
 /* ==================================================================== Additional requirement (order-wise) */
 const ADD_COLS = [{"min": 1, "max": 1, "width": 8.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 2, "max": 2, "width": 11.109375, "hidden": false, "outline": 0, "collapsed": true}, {"min": 3, "max": 3, "width": 9.109375, "hidden": false, "outline": 0, "collapsed": false}, {"min": 4, "max": 4, "width": 32.0, "hidden": false, "outline": 0, "collapsed": false}, {"min": 5, "max": 5, "width": 26.88671875, "hidden": false, "outline": 0, "collapsed": false}, {"min": 6, "max": 6, "width": 32.88671875, "hidden": false, "outline": 0, "collapsed": false}, {"min": 7, "max": 7, "width": 6.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 8, "max": 15, "width": 11.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 16, "max": 16, "width": 13.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 17, "max": 17, "width": 11.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 18, "max": 18, "width": 12.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 19, "max": 19, "width": 14.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 20, "max": 20, "width": 12.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 21, "max": 21, "width": 10.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 22, "max": 22, "width": 13.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 23, "max": 23, "width": 7.33203125, "hidden": false, "outline": 0, "collapsed": true}, {"min": 24, "max": 24, "width": 34.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 25, "max": 25, "width": 11.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 26, "max": 26, "width": 11.0, "hidden": false, "outline": 0, "collapsed": true}, {"min": 27, "max": 27, "width": 24.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 28, "max": 28, "width": 10.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 29, "max": 29, "width": 21.88671875, "hidden": false, "outline": 0, "collapsed": true}, {"min": 30, "max": 31, "width": 11.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 32, "max": 32, "width": 9.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 33, "max": 33, "width": 13.0, "hidden": false, "outline": 0, "collapsed": true}, {"min": 34, "max": 34, "width": 13.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 35, "max": 35, "width": 13.0, "hidden": false, "outline": 0, "collapsed": true}, {"min": 36, "max": 36, "width": 46.88671875, "hidden": true, "outline": 1, "collapsed": false}, {"min": 37, "max": 37, "width": 8.6640625, "hidden": false, "outline": 0, "collapsed": true}];
@@ -2139,6 +2269,7 @@ function finished(bytes,rep,secs,add){
   const parts=[`217: ${r['217'].toLocaleString()} rows after removing duplicates`,`Melange ${r.melange} · Rib ${r.rib}`];
   if(rep.ld)parts.push(`LD New ${rep.ld.New} · Repeat ${rep.ld.Repeat} (Dye Q ${rep.ld.col})`);
   if(rep.combo)parts.push(`Body/Gusset: Dye Q B ${rep.combo.dq.B} · G ${rep.combo.dq.G} · ${rep.combo.twoBatch} combos · ${(rep.combo.mc||{})['Need Batch Plan']||0} need batch plan`);
+  if(rep.dyeqValueCols)parts.push(`Dye Q ${rep.dyeqValueCols.cols[0]}:${rep.dyeqValueCols.cols[rep.dyeqValueCols.cols.length-1]} worked out and pasted as values`+(rep.dyeqValueCols.keptAsFormula?` (${rep.dyeqValueCols.keptAsFormula} cells kept as formula: ${rep.dyeqValueCols.notes.join('; ')})`:''));
   parts.push(`${rep.pivotTables} pivots refresh on open`);
   if(rep.warnings&&rep.warnings.length)parts.push(rep.warnings.join(' '));
   note(parts.join(' · '));
