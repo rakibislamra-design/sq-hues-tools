@@ -1693,6 +1693,25 @@ async function build(files, opts = {}) {
   sh = new Sheet(await rd(pathOf['Dye Q']));
   oldLast = lastDataRow(sh, 4, 37, 3); nl = paste(sh, ddq, 3, 4, 18, oldLast, ci('AK'));
   refitFormulas(sh, [1, 2, 3], 3, oldLast, nl);
+  // user-added formula columns after AK (e.g. AQ:AV Lab Dip Ref / Knitting status / Batch Type / Batch qty / Knit Q / Greige allocation):
+  // keep their formulas and fill them for every new row
+  {
+    const masters = sharedMasters(sh), tmplRow = new Map();
+    for (const r of [...sh.rows.keys()].sort((a, b) => a - b)) {
+      if (r < 3) continue;
+      for (const [c, x] of sh.rows.get(r)[1]) if (c > ci('AK') && !tmplRow.has(c) && /<f[\s>\/]/.test(x)) tmplRow.set(c, r);
+    }
+    const ta = stripHidden((sh.rows.get(3) || [''])[0]);
+    for (const [c, tr] of tmplRow) {
+      const f = formulaAt(sh, tr, c, masters); if (f === null) continue;
+      const gen = formulaGen(f, tr, c), st = styleOf(sh.get(tr, c));
+      for (let r = 3; r <= Math.max(oldLast, nl); r++) {
+        const [, cells] = sh.row(r, ta); const s0 = styleOf(cells.get(c)) || st;
+        if (r <= nl) cells.set(c, fcellXml(cl(c) + r, s0, gen(r))); else cells.delete(c);
+      }
+    }
+    if (tmplRow.size) report.dyeqFormulaCols = [...tmplRow.keys()].sort((a, b) => a - b).map(cl);
+  }
   writeValues(sh, ci('V'), ci('AK'), 3, cdq, oldLast);
   // LD New / Repeat column (first empty column after the header row, normally AL)
   const ld = ldCompute(d280, ddq, cdq);
@@ -1778,7 +1797,7 @@ async function build(files, opts = {}) {
   report.ldPivot = await ldPivots(zip, rd, wr, wbx, rels, pathOf, SST, ld.batch2ld, cl(ldCol));
   // ---- Dye Q Combo Planner: 280 DB Body Type (B/G); Dye Q AM:AP Body Type, Combo Batch, Combo Qty, Batch Plan MC; Dye Q sorted by Combo Qty
   note(88, 'Body / Gusset combos (Dye Q Combo Planner)');
-  try { const dq = await root.DyeQEngine.runZip(zip, () => {}); report.combo = dq.summary; }
+  try { const dq = await root.DyeQEngine.runZip(zip, () => {}); report.combo = dq.summary; await sqStripe(zip, pathOf['Dye Q']); }
   catch (e) { report.warnings.push('Body/Gusset combo step failed: ' + (e.message || e)); }
   // ---- pivots: keep all, refresh on open
   let nPc = 0, nPt = 0, nRec = 0, recBytes = 0;
@@ -1829,6 +1848,45 @@ async function build(files, opts = {}) {
 const tick = () => new Promise(r => setTimeout(r, 0));
 
 
+
+// SQ stripe format for Dye Q after the combo sort: rows 3+ alternate #EFECED / white (cells with other fills untouched);
+// columns after AP (user formula columns) take AP's look: purple header + same border/font as AP.
+async function sqStripe(zip, path, firstRow = 3) {
+  let st = await zip.file('xl/styles.xml').async('string');
+  const fillsM = /<fills count="(\d+)">([\s\S]*?)<\/fills>/.exec(st);
+  const fills = fillsM[2].match(/<fill>[\s\S]*?<\/fill>|<fill\/>/g) || [];
+  let band = fills.findIndex(f => /fgColor rgb="FFEFECED"/i.test(f) && /solid/.test(f));
+  if (band < 0) { fills.push('<fill><patternFill patternType="solid"><fgColor rgb="FFEFECED"/><bgColor indexed="64"/></patternFill></fill>'); band = fills.length - 1; }
+  const plainFill = i => { const f = fills[i] || ''; return !f || /patternType="none"/.test(f) || f === '<fill/>'; };
+  const xm = /<cellXfs count="(\d+)">([\s\S]*?)<\/cellXfs>/.exec(st);
+  const xfs = xm[2].match(/<xf\b[^>]*\/>|<xf\b[^>]*>[\s\S]*?<\/xf>/g);
+  const cache = new Map();
+  const variant = (sid, on) => {
+    const k = sid + '|' + on; if (cache.has(k)) return cache.get(k);
+    const x = xfs[sid] || xfs[0]; const fid = +((/fillId="(\d+)"/.exec(x) || [0, 0])[1]);
+    if (!(plainFill(fid) || fid === band)) { cache.set(k, sid); return sid; }   // keep highlight colours
+    const want = on ? band : 0; if (fid === want) { cache.set(k, sid); return sid; }
+    let nx = /fillId="/.test(x) ? x.replace(/fillId="\d+"/, `fillId="${want}"`) : x.replace(/^<xf\b/, `<xf fillId="${want}"`);
+    if (!/applyFill=/.test(nx)) nx = nx.replace(/^<xf\b/, '<xf applyFill="1"');
+    xfs.push(nx); cache.set(k, xfs.length - 1); return xfs.length - 1;
+  };
+  let x = await zip.file(path).async('string');
+  const styleIn = (row, col) => { const m = new RegExp('<c r="' + col + '\\d+"[^>]*?\\bs="(\\d+)"').exec(row); return m ? +m[1] : 0; };
+  let hdrAP = null;
+  x = x.replace(/<row r="(\d+)"[^>]*>[\s\S]*?<\/row>/g, (row, rn) => {
+    rn = +rn;
+    if (rn === 2) { hdrAP = styleIn(row, 'AP'); return row.replace(/<c r="([A-Z]{1,3})2"([^>]*?)(\/?>)/g, (m, c, at, end) => ci(c) > ci('AP') ? `<c r="${c}2"${at.replace(/\s+s="\d+"/, '')} s="${hdrAP}"${end}` : m); }
+    if (rn < firstRow) return row;
+    const on = (rn - firstRow) % 2 === 0, ap = styleIn(row, 'AP');
+    return row.replace(/<c r="([A-Z]{1,3})(\d+)"([^>]*?)(\/?>)/g, (m, c, r, at, end) => {
+      let sid = +((/\bs="(\d+)"/.exec(at) || [0, 0])[1]);
+      if (ci(c) > ci('AP') && ap) sid = ap;
+      return `<c r="${c}${r}"${at.replace(/\s+s="\d+"/, '')} s="${variant(sid, on)}"${end}`;
+    });
+  });
+  st = st.replace(fillsM[0], `<fills count="${fills.length}">${fills.join('')}</fills>`).replace(xm[0], `<cellXfs count="${xfs.length}">${xfs.join('')}</cellXfs>`);
+  zip.file('xl/styles.xml', st); zip.file(path, x);
+}
 /* ==================================================================== Additional requirement (order-wise) */
 const ADD_COLS = [{"min": 1, "max": 1, "width": 8.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 2, "max": 2, "width": 11.109375, "hidden": false, "outline": 0, "collapsed": true}, {"min": 3, "max": 3, "width": 9.109375, "hidden": false, "outline": 0, "collapsed": false}, {"min": 4, "max": 4, "width": 32.0, "hidden": false, "outline": 0, "collapsed": false}, {"min": 5, "max": 5, "width": 26.88671875, "hidden": false, "outline": 0, "collapsed": false}, {"min": 6, "max": 6, "width": 32.88671875, "hidden": false, "outline": 0, "collapsed": false}, {"min": 7, "max": 7, "width": 6.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 8, "max": 15, "width": 11.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 16, "max": 16, "width": 13.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 17, "max": 17, "width": 11.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 18, "max": 18, "width": 12.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 19, "max": 19, "width": 14.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 20, "max": 20, "width": 12.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 21, "max": 21, "width": 10.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 22, "max": 22, "width": 13.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 23, "max": 23, "width": 7.33203125, "hidden": false, "outline": 0, "collapsed": true}, {"min": 24, "max": 24, "width": 34.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 25, "max": 25, "width": 11.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 26, "max": 26, "width": 11.0, "hidden": false, "outline": 0, "collapsed": true}, {"min": 27, "max": 27, "width": 24.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 28, "max": 28, "width": 10.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 29, "max": 29, "width": 21.88671875, "hidden": false, "outline": 0, "collapsed": true}, {"min": 30, "max": 31, "width": 11.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 32, "max": 32, "width": 9.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 33, "max": 33, "width": 13.0, "hidden": false, "outline": 0, "collapsed": true}, {"min": 34, "max": 34, "width": 13.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 35, "max": 35, "width": 13.0, "hidden": false, "outline": 0, "collapsed": true}, {"min": 36, "max": 36, "width": 46.88671875, "hidden": true, "outline": 1, "collapsed": false}, {"min": 37, "max": 37, "width": 8.6640625, "hidden": false, "outline": 0, "collapsed": true}];
 const ADD_HEAD = ['Group ID','Customer','Customer PO','Color','Fabrication','Order No','AOP','Order Qty (m)','FIN REQ Qty (kg)','RFD Qty (kg)','RFD Qty (m)',
