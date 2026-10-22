@@ -437,21 +437,6 @@ function buildContext(q){
       }
     } else L.push("\nWIP / Final Reject: not saved yet (the 280+217 Update must be run once with the new version).");
   } else L.push("\n280+217 data: not available.");
-  /* PO lines go last and only when the question needs them: open lines only, one buyer if named */
-  if(j&&j.rows&&NEED_PO.test(q||"")){
-    const ql=(q||"").toLowerCase().replace(/[^a-z0-9]+/g," ");
-    const alias=b=>{const n=b.toLowerCase().replace(/[^a-z0-9]+/g," ").trim();const out=[n];const m=/\b(t\d{2})\b/.exec(n);if(m)out.push(m[1]);if(n.includes("kpk"))out.push("kpk");if(n.includes("shk"))out.push("shk");out.push(n.split(" ")[0]);return out.filter(x=>x.length>=3)};
-    const named=new Set(j.buyers.map((b,i)=>alias(b).some(a=>(" "+ql+" ").includes(" "+a+" "))?i:-1).filter(i=>i>=0));
-    const rep=toSerial(j.report);
-    const rows=j.rows.filter(r=>(!named.size||named.has(r[0]))&&((r[3]||0)-(r[4]||0)-(r[5]||0))>0.5)
-      .sort((a,b)=>a[0]-b[0]||String(a[6]).localeCompare(String(b[6]))||(a[1]||0)-(b[1]||0));
-    L.push(`\n## Open PO lines${named.size?" for "+[...named].map(i=>j.buyers[i]).join(", "):" (all buyers)"} — only lines with balance > 0 (fully RFD lines are left out)`);
-    L.push(`buyer | PO | colour | article | plan date or TBC | plan kg | RFD kg | balance kg | status`);
-    let n=0;
-    for(const r of rows){ if(n++>2500)break; const bal=(r[3]||0)-(r[4]||0)-(r[5]||0);
-      const st=r[2]?"TBC":(typeof r[1]==="number"?(r[1]<rep?"BEHIND":"upcoming"):"-");
-      L.push(`${j.buyers[r[0]]} | ${r[6]||"-"} | ${r[7]||"-"} | ${String((j.articles&&j.articles[r[8]])||"-").slice(0,45)} | ${r[2]?"TBC":(typeof r[1]==="number"?dTxt(sDate(r[1])):"-")} | ${k(r[3])} | ${k((r[4]||0)+(r[5]||0))} | ${k(bal)} | ${st}`)}
-  }
   return L.join("\n");
 }
 function md(t){
@@ -533,6 +518,17 @@ function aiReset(){CHAT=[];$("aiBody").innerHTML="";addMsg("assistant","Hi! Ask 
   $("aiSug").innerHTML=SUGG.map(q=>`<button type="button">${esc(q)}</button>`).join("");$("aiSug").querySelectorAll("button").forEach(b=>b.onclick=()=>ask(b.textContent))}
 function aiOpen(){$("aiPanel").hidden=false;$("aiFab").hidden=true;if(!CHAT.length&&!$("aiBody").children.length)aiReset();setTimeout(()=>$("aiIn").focus(),50);$("app").classList.remove("nav-open")}
 function aiClose(){$("aiPanel").hidden=true;$("aiFab").hidden=false}
+/* ---- OTT Fabric Plan lines as a searchable table (from the saved OTT data) ---- */
+let TOTT=null, TOTT_AT=null;
+function ottTable(){
+  const j=DATA_J; if(!j||!j.rows)return null; if(TOTT&&TOTT_AT===j.at)return TOTT;
+  const rep=toSerial(j.report), r3=v=>Math.round((v||0)*1000)/1000;
+  const cols=["Buyer","PO","Colour","Article","Plan date","Plan TBC","Plan kg","RFD kg","Balance kg","Line status"];
+  const rows=j.rows.map(r=>{const plan=r[3]||0, rfd=(r[4]||0)+(r[5]||0), bal=Math.max(0,plan-rfd), dt=typeof r[1]==="number"?sDate(r[1]).toISOString().slice(0,10):null;
+    const st=bal<=0.5?"RFD done":r[2]?"TBC":(typeof r[1]==="number"&&r[1]<rep?"Behind":"Upcoming");
+    return [j.buyers[r[0]],r[6]||null,r[7]||null,(j.articles&&j.articles[r[8]])||null,dt,r[2]?"TBC":null,r3(plan),r3(rfd),r3(bal),st]});
+  TOTT={cols,rows,colLow:cols.map(c=>c.toLowerCase())}; TOTT_AT=j.at; return TOTT;
+}
 /* ---- full 280 sheet: loaded only when the AI needs it, then searched in the browser ---- */
 let T280=null, T280SHA=null;
 async function load280(){
@@ -581,7 +577,7 @@ function run280(T,spec){
   const S=(spec.sum||[]).map(c=>colIdx(T,c)).filter(i=>i>=0);
   const G=(spec.groupBy||[]).map(c=>colIdx(T,c)).filter(i=>i>=0);
   const fmtN=v=>Math.round(v*100)/100;
-  let out=[`Matched ${rows.length} of ${T.rows.length} rows in the 280 sheet.`];
+  let out=[`Matched ${rows.length} of ${T.rows.length} rows in this table.`];
   if(F.length) out.push("Filters used: "+F.map(f=>`${T.cols[f.i]} ${f.op||"eq"} ${JSON.stringify(f.value??"")}`).join("; "));
   if(S.length) out.push("Totals: "+S.map(i=>`${T.cols[i]} = ${fmtN(rows.reduce((t,r)=>t+(numv(r[i])||0),0))}`).join("; "));
   if(G.length){
@@ -623,21 +619,25 @@ async function ask(q){
     const recent=CHAT.slice(-6).map(m=>m.text).join(" ");
     let extra="";
     if(!/^(hi|hello|hey|thanks|thank you|ok|salam|assalamu)/i.test(q)&&q.length>3){
-      STAGE="Reading 280 sheet"; const T=await load280().catch(()=>null);
-      if(T){
+      STAGE="Reading data"; const T2=await load280().catch(()=>null), T1=ottTable();
+      const tables={}; if(T1)tables.ott=T1; if(T2)tables["280"]=T2;
+      if(Object.keys(tables).length){
         STAGE="Planning the search";
-        const plan=`You can search the FULL 280 sheet (${T.rows.length} batch rows) of the DOC-280+217 file. Each row is one batch.
-Columns (letter + header) with sample or all values:
-${profile280(T)}
+        const desc=Object.entries(tables).map(([k,T])=>`### Table "${k}" — ${k==="ott"?"OTT Fabric Plan lines (one row per PO + colour + plan date; Plan kg, RFD kg, Balance kg per line)":"280 sheet of the DOC-280+217 file (one row per batch)"} · ${T.rows.length} rows\n${profile280(T)}`).join("\n\n");
+        const plan=`You can run exact searches on these tables. The browser computes every total exactly.
+${desc}
 
 Recent chat: ${CHAT.slice(-6,-1).map(m=>m.role+": "+m.text.slice(0,300)).join(" / ")||"none"}
 Question: ${q}
 
 Reply with ONLY a JSON object, no other text:
-{"need":true,"filters":[{"col":"<column name or letter>","op":"eq|ne|contains|notcontains|in|gt|gte|lt|lte|between|empty|notempty","value":"..."}],"groupBy":["<col>"],"sum":["<numeric col>"],"list":["<cols to show>"],"sort":{"col":"<col>","desc":true},"limit":100}
-Rules: use exact column names from the list; dates are YYYY-MM-DD; for buyer use "contains" (e.g. "T33", "LIDL"); use groupBy+sum for totals or breakdowns; use list for batch details. If the question does not need 280 batch data, reply {"need":false}.`;
+{"need":true,"searches":[{"table":"ott|280","filters":[{"col":"<column>","op":"eq|ne|contains|notcontains|in|gt|gte|lt|lte|between|empty|notempty","value":"..."}],"groupBy":["<col>"],"sum":["<numeric col>"],"list":["<cols to show>"],"sort":{"col":"<col>","desc":true},"limit":100}]}
+Rules: up to 3 searches; exact column names; dates YYYY-MM-DD; use "contains" for buyer, PO, colour and article text; use sum for any total (never ask for rows just to add them up); use groupBy for breakdowns; use the "ott" table for plan / RFD / balance / OTT / PO plan questions and the "280" table for batch, WIP status, reject, dyeing, finishing, QAD and age questions. If no table is needed reply {"need":false}.`;
         const spec=parseJSON(await callAI([{role:"user",text:plan}],"(planning step: no data needed)",ctl.signal));
-        if(spec&&spec.need!==false){STAGE="Searching 280 sheet";extra=`\n\n## Result from searching the FULL 280 sheet (exact, computed in the browser — trust these numbers)\nSearch: ${JSON.stringify(spec)}\n${run280(T,spec)}`}
+        const list=spec&&spec.need!==false?(spec.searches||[spec]).slice(0,3):[];
+        if(list.length){STAGE="Searching";
+          extra="\n\n## EXACT search results (computed by the browser over the full tables). Use these totals as they are; do not re-add or estimate numbers.\n"+
+            list.map((sp,n)=>{const T=tables[String(sp.table||"280").toLowerCase()]||T2||T1;return `\n### Search ${n+1} on table "${T===T1?"ott":"280"}": ${JSON.stringify(sp)}\n${run280(T,sp)}`}).join("\n")}
       }
     }
     STAGE="Writing the answer";
