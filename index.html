@@ -48,6 +48,9 @@ a{color:inherit;text-decoration:none}
 .u .ic svg{width:19px;height:19px;fill:none;stroke:var(--q);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .u.t .ic svg{stroke:var(--tanD)}
 .u .tx{min-width:0}
+.u .go{display:flex;align-items:center;gap:14px;min-width:0;flex:1;border-radius:10px;margin:-6px;padding:6px}
+.u .go:hover{background:rgba(255,255,255,.7)}.u .go:hover b{color:var(--q)}
+.u .arr{opacity:0;transition:opacity .15s,margin .15s;color:var(--q);font-weight:600}.u .go:hover .arr{opacity:1;margin-left:4px}
 .u b{font-size:14px;display:block}.u small{font-size:11.8px;color:var(--muted);display:block}.u small em{font-style:normal;color:var(--q);font-weight:600}
 .dl{margin-left:auto;display:inline-flex;align-items:center;gap:7px;background:var(--q);color:#fff;border:0;border-radius:9px;padding:9px 14px;font:600 12.5px var(--f);cursor:pointer;white-space:nowrap;flex:none}
 .u.t .dl{background:var(--tanD)}
@@ -76,11 +79,20 @@ a{color:inherit;text-decoration:none}
 .k1{background:#F1ECEF;border-color:var(--q20)}.k1 .h svg{stroke:var(--q)}.k1 .bar i{background:var(--q)}
 .k2{background:var(--tan20);border-color:var(--tan40)}.k2 .h svg{stroke:var(--tanD)}.k2 .bar i{background:#9E857D}
 .k3{background:var(--blue10);border-color:var(--blue20)}.k3 .h svg{stroke:var(--blue)}.k3 .bar i{background:var(--blue)}
+.v2{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.mtd{text-align:right;display:flex;flex-direction:column}.mtd small{font-size:11px;color:var(--muted)}.mtd b{font-size:16px;font-variant-numeric:tabular-nums}
+.io{display:flex;gap:14px;font-size:11.8px;color:var(--muted);flex-wrap:wrap}.io i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px}.io b{color:var(--fg)}
+.spark{display:flex;align-items:flex-end;gap:3px;height:46px;margin-top:4px}.spark i{flex:1;border-radius:3px 3px 0 0;min-width:4px}
+.k1 .spark i{background:var(--q)}.k2 .spark i{background:#9E857D}.k3 .spark i{background:var(--blue)}
+.tb{display:flex;flex-direction:column;gap:3px;font-size:12px;border-top:1px solid rgba(0,0,0,.06);padding-top:6px}.tb div{display:flex;justify-content:space-between;gap:8px}.tb span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#4a3f45}.tb b{font-variant-numeric:tabular-nums;font-weight:600}
 .k .wait{margin:auto 0;font-size:12.5px;color:var(--muted);line-height:1.5}
 .good{color:var(--green);font-weight:600}.bad{color:var(--red);font-weight:600}.mid{color:var(--q80);font-weight:600}
 .chart{position:relative;overflow-x:auto}
 .chart svg text{font-family:var(--f)}
 .chart rect.b{cursor:pointer;transition:opacity .15s}.chart rect.b:hover{opacity:.8}
+.tot{display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:var(--q5);border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:12.5px;color:var(--muted)}
+.tot b{color:var(--fg);font-variant-numeric:tabular-nums}.tot .big{font-size:20px;color:var(--q);font-weight:700}
+.tot .tb2{flex:1;min-width:160px;height:9px;background:#fff;border-radius:5px;overflow:hidden}.tot .tb2 i{display:block;height:100%;background:var(--q);border-radius:5px}
 .legend{display:flex;gap:14px;font-size:11.5px;color:var(--muted);flex-wrap:wrap}
 .legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
 .tip{position:fixed;z-index:20;background:#2B2027;color:#fff;border-radius:10px;padding:10px 12px;font-size:12px;line-height:1.5;pointer-events:none;box-shadow:0 10px 30px rgba(0,0,0,.2);min-width:170px}
@@ -115,7 +127,7 @@ a{color:inherit;text-decoration:none}
     <div class="sec">TOOLS</div>
     <div id="navTools"></div>
 
-    <div class="foot">Data refreshes on every update · Asia/Dhaka</div>
+    <div class="foot">Times in Bangladesh time (Dhaka), taken from the internet</div>
   </aside>
 
   <main class="main">
@@ -123,13 +135,13 @@ a{color:inherit;text-decoration:none}
 
     <div class="ub">
       <div class="u">
-        <span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 9v11"/></svg></span>
-        <div class="tx"><b>OTT Update</b><small id="ottStamp">Loading…</small></div>
+        <a class="go" href="ott-updater.html" title="Open OTT Update"><span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 9v11"/></svg></span>
+        <div class="tx"><b>OTT Update <span class="arr">→</span></b><small id="ottStamp">Loading…</small></div></a>
         <button class="dl" id="ottDl" disabled><svg viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Fabric Plan file</button>
       </div>
       <div class="u t">
-        <span class="ic"><svg viewBox="0 0 24 24"><path d="M6 4v5a4 4 0 0 0 4 4h4a4 4 0 0 1 4 4v3"/><path d="M15 17l3 3 3-3"/></svg></span>
-        <div class="tx"><b>280+217 Update</b><small id="docStamp">Loading…</small></div>
+        <a class="go" href="doc-master.html" title="Open 280+217 Update"><span class="ic"><svg viewBox="0 0 24 24"><rect x="8" y="3" width="13" height="13" rx="2"/><path d="M16 16v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2h3"/></svg></span>
+        <div class="tx"><b>280+217 Update <span class="arr">→</span></b><small id="docStamp">Loading…</small></div></a>
         <button class="dl" id="docDl" disabled><svg viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>DOC master file</button>
       </div>
     </div>
@@ -138,7 +150,7 @@ a{color:inherit;text-decoration:none}
 
     <section class="panel">
       <div class="ph"><svg viewBox="0 0 24 24"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg>
-        <div><b id="outTitle">Daily output</b><small>Knitting, dyeing and RFD for the last report day</small></div></div>
+        <div><b id="outTitle">Daily output</b><small>From the 280+217 Update · MTD and the last 14 days on each card</small></div></div>
       <div class="kp">
         <div class="k k1"><div class="h"><span><svg viewBox="0 0 24 24"><path d="M4 18c4-8 12-8 16 0"/><path d="M4 12c4-8 12-8 16 0"/></svg></span>Knit output<i id="knitD"></i></div><div id="knitB"><p class="wait">Loading…</p></div></div>
         <div class="k k2"><div class="h"><span><svg viewBox="0 0 24 24"><path d="M12 3c3 4 6 7 6 11a6 6 0 0 1-12 0c0-4 3-7 6-11z"/></svg></span>Dye output<i id="dyeD"></i></div><div id="dyeB"><p class="wait">Loading…</p></div></div>
@@ -151,6 +163,7 @@ a{color:inherit;text-decoration:none}
         <div><b>Date-wise OTT %</b><small id="chNote">RFD qty ÷ plan qty for each plan date · hover a bar for details</small></div>
         <div class="r"><button class="mbtn" id="mPrev" aria-label="Previous month">‹</button><span class="mlab" id="mLab"></span><button class="mbtn" id="mNext" aria-label="Next month">›</button></div>
       </div>
+      <div class="tot" id="totReq" hidden></div>
       <div class="legend"><span><i style="background:var(--q)"></i>95% and above</span><span><i style="background:var(--q40)"></i>70–94%</span><span><i style="background:var(--red)"></i>below 70%</span><span><i style="background:none;border-top:2px dashed var(--blue);border-radius:0;height:0;vertical-align:3px"></i>Target 95%</span></div>
       <div class="chart" id="chart"><p class="status">Loading…</p></div>
     </section>
@@ -164,7 +177,7 @@ a{color:inherit;text-decoration:none}
    status "live" = opens the page; "soon" = shows "will be live soon". */
 const DAILY = [
   { name:"OTT Update",     link:"ott-updater.html", status:"live", icon:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 9v11"/>' },
-  { name:"280+217 Update", link:"doc-master.html",  status:"live", icon:'<path d="M6 4v5a4 4 0 0 0 4 4h4a4 4 0 0 1 4 4v3"/><path d="M15 17l3 3 3-3"/>' }
+  { name:"280+217 Update", link:"doc-master.html",  status:"live", icon:'<rect x="8" y="3" width="13" height="13" rx="2"/><path d="M16 16v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2h3"/>' }
 ];
 const TOOLS = [
   { group:"Monthly Line Plan", icon:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>', items:[
@@ -177,7 +190,10 @@ const TOOLS = [
 
 const REPO={owner:"rakibislamra-design",repo:"sq-hues-tools"};
 const SITE=(()=>{const h=location.hostname;if(!/\.github\.io$/i.test(h))return REPO;const owner=h.split(".")[0];const seg=location.pathname.split("/").filter(Boolean);const repo=seg.length&&!/\.html?$/i.test(seg[0])?seg[0]:`${owner}.github.io`;return{owner,repo}})();
-const raw=f=>`https://raw.githubusercontent.com/${SITE.owner}/${SITE.repo}/data/${f}`;
+const SHA={};
+/* read by commit id so a fresh save shows at once (branch names are cached ~5 min by GitHub) */
+async function resolveSha(br){try{const r=await fetch(`https://api.github.com/repos/${SITE.owner}/${SITE.repo}/commits/${br}?t=${Date.now()}`,{headers:{Accept:"application/vnd.github.sha"},cache:"no-store"});if(r.ok){const t=(await r.text()).trim();if(/^[0-9a-f]{40}$/.test(t))return t}}catch(e){}return null}
+const raw=(f,br="data")=>`https://raw.githubusercontent.com/${SITE.owner}/${SITE.repo}/${SHA[br]||br}/${encodeURIComponent(f)}`;
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -186,12 +202,12 @@ const fmt=n=>Math.round(n).toLocaleString("en-US");
 const sDate=s=>new Date(Date.UTC(1899,11,30)+s*864e5);
 const dTxt=d=>`${String(d.getUTCDate()).padStart(2,"0")}-${MON[d.getUTCMonth()]}-${String(d.getUTCFullYear()).slice(2)}`;
 const toSerial=iso=>{const [y,m,d]=iso.split("-").map(Number);return Math.round((Date.UTC(y,m-1,d)-Date.UTC(1899,11,30))/864e5)};
-const stamp=iso=>{const d=new Date(iso);let h=d.getHours(),ap=h>=12?"PM":"AM";h=h%12||12;return `${String(d.getDate()).padStart(2,"0")}-${MON[d.getMonth()]}-${String(d.getFullYear()).slice(2)} · ${h}:${String(d.getMinutes()).padStart(2,"0")} ${ap}`};
+const stamp=iso=>{const p=new Intl.DateTimeFormat("en-GB",{timeZone:"Asia/Dhaka",day:"2-digit",month:"short",year:"2-digit",hour:"numeric",minute:"2-digit",hour12:true}).formatToParts(new Date(iso)).reduce((m,x)=>(m[x.type]=x.value,m),{});return `${p.day}-${p.month}-${p.year} · ${p.hour}:${p.minute} ${(p.dayPeriod||"").toUpperCase()}`};
 const ICON=p=>`<svg viewBox="0 0 24 24">${p}</svg>`;
 
 /* ---- menu ---- */
 function toast(t,b){const el=$("toast");el.innerHTML=`<b>${esc(t)}</b>${esc(b)}`;el.classList.add("show");clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove("show"),3200)}
-function go(it){ if(it.status==="live"&&it.link){location.href=it.link;return} toast(`${it.name}`,"This tool will be live soon. OTT Update and 280+217 Update are live now."); }
+function go(it){ if(it.status==="live"&&it.link){location.href=it.link;return} toast(`${it.name}`,"This tool will be live soon."); }
 function drawNav(){
   $("navDaily").innerHTML=DAILY.map((it,i)=>`<button class="nav" data-d="${i}">${ICON(it.icon)}${esc(it.name)}${it.status==="live"?'<span class="dot" title="Live"></span>':'<span class="soon-tag">SOON</span>'}</button>`).join("");
   $("navTools").innerHTML=TOOLS.map((g,gi)=>`<div class="grp"><button class="nav" data-g="${gi}">${ICON(g.icon)}${esc(g.group)}<svg class="chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button><div class="sub">${g.items.map((it,ii)=>`<button class="nav s" data-t="${gi}.${ii}"><span class="nm">${esc(it.name)}</span>${it.status==="live"?'<span class="dot"></span>':'<span class="soon-tag">SOON</span>'}${it.sub?`<small>${esc(it.sub)}</small>`:""}</button>`).join("")}</div></div>`).join("");
@@ -202,22 +218,35 @@ function drawNav(){
 $("menuBtn").onclick=e=>{e.stopPropagation();$("app").classList.toggle("nav-open")};
 document.addEventListener("click",e=>{if(!$("side").contains(e.target))$("app").classList.remove("nav-open")});
 
-/* ---- clock ---- */
-const DAYS=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
-function tick(){const d=new Date();$("cDate").textContent=`${DAYS[d.getDay()]}, ${d.getDate()} ${MONF[d.getMonth()]} ${d.getFullYear()}`;let h=d.getHours(),ap=h>=12?"PM":"AM";h=h%12||12;$("cTime").textContent=`${h}:${String(d.getMinutes()).padStart(2,"0")}:${String(d.getSeconds()).padStart(2,"0")} ${ap}`}
-tick();setInterval(tick,1000);
+/* ---- clock: internet time, shown in Bangladesh time (Asia/Dhaka) whatever the PC clock says ---- */
+const TZ="Asia/Dhaka"; let OFF=0, NET=false;
+const now=()=>new Date(Date.now()+OFF);
+const dhaka=(d,o)=>new Intl.DateTimeFormat("en-GB",Object.assign({timeZone:TZ},o)).formatToParts(d).reduce((m,p)=>(m[p.type]=p.value,m),{});
+async function syncTime(){
+  const src=[
+    async()=>{const t0=Date.now();const r=await fetch("https://www.cloudflare.com/cdn-cgi/trace",{cache:"no-store"});const tx=await r.text();const m=/ts=([\d.]+)/.exec(tx);if(!m)throw 0;return {ms:+m[1]*1000,t0,t1:Date.now()}},
+    async()=>{const t0=Date.now();const r=await fetch("https://worldtimeapi.org/api/timezone/Asia/Dhaka",{cache:"no-store"});const j=await r.json();if(!j.unixtime)throw 0;return {ms:j.unixtime*1000,t0,t1:Date.now()}},
+    async()=>{const t0=Date.now();const r=await fetch("https://timeapi.io/api/time/current/zone?timeZone=Asia%2FDhaka",{cache:"no-store"});const j=await r.json();if(!j.dateTime)throw 0;return {ms:Date.parse(j.dateTime.slice(0,23)+"+06:00"),t0,t1:Date.now()}}
+  ];
+  for(const f of src){try{const x=await f();if(isFinite(x.ms)){OFF=x.ms-(x.t0+x.t1)/2;NET=true;tick();return}}catch(e){}}
+  NET=false; tick();
+}
+function tick(){const p=dhaka(now(),{weekday:"long",day:"numeric",month:"long",year:"numeric",hour:"numeric",minute:"2-digit",second:"2-digit",hour12:true});
+  $("cDate").textContent=`${p.weekday}, ${p.day} ${p.month} ${p.year}`;
+  $("cTime").textContent=`${p.hour}:${p.minute}:${p.second} ${(p.dayPeriod||"").toUpperCase()} · Dhaka${NET?"":" (PC clock)"}`;}
+tick();setInterval(tick,1000);syncTime();setInterval(syncTime,10*60*1000);
 
 /* ---- downloads ---- */
-async function download(path,name,btn){
+async function download(path,name,btn,br="data"){
   const old=btn.innerHTML;btn.disabled=true;btn.lastChild.textContent=" Downloading…";
-  try{const r=await fetch(raw(path)+"?ts="+Date.now());if(!r.ok)throw 0;const b=await r.blob();const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000)}
+  try{const r=await fetch(raw(path,br)+"?ts="+Date.now());if(!r.ok)throw 0;const b=await r.blob();const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000)}
   catch(e){toast("Download failed","Could not reach the saved file. Check your connection and try again.")}
   btn.innerHTML=old;btn.disabled=false;
 }
 
 /* ---- KPI cards ---- */
 function kpi(el,dEl,o){
-  if(!o){$(el).innerHTML=`<p class="wait">No data on the site yet. It appears here after the next 280+217 Update saves its daily output.</p>`;return}
+  if(!o){$(el).innerHTML=`<p class="wait">No data on the site yet. Run the 280+217 Update once and it appears here.</p>`;return}
   const p=o.plan>0?o.act/o.plan*100:null, cls=p==null?"":p>=95?"good":p>=70?"mid":"bad";
   $(dEl).textContent=o.label||"";
   $(el).innerHTML=`<div class="v">${fmt(o.act)} <small>kg</small></div>
@@ -265,38 +294,64 @@ $("mPrev").onclick=()=>{if(mIdx>0){mIdx--;drawChart()}};
 $("mNext").onclick=()=>{if(mIdx<MONTHS.length-1){mIdx++;drawChart()}};
 
 /* ---- load ---- */
-async function getJSON(f){try{const r=await fetch(raw(f)+"?ts="+Date.now(),{cache:"no-store"});if(!r.ok)return null;return await r.json()}catch(e){return null}}
+const CACHE={};
+async function getJSON(f,br="data"){const sha=await resolveSha(br);
+  if(sha&&CACHE[br]&&CACHE[br].sha===sha)return CACHE[br].data; /* nothing new saved: skip the download */
+  SHA[br]=sha;try{const r=await fetch(raw(f,br)+"?ts="+Date.now(),{cache:"no-store"});if(!r.ok)return null;const data=await r.json();if(sha)CACHE[br]={sha,data};return data}catch(e){return null}}
 async function load(){
-  const [j,doc]=await Promise.all([getJSON("dashboard.json"),getJSON("doc.json")]);
+  const [j,doc]=await Promise.all([getJSON("dashboard.json"),getJSON("latest.json","doc-master-data")]);
   /* OTT */
   if(j&&j.rows){
     $("ottStamp").innerHTML=`Last update <em>${stamp(j.at)}</em> · report ${dTxt(sDate(toSerial(j.report)))}`;
     if(j.ottPath){$("ottDl").disabled=false;$("ottDl").onclick=()=>download(j.ottPath,j.ott||"Fabric_Plan.xlsx",$("ottDl"))}
     REPORT=toSerial(j.report); DAYMAP=buildDays(j);
+    { let req=0,done=0; for(const r of j.rows){req+=r[3]||0;done+=(r[4]||0)+(r[5]||0)}
+      const pc=req?done/req*100:0, M=v=>v>=1e6?(v/1e6).toFixed(2)+" M":fmt(v);
+      $("totReq").hidden=false;
+      $("totReq").innerHTML=`<span>Total req <b>${M(req)} kg</b></span><span>RFD done <b>${fmt(done)} kg</b></span><span>Balance <b>${fmt(Math.max(0,req-done))} kg</b></span><span class="tb2"><i style="width:${Math.min(100,pc).toFixed(1)}%"></i></span><span class="big">${pc.toFixed(1)}%</span><span>of total req RFD done (whole Fabric Plan)</span>`; }
     const ms=new Set();for(const o of DAYMAP.values()){if(o.d>0&&o.s<REPORT){const d=sDate(o.s);ms.add(d.getUTCFullYear()*12+d.getUTCMonth())}}
     MONTHS=[...ms].sort((a,b)=>a-b).map(v=>[Math.floor(v/12),v%12]);
     const rd=sDate(REPORT-1), cur=rd.getUTCFullYear()*12+rd.getUTCMonth(); mIdx=Math.max(0,MONTHS.findIndex(([y,m])=>y*12+m===cur)); if(mIdx<0)mIdx=MONTHS.length-1;
     if(MONTHS.length)drawChart(); else $("chart").innerHTML='<p class="status">No plan dates yet.</p>';
-    /* RFD output vs plan for the day before the report date */
-    const y=DAYMAP.get(REPORT-1);
-    $("outTitle").textContent=`Daily output · ${dTxt(sDate(REPORT-1))}`;
-    kpi("rfdB","rfdD",y?{act:y.a,plan:y.d,label:dTxt(sDate(REPORT-1)),foot:"RFD against that day's plan (OTT file)"}:{act:0,plan:0,label:dTxt(sDate(REPORT-1))});
   } else {
     $("ottStamp").textContent="No update saved to the site yet";
     $("chart").innerHTML='<p class="status">Run OTT Update once to see the chart.</p>';
-    kpi("rfdB","rfdD",null);
   }
-  /* 280+217: knit + dye come from doc.json when the DOC tool saves it */
-  if(doc){
-    $("docStamp").innerHTML=`Last update <em>${stamp(doc.at)}</em>${doc.report?` · report ${esc(doc.report)}`:""}`;
-    if(doc.filePath){$("docDl").disabled=false;$("docDl").onclick=()=>download(doc.filePath,doc.file||"DOC -280+217.xlsx",$("docDl"))}
-    kpi("knitB","knitD",doc.knit||null); kpi("dyeB","dyeD",doc.dye||null);
+  /* 280+217: last update, file and daily output come from the DOC master page's saved data */
+  if(doc&&doc.updated){
+    $("docStamp").innerHTML=`Last update <em>${stamp(doc.updated)}</em>${doc.reportDate?` · report ${esc(doc.reportDate)}`:""}`;
+    $("docDl").disabled=false; $("docDl").title=doc.name||""; $("docDl").onclick=()=>download("DOC -280+217.xlsx",doc.name||"DOC -280+217.xlsx",$("docDl"),"doc-master-data");
+    drawOutput(doc);
   } else {
-    $("docStamp").innerHTML=j&&j.doc?`Last file used by OTT: <em>${esc(j.doc)}</em>`:"Not saved to the site yet"; $("docDl").title="Available once the 280+217 Update saves its file to the site";
-    kpi("knitB","knitD",null); kpi("dyeB","dyeD",null);
+    $("docStamp").textContent="Not saved to the site yet";
+    ["knitB","dyeB","rfdB"].forEach(id=>kpi(id,"",null));
   }
 }
-drawNav(); load(); setInterval(load,5*60*1000);
+/* ---- daily output from 280+217 (same figures as the DOC master page) ---- */
+function parseRep(t){const m=/^(\d{1,2})-([A-Za-z]{3})-(\d{2,4})$/.exec(t||"");if(!m)return null;const y=+m[3]<100?2000+ +m[3]:+m[3];return new Date(Date.UTC(y,MON.indexOf(m[2]),+m[1]))}
+const iso=d=>d.toISOString().slice(0,10);
+function drawOutput(doc){
+  const S=doc.summary||{}; let rd=parseRep(doc.reportDate)||new Date(doc.updated);
+  const day=new Date(Date.UTC(rd.getUTCFullYear(),rd.getUTCMonth(),rd.getUTCDate()-1)), key=iso(day), mon=key.slice(0,7);
+  $("outTitle").textContent=`Daily output · ${dTxt(day)}`;
+  const card=(k,el,dEl,unit)=>{
+    const m=S[k]; if(!m){kpi(el,dEl,null);return}
+    const o=m[key]||{kg:0,n:0,by:{}};
+    const mtdDays=Object.keys(m).filter(d=>d.slice(0,7)===mon&&d<=key), mtd=mtdDays.reduce((t,d)=>t+(m[d].kg||0),0), avg=mtdDays.length?mtd/mtdDays.length:0;
+    const last=Object.keys(m).filter(d=>d<=key).sort().slice(-14), mx=Math.max(1,...last.map(d=>m[d].kg||0));
+    const bars=last.map(d=>`<i title="${dTxt(new Date(d+'T00:00:00Z'))} · ${fmt(m[d].kg)} kg" style="height:${Math.max(4,(m[d].kg||0)/mx*100).toFixed(0)}%;${d===key?'':'opacity:.35'}"></i>`).join("");
+    const top=Object.entries(o.by||{}).sort((a,b)=>b[1]-a[1]).slice(0,3);
+    $(dEl).textContent=dTxt(day);
+    $(el).innerHTML=`<div class="v2"><div><div class="v">${fmt(o.kg)} <small>kg</small></div><div class="m"><span>${fmt(o.n||0)} ${unit}</span></div></div>
+      <div class="mtd"><small>MTD</small><b>${fmt(mtd)} kg</b><small>Avg ${fmt(avg)} kg/day</small></div></div>
+      ${o.in!=null?`<div class="io"><span><i style="background:var(--q)"></i>Inhouse <b>${fmt(o.in)}</b> kg</span><span><i style="background:var(--q40)"></i>Outside <b>${fmt(o.out||0)}</b> kg</span></div>`:""}
+      <div class="spark">${bars}</div>
+      <div class="tb">${top.map(([b,v])=>`<div><span>${esc(b)}</span><b>${fmt(v)} kg</b></div>`).join("")}</div>`;
+  };
+  card("knit","knitB","knitD","rolls"); card("dye","dyeB","dyeD","batches"); card("rfd","rfdB","rfdD","batches");
+}
+drawNav(); load(); setInterval(()=>{if(!document.hidden)load()},10*60*1000);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)load()});
 </script>
 </body>
 </html>
