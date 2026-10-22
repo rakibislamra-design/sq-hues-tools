@@ -527,10 +527,13 @@ async function ask(q){
   addMsg("user",q); CHAT.push({role:"user",text:q});
   if(!AI_URL){addMsg("assistant","The AI helper isn't connected yet. Add the Worker link in index.html (AI_URL) to switch it on.","err");CHAT.pop();return}
   const w=addMsg("assistant","");w.innerHTML='<span class="typing"><span></span><span></span><span></span></span>';$("aiSend").disabled=true;
-  try{const r=await fetch(AI_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:CHAT.slice(-12),context:buildContext(q+" "+CHAT.slice(-6).map(m=>m.text).join(" "))})});
+  const t0=Date.now(), ctl=new AbortController(), kill=setTimeout(()=>ctl.abort(),90000);
+  const slow=setInterval(()=>{const s=Math.round((Date.now()-t0)/1000);if(s>=8)w.innerHTML=`<span class="typing"><span></span><span></span><span></span></span> <small style="color:var(--muted)">Thinking… ${s}s${s>=20?" · free AI is busy, still trying":""}</small>`},1000);
+  try{const r=await fetch(AI_URL,{method:"POST",signal:ctl.signal,headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:CHAT.slice(-12),context:buildContext(q+" "+CHAT.slice(-6).map(m=>m.text).join(" "))})});
     const j=await r.json().catch(()=>({})); if(!r.ok||!j.text)throw new Error(j.error||("Error "+r.status));
     w.innerHTML=md(j.text); addTools(w,j.text,q); CHAT.push({role:"assistant",text:j.text});
-  }catch(e){w.classList.add("err");w.innerHTML=md("Couldn't get an answer: "+(e.message||"network problem")+". Please try again.");CHAT.pop()}
+  }catch(e){w.classList.add("err");w.innerHTML=md(e.name==="AbortError"?"No answer after 90 seconds. The free AI is very busy; please try again in a minute.":"Couldn't get an answer: "+(e.message||"network problem")+(/again/i.test(e.message||"")?"":" Please try again."));CHAT.pop()}
+  clearInterval(slow); clearTimeout(kill);
   $("aiSend").disabled=false; $("aiBody").scrollTop=1e9;
 }
 $("aiFab").onclick=aiOpen; $("aiNav").onclick=aiOpen; $("aiClose").onclick=aiClose; $("aiClear").onclick=aiReset;
