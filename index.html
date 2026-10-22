@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>SQ Hues Tools</title>
+<title>SQ Hues Tools AI</title>
 <style>
 :root{
   --q:#664356;--q80:#7C5D6D;--q60:#957B87;--q40:#B29EA6;--q20:#D2C7CB;--q10:#E6DFE1;--q5:#EFECED;
@@ -203,7 +203,7 @@ a{color:inherit;text-decoration:none}
 <div class="tip" id="tip" hidden></div>
 <button class="aiFab" id="aiFab" aria-label="Ask AI"><svg viewBox="0 0 24 24"><path d="M12 3l1.8 4.6L18 9.4l-4.2 1.8L12 16l-1.8-4.8L6 9.4l4.2-1.8z"/><path d="M19 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/></svg>Ask AI</button>
 <aside class="aiPanel" id="aiPanel" aria-label="Ask AI" hidden>
-  <div class="aiHead"><div><b>SQ Hues AI</b><small>Knows today's OTT and 280+217 data</small></div><button id="aiClear" title="New chat">↺</button><button id="aiClose" title="Close">✕</button></div>
+  <div class="aiHead"><div><b>SQ Hues AI</b><small>Reads OTT, 280+217 and the full 280 sheet</small></div><button id="aiClear" title="New chat">↺</button><button id="aiClose" title="Close">✕</button></div>
   <div class="aiBody" id="aiBody"></div>
   <div class="aiSug" id="aiSug"></div>
   <form class="aiForm" id="aiForm"><textarea id="aiIn" rows="1" placeholder="Ask anything… (English or বাংলা)"></textarea><button id="aiSend" aria-label="Send">➤</button></form>
@@ -425,6 +425,17 @@ function buildContext(q){
         const bu=Object.entries(o.by||{}).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]).map(([b,v])=>key==="rfd"?`${b} ${k(v)} (${k(sin[b])}/${k(sout[b])})`:`${b} ${k(v)}`).join("; ");
         L.push(`${dd(x)} | ${k(o.kg)} | ${o.n||0}${key==="rfd"?` | ${k(o.in)} | ${k(o.out)}`:""} | ${bu}`); }
     }
+    if(d.wip&&d.wip.status){
+      L.push(`\n## WIP status of 280 batches (status column of the 280 sheet) · batch plan qty kg`);
+      L.push(`status | kg | batches | by buyer kg`);
+      for(const [st,o] of Object.entries(d.wip.status).sort((a,b)=>b[1].kg-a[1].kg))
+        L.push(`${st} | ${k(o.kg)} | ${o.n} | `+Object.entries(o.by).sort((a,b)=>b[1]-a[1]).map(([b,v])=>`${b} ${k(v)}`).join("; "));
+      L.push(`Final Reject total: ${k(d.wip.rejectTotal)} kg in ${d.wip.rejectCount} batches`);
+      if(/reject|rej\b|wip|status|stuck|pending|report/i.test(q||"")){
+        L.push(`Final Reject batches (buyer | batch | PO | colour | fabrication | kg), largest first:`);
+        for(const r of d.wip.rejects) L.push(r.join(" | "));
+      }
+    } else L.push("\nWIP / Final Reject: not saved yet (the 280+217 Update must be run once with the new version).");
   } else L.push("\n280+217 data: not available.");
   /* PO lines go last and only when the question needs them: open lines only, one buyer if named */
   if(j&&j.rows&&NEED_PO.test(q||"")){
@@ -522,17 +533,117 @@ function aiReset(){CHAT=[];$("aiBody").innerHTML="";addMsg("assistant","Hi! Ask 
   $("aiSug").innerHTML=SUGG.map(q=>`<button type="button">${esc(q)}</button>`).join("");$("aiSug").querySelectorAll("button").forEach(b=>b.onclick=()=>ask(b.textContent))}
 function aiOpen(){$("aiPanel").hidden=false;$("aiFab").hidden=true;if(!CHAT.length&&!$("aiBody").children.length)aiReset();setTimeout(()=>$("aiIn").focus(),50);$("app").classList.remove("nav-open")}
 function aiClose(){$("aiPanel").hidden=true;$("aiFab").hidden=false}
+/* ---- full 280 sheet: loaded only when the AI needs it, then searched in the browser ---- */
+let T280=null, T280SHA=null;
+async function load280(){
+  if(!DATA_D||!DATA_D.t280)return null;
+  if(T280&&T280SHA===SHA["doc-master-data"])return T280;
+  const r=await fetch(raw(DATA_D.t280.file||"280.json","doc-master-data")+"?ts="+Date.now(),{cache:"no-store"});
+  if(!r.ok)return null; T280=await r.json(); T280SHA=SHA["doc-master-data"];
+  T280.colLow=T280.cols.map(c=>c.toLowerCase()); return T280;
+}
+function colIdx(T,name){
+  if(name==null)return -1; const n=String(name).trim().toLowerCase(); if(!n)return -1;
+  let i=T.colLow.indexOf(n); if(i>=0)return i;
+  i=T.colLow.findIndex(c=>c.split(" ")[0]===n); if(i>=0)return i;                 // column letter, e.g. "W"
+  i=T.colLow.findIndex(c=>c.slice(c.indexOf(" ")+1)===n); if(i>=0)return i;       // header text only
+  return T.colLow.findIndex(c=>c.includes(n));
+}
+function profile280(T){
+  const out=[];
+  T.cols.forEach((c,ci)=>{const seen=new Map();let filled=0;
+    for(const r of T.rows){const v=r[ci];if(v===null||v===undefined)continue;filled++;const k=String(v);if(seen.size<=40||seen.has(k))seen.set(k,(seen.get(k)||0)+1)}
+    if(!filled)return;
+    const few=seen.size<=40;
+    const vals=[...seen.entries()].sort((a,b)=>b[1]-a[1]).slice(0,few?40:3).map(([k])=>k.length>40?k.slice(0,40)+"…":k);
+    out.push(`- ${c} (${filled} filled)${few?" values: ":" e.g. "}${vals.join(" | ")}`)});
+  return out.join("\n");
+}
+const numv=v=>typeof v==="number"?v:(v!=null&&v!==""&&!isNaN(+v)?+v:null);
+function cmp(a,b){const x=numv(a),y=numv(b);if(x!=null&&y!=null)return x-y;return String(a??"").localeCompare(String(b??""))}
+function run280(T,spec){
+  const F=(spec.filters||[]).map(f=>({...f,i:colIdx(T,f.col)})).filter(f=>f.i>=0);
+  const low=v=>String(v??"").toLowerCase();
+  const ok=r=>F.every(f=>{const v=r[f.i],op=(f.op||"eq").toLowerCase(),x=f.value;
+    switch(op){
+      case "eq":return numv(v)!=null&&numv(x)!=null?numv(v)===numv(x):low(v)===low(x);
+      case "ne":return low(v)!==low(x);
+      case "contains":return low(v).includes(low(x));
+      case "notcontains":return !low(v).includes(low(x));
+      case "in":return (Array.isArray(x)?x:[x]).some(y=>low(v)===low(y)||low(v).includes(low(y)));
+      case "gt":return v!=null&&cmp(v,x)>0; case "gte":return v!=null&&cmp(v,x)>=0;
+      case "lt":return v!=null&&cmp(v,x)<0; case "lte":return v!=null&&cmp(v,x)<=0;
+      case "between":return v!=null&&Array.isArray(x)&&cmp(v,x[0])>=0&&cmp(v,x[1])<=0;
+      case "empty":return v==null||v==="";
+      case "notempty":return !(v==null||v==="");
+      default:return true}});
+  const rows=T.rows.filter(ok);
+  const S=(spec.sum||[]).map(c=>colIdx(T,c)).filter(i=>i>=0);
+  const G=(spec.groupBy||[]).map(c=>colIdx(T,c)).filter(i=>i>=0);
+  const fmtN=v=>Math.round(v*100)/100;
+  let out=[`Matched ${rows.length} of ${T.rows.length} rows in the 280 sheet.`];
+  if(F.length) out.push("Filters used: "+F.map(f=>`${T.cols[f.i]} ${f.op||"eq"} ${JSON.stringify(f.value??"")}`).join("; "));
+  if(S.length) out.push("Totals: "+S.map(i=>`${T.cols[i]} = ${fmtN(rows.reduce((t,r)=>t+(numv(r[i])||0),0))}`).join("; "));
+  if(G.length){
+    const m=new Map();
+    for(const r of rows){const k=G.map(i=>r[i]??"(blank)").join(" ¦ ");const o=m.get(k)||{n:0,s:S.map(()=>0)};o.n++;S.forEach((i,j)=>o.s[j]+=numv(r[i])||0);m.set(k,o)}
+    const list=[...m.entries()].sort((a,b)=>(b[1].s[0]??b[1].n)-(a[1].s[0]??a[1].n)).slice(0,200);
+    out.push(`\nGrouped (${m.size} groups${m.size>200?", top 200 shown":""}):`);
+    out.push(`${G.map(i=>T.cols[i]).join(" | ")} | rows${S.map(i=>" | "+T.cols[i]).join("")}`);
+    for(const [k,o] of list) out.push(`${k.replace(/ ¦ /g," | ")} | ${o.n}${o.s.map(v=>" | "+fmtN(v)).join("")}`);
+  }
+  const wantList=!G.length||(spec.list&&spec.list.length);
+  if(wantList&&rows.length){
+    let L=(spec.list||[]).map(c=>colIdx(T,c)).filter(i=>i>=0);
+    if(!L.length){L=[...new Set([...F.map(f=>f.i),...S])];for(let i=0;i<T.cols.length&&L.length<16;i++){if(!L.includes(i)&&rows.slice(0,50).some(r=>r[i]!=null))L.push(i)}}
+    let sorted=rows; const so=spec.sort&&colIdx(T,spec.sort.col);
+    if(so>=0){sorted=rows.slice().sort((a,b)=>cmp(a[so],b[so])*(spec.sort.desc?-1:1))}
+    const lim=Math.min(300,Math.max(1,+spec.limit||100));
+    out.push(`\nRows (${Math.min(lim,rows.length)} of ${rows.length} shown):`);
+    out.push(L.map(i=>T.cols[i]).join(" | "));
+    for(const r of sorted.slice(0,lim)) out.push(L.map(i=>r[i]??"").join(" | "));
+  }
+  return out.join("\n");
+}
+function parseJSON(t){try{const m=/\{[\s\S]*\}/.exec(t);return m?JSON.parse(m[0]):null}catch(e){return null}}
+async function callAI(messages,context,signal){
+  const r=await fetch(AI_URL,{method:"POST",signal,headers:{"Content-Type":"application/json"},body:JSON.stringify({messages,context})});
+  const j=await r.json().catch(()=>({})); if(!r.ok||!j.text)throw new Error(j.error||("Error "+r.status)); return j.text;
+}
+let STAGE="";
 async function ask(q){
   q=(q||"").trim(); if(!q)return; $("aiSug").innerHTML=""; $("aiIn").value=""; $("aiIn").style.height="";
   addMsg("user",q); CHAT.push({role:"user",text:q});
   if(!AI_URL){addMsg("assistant","The AI helper isn't connected yet. Add the Worker link in index.html (AI_URL) to switch it on.","err");CHAT.pop();return}
-  const w=addMsg("assistant","");w.innerHTML='<span class="typing"><span></span><span></span><span></span></span>';$("aiSend").disabled=true;
-  const t0=Date.now(), ctl=new AbortController(), kill=setTimeout(()=>ctl.abort(),90000);
-  const slow=setInterval(()=>{const s=Math.round((Date.now()-t0)/1000);if(s>=8)w.innerHTML=`<span class="typing"><span></span><span></span><span></span></span> <small style="color:var(--muted)">Thinking… ${s}s${s>=20?" · free AI is busy, still trying":""}</small>`},1000);
-  try{const r=await fetch(AI_URL,{method:"POST",signal:ctl.signal,headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:CHAT.slice(-12),context:buildContext(q+" "+CHAT.slice(-6).map(m=>m.text).join(" "))})});
-    const j=await r.json().catch(()=>({})); if(!r.ok||!j.text)throw new Error(j.error||("Error "+r.status));
-    w.innerHTML=md(j.text); addTools(w,j.text,q); CHAT.push({role:"assistant",text:j.text});
-  }catch(e){w.classList.add("err");w.innerHTML=md(e.name==="AbortError"?"No answer after 90 seconds. The free AI is very busy; please try again in a minute.":"Couldn't get an answer: "+(e.message||"network problem")+(/again/i.test(e.message||"")?"":" Please try again."));CHAT.pop()}
+  const w=addMsg("assistant","");$("aiSend").disabled=true; STAGE="Thinking";
+  const t0=Date.now(), ctl=new AbortController(), kill=setTimeout(()=>ctl.abort(),120000);
+  const paint=()=>{const s=Math.round((Date.now()-t0)/1000);w.innerHTML=`<span class="typing"><span></span><span></span><span></span></span> <small style="color:var(--muted)">${STAGE}… ${s>=3?s+"s":""}${s>=25?" · free AI is busy, still trying":""}</small>`};
+  paint(); const slow=setInterval(paint,1000);
+  try{
+    const recent=CHAT.slice(-6).map(m=>m.text).join(" ");
+    let extra="";
+    if(!/^(hi|hello|hey|thanks|thank you|ok|salam|assalamu)/i.test(q)&&q.length>3){
+      STAGE="Reading 280 sheet"; const T=await load280().catch(()=>null);
+      if(T){
+        STAGE="Planning the search";
+        const plan=`You can search the FULL 280 sheet (${T.rows.length} batch rows) of the DOC-280+217 file. Each row is one batch.
+Columns (letter + header) with sample or all values:
+${profile280(T)}
+
+Recent chat: ${CHAT.slice(-6,-1).map(m=>m.role+": "+m.text.slice(0,300)).join(" / ")||"none"}
+Question: ${q}
+
+Reply with ONLY a JSON object, no other text:
+{"need":true,"filters":[{"col":"<column name or letter>","op":"eq|ne|contains|notcontains|in|gt|gte|lt|lte|between|empty|notempty","value":"..."}],"groupBy":["<col>"],"sum":["<numeric col>"],"list":["<cols to show>"],"sort":{"col":"<col>","desc":true},"limit":100}
+Rules: use exact column names from the list; dates are YYYY-MM-DD; for buyer use "contains" (e.g. "T33", "LIDL"); use groupBy+sum for totals or breakdowns; use list for batch details. If the question does not need 280 batch data, reply {"need":false}.`;
+        const spec=parseJSON(await callAI([{role:"user",text:plan}],"(planning step: no data needed)",ctl.signal));
+        if(spec&&spec.need!==false){STAGE="Searching 280 sheet";extra=`\n\n## Result from searching the FULL 280 sheet (exact, computed in the browser — trust these numbers)\nSearch: ${JSON.stringify(spec)}\n${run280(T,spec)}`}
+      }
+    }
+    STAGE="Writing the answer";
+    const text=await callAI(CHAT.slice(-12),buildContext(q+" "+recent)+extra,ctl.signal);
+    w.innerHTML=md(text); addTools(w,text,q); CHAT.push({role:"assistant",text});
+  }catch(e){w.classList.add("err");w.innerHTML=md(e.name==="AbortError"?"No answer after 2 minutes. The free AI is very busy; please try again in a minute.":"Couldn't get an answer: "+(e.message||"network problem")+(/again/i.test(e.message||"")?"":" Please try again."));CHAT.pop()}
   clearInterval(slow); clearTimeout(kill);
   $("aiSend").disabled=false; $("aiBody").scrollTop=1e9;
 }

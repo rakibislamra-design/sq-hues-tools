@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#664356">
-<title>Master File</title>
+<title>Doc master AI</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23664356'/%3E%3Ctext x='32' y='44' font-family='Arial' font-size='34' font-weight='700' text-anchor='middle' fill='%23fff'%3EQ%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -1538,6 +1538,47 @@ async function ldPivots(zip, rd, wr, wbx, rels, pathOf, SST, batch2ld, tcol) {
 
 
 /* ------------------------------------------- daily output summary (dashboard) */
+// WIP status of every 280 batch (column BA status, BB final status) for the home page AI
+function wipSummary(d280, c280) {
+  const S = v => String(v ?? '').replace(/\s+/g, ' ').trim(), N = v => (typeof v === 'number' && isFinite(v) ? v : 0);
+  const BA = c280.out.BA || [], BB = c280.out.BB || [];
+  const status = {}, rejects = [];
+  d280.forEach((r, i) => {
+    const H = S(r[7]); if (!H || H.toLowerCase().startsWith('trial')) return;
+    const st = S(BA[i]) || 'Unknown', fin = S(BB[i]), kg = N(r[22]), buyer = S(r[4]) || 'Unknown';
+    const o = status[st] || (status[st] = { kg: 0, n: 0, by: {} });
+    o.kg += kg; o.n++; o.by[buyer] = (o.by[buyer] || 0) + kg;
+    if (st === 'Final Reject' || /reject/i.test(fin)) rejects.push([buyer, H, S(r[5]), S(r[11]), S(r[13]).slice(0, 45), Math.round(kg * 10) / 10]);
+  });
+  for (const k in status) { const o = status[k]; o.kg = Math.round(o.kg); for (const b in o.by) o.by[b] = Math.round(o.by[b]); }
+  rejects.sort((a, b) => b[5] - a[5]);
+  return { status, rejects: rejects.slice(0, 400), rejectTotal: Math.round(rejects.reduce((t, x) => t + x[5], 0)), rejectCount: rejects.length };
+}
+// Full 280 sheet as a compact table for the home page AI (all 46 report columns + key status columns)
+function table280(src, d280, c280) {
+  const cand = (src || []).slice(0, 4), score = r => (r || []).filter(v => typeof v === 'string' && v.trim()).length;
+  const hdrRow = cand.reduce((b, r) => score(r) > score(b) ? r : b, cand[3] || []) || [];
+  const clean = v => String(v ?? '').replace(/\s+/g, ' ').trim();
+  const cols = [], pick = [];
+  for (let c = 0; c < 46; c++) { const h = clean(hdrRow[c]); cols.push(cl(c + 1) + (h ? ' ' + h : '')); pick.push(['src', c]); }
+  const extra = [['BA', 'WIP Status'], ['BB', 'Final Status'], ['BQ', 'OTT flag'], ['BR', 'OTT check date'], ['CW', 'Age days'], ['CY', 'Age bucket']];
+  for (const [k, label] of extra) if (c280.out[k]) { cols.push(k + ' ' + label); pick.push(['calc', k]); }
+  const isDateCol = cols.map(h => /date|\bdt\b|OTT check/i.test(h));
+  const iso = v => new Date(Date.UTC(1899, 11, 30) + Math.round(v) * 864e5).toISOString().slice(0, 10);
+  const val = v => {
+    if (v === null || v === undefined || v === '') return null;
+    if (typeof v === 'object') return v.err ? null : String(v);
+    if (typeof v === 'number') return Number.isFinite(v) ? Math.round(v * 1000) / 1000 : null;
+    if (typeof v === 'boolean') return v;
+    const t = clean(v); return t === '' ? null : t;
+  };
+  const rows = d280.map((r, i) => pick.map(([kind, k], j) => {
+    let v = val(kind === 'src' ? r[k] : c280.out[k][i]);
+    if (isDateCol[j] && typeof v === 'number' && v > 20000 && v < 80000) v = iso(v);
+    return v;
+  }));
+  return { cols, rows };
+}
 function dailySummary(d280, grp280, dlot, today) {
   const iso = serial => new Date(Date.UTC(1899, 11, 30) + Math.floor(serial) * 864e5).toISOString().slice(0, 10);
   const minSerial = today - 120;
@@ -1836,6 +1877,8 @@ async function build(files, opts = {}) {
     m => log(92 + m.percent * 0.07, 'Compressing workbook'));
   note(100, 'Done');
   report.summary = dailySummary(d280, grp280, dlot, today);
+  try { report.wip = wipSummary(d280, c280); } catch (e) { report.warnings.push('WIP summary skipped: ' + (e.message || e)); }
+  try { report.t280 = table280(S.s280, d280, c280); } catch (e) { report.warnings.push('280 table for AI skipped: ' + (e.message || e)); }
   report.newArt = newArticles(d280, grp280, c280, today);
   let addBytes = null;
   try {
@@ -2357,11 +2400,14 @@ async function publish(){
     const blob=await gh('/git/blobs',{method:'POST',body:JSON.stringify({content:b64(bytes),encoding:'base64'})});
     const addB=addBlob?new Uint8Array(await addBlob.arrayBuffer()):null;
     const addBlobGh=addB?await gh('/git/blobs',{method:'POST',body:JSON.stringify({content:b64(addB),encoding:'base64'})}):null;
+    const t280=lastReport&&lastReport.t280;
+    const t280Gh=t280?await gh('/git/blobs',{method:'POST',body:JSON.stringify({content:JSON.stringify({cols:t280.cols,rows:t280.rows}),encoding:'utf-8'})}):null;
     const d=rdate();
-    const meta={summary:lastReport&&lastReport.summary,newArt:lastReport&&lastReport.newArt,updated:new Date().toISOString(),reportDate:`${pad(d.getDate())}-${MON[d.getMonth()]}-${String(d.getFullYear()).slice(2)}`,name:outName(),size:bytes.length,rows:lastReport&&lastReport.rows,ld:lastReport&&lastReport.ld,fixSlips:true,additional:addB&&lastReport&&lastReport.additional?{name:addName(),size:addB.length,total:lastReport.additional.total,orders:lastReport.additional.orders}:null};
+    const meta={t280:t280?{file:'280.json',rows:t280.rows.length,cols:t280.cols}:null,summary:lastReport&&lastReport.summary,newArt:lastReport&&lastReport.newArt,updated:new Date().toISOString(),reportDate:`${pad(d.getDate())}-${MON[d.getMonth()]}-${String(d.getFullYear()).slice(2)}`,name:outName(),size:bytes.length,rows:lastReport&&lastReport.rows,ld:lastReport&&lastReport.ld,wip:lastReport&&lastReport.wip,fixSlips:true,additional:addB&&lastReport&&lastReport.additional?{name:addName(),size:addB.length,total:lastReport.additional.total,orders:lastReport.additional.orders}:null};
     const tree=await gh('/git/trees',{method:'POST',body:JSON.stringify({tree:[
       {path:DATA_FILE,mode:'100644',type:'blob',sha:blob.sha},
       ...(addBlobGh?[{path:ADD_FILE,mode:'100644',type:'blob',sha:addBlobGh.sha}]:[]),
+      ...(t280Gh?[{path:'280.json',mode:'100644',type:'blob',sha:t280Gh.sha}]:[]),
       {path:'latest.json',mode:'100644',type:'blob',content:JSON.stringify(meta,null,2)}]})});
     // parentless commit + force-moved branch: the previous file is wiped, no history builds up
     const commit=await gh('/git/commits',{method:'POST',body:JSON.stringify({message:'DOC master update '+meta.updated,tree:tree.sha,parents:[]})});
