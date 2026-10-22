@@ -4,144 +4,299 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>SQ Hues Tools</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Source+Sans+3:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
 <style>
-/* Layout: purple masthead band, then a grid of tool cards grouped by status (Live first) */
 :root{
-  --q:#664356; --q80:#7C5D6D; --q60:#957B87; --q20:#D2C7CB; --q10:#E6DFE1; --q5:#EFECED;
-  --bg:#FBFAFA; --surface:#FFFFFF; --fg:#2B2027; --muted:#6E6369; --line:#DED5D8;
-  --accent:var(--q); --accent-ink:#FFFFFF; --band:#664356; --band-ink:#FFFFFF; --band-sub:#E6DFE1;
-  --live:#366083; --live-soft:#E3E8EF; --plan:#7C5D6D; --plan-soft:#EFECED; --tan:#B7A19B;
-  --f-display:"Archivo","Segoe UI",Arial,sans-serif;
-  --f-body:"Source Sans 3","Segoe UI",Calibri,Arial,sans-serif;
-  --f-mono:"JetBrains Mono",Consolas,monospace;
-  color-scheme:light;
+  --q:#664356;--q80:#7C5D6D;--q60:#957B87;--q40:#B29EA6;--q20:#D2C7CB;--q10:#E6DFE1;--q5:#EFECED;
+  --tan:#B7A19B;--tan20:#ECE6E3;--tan40:#DED5D0;--tanD:#8a6f67;
+  --blue:#366083;--blue20:#CCD0DB;--blue10:#E6E9F0;--red:#AF4F5A;--green:#4E8A63;
+  --bg:#F3F0F2;--surface:#fff;--side:#FAF8F9;--fg:#2B2027;--muted:#7A6F75;--line:#E6E0E2;
+  --f:"Segoe UI",system-ui,-apple-system,Arial,sans-serif;
 }
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#1C1619; --surface:#251D21; --fg:#EFE8EB; --muted:#B5A9AF; --line:#3D3138; --q10:#33282E; --q5:#2A2126;
-  --accent:#B29EA6; --accent-ink:#1C1619; --band:#3A2932; --band-sub:#D2C7CB;
-  --live:#A3ABBF; --live-soft:#262C36; --plan:#B29EA6; --plan-soft:#2E242A; color-scheme:dark}}
-:root[data-theme="dark"]{
-  --bg:#1C1619; --surface:#251D21; --fg:#EFE8EB; --muted:#B5A9AF; --line:#3D3138; --q10:#33282E; --q5:#2A2126;
-  --accent:#B29EA6; --accent-ink:#1C1619; --band:#3A2932; --band-sub:#D2C7CB;
-  --live:#A3ABBF; --live-soft:#262C36; --plan:#B29EA6; --plan-soft:#2E242A; color-scheme:dark}
 *{box-sizing:border-box}
-[hidden]{display:none!important}
 html,body{margin:0}
-body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.5}
-.band{background:var(--band);color:var(--band-ink);padding-inline:20px;padding-block:calc(26px + env(safe-area-inset-top,0px)) 30px}
-.band .in,.main{max-width:1100px;margin:0 auto}
-.top{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px}
-.brand{display:flex;align-items:center;gap:12px}
-.mark{width:42px;height:42px;border-radius:10px;background:var(--band-ink);color:#664356;display:grid;place-items:center;font:800 24px/1 var(--f-display)}
-.tag{font:500 11px/1 var(--f-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--band-sub)}
-h1{font:800 clamp(28px,4.4vw,44px)/1.05 var(--f-display);margin:22px 0 8px;letter-spacing:-.015em;text-wrap:balance}
-.lead{max-width:62ch;color:var(--band-sub);margin:0;font-size:16px}
-.date{font:500 13px var(--f-mono);color:var(--band-sub)}
-.main{padding-inline:20px;padding-block:26px 56px;display:grid;gap:18px}
-.bar{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;align-items:center}
-.filters{display:flex;flex-wrap:wrap;gap:8px}
-.chip{font:600 13px var(--f-body);border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:999px;padding:6px 14px;cursor:pointer}
-.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
-input[type=search]{font:inherit;color:var(--fg);background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:8px 12px;width:min(280px,100%)}
-button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(--q60);outline-offset:2px}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
-.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;display:grid;grid-template-rows:auto auto 1fr auto;gap:10px;min-width:0}
-.card.live{border-color:var(--live)}
-.head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
-.ico{width:40px;height:40px;border-radius:10px;background:var(--q10);display:grid;place-items:center;flex:none}
-.ico svg{width:22px;height:22px;fill:none;stroke:var(--accent);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-.status{font:600 11px/1 var(--f-mono);letter-spacing:.06em;text-transform:uppercase;border-radius:999px;padding:6px 10px;white-space:nowrap}
-.status.live{background:var(--live-soft);color:var(--live)}
-.status.planned{background:var(--plan-soft);color:var(--plan)}
-.status.link{background:var(--q10);color:var(--accent)}
-h2{font:700 18px/1.25 var(--f-display);margin:0}
-.desc{color:var(--muted);font-size:14px;margin:0}
-.io{display:flex;flex-wrap:wrap;gap:6px;align-content:flex-start}
-.io span{font:500 11.5px var(--f-mono);background:var(--q5);border:1px solid var(--line);border-radius:6px;padding:3px 7px;color:var(--fg)}
-.go{display:inline-flex;justify-content:center;align-items:center;gap:6px;font:600 14px var(--f-body);text-decoration:none;border-radius:9px;padding:9px 14px;background:var(--accent);color:var(--accent-ink)}
-.go.off{background:transparent;color:var(--muted);border:1px dashed var(--line);cursor:default}
-.note{font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:14px}
-code{font-family:var(--f-mono);font-size:12.5px;background:var(--q5);padding:1px 5px;border-radius:4px}
-.empty{color:var(--muted)}
+body{font-family:var(--f);background:var(--bg);color:var(--fg);min-height:100vh}
+[hidden]{display:none!important}
+a{color:inherit;text-decoration:none}
+.app{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+/* sidebar */
+.side{background:var(--side);border-right:1px solid var(--line);padding:18px 14px;display:flex;flex-direction:column;gap:4px;position:sticky;top:0;height:100vh;overflow:auto}
+.logo{display:flex;align-items:center;gap:10px;padding:2px 6px 14px}
+.logo .m{width:36px;height:36px;border-radius:10px;background:var(--q);color:#fff;display:grid;place-items:center;font:800 18px var(--f)}
+.logo b{font-size:14.5px;line-height:1.1;display:block}.logo span{font-size:10.5px;color:var(--muted)}
+.sec{font:700 10.5px var(--f);letter-spacing:.08em;color:var(--q60);margin:14px 8px 4px}
+.nav{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:9px;font-size:13.5px;color:#4a3f45;cursor:pointer;border:1px solid transparent;background:none;width:100%;font-family:inherit;text-align:left}
+.nav:hover{background:#fff;border-color:var(--line)}
+.nav svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.nav.on{background:#fff;border-color:var(--line);color:var(--q);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.dot{margin-left:auto;width:7px;height:7px;border-radius:50%;background:var(--green)}
+.grp .sub{display:none;margin:2px 0 6px 18px;border-left:1.5px solid var(--q20);padding-left:8px}
+.grp.open .sub{display:block}
+.grp.open>.nav{color:var(--q);font-weight:600}
+.chev{margin-left:auto;width:14px!important;height:14px!important;transition:transform .2s;color:var(--q60)}
+.grp.open .chev{transform:rotate(90deg)}
+.nav.s{font-size:12.8px;padding:7px 8px;flex-wrap:wrap;gap:4px 8px;align-items:flex-start}
+.nav.s .nm{flex:1;min-width:0}
+.nav.s small{flex-basis:100%;font-size:10.5px;color:var(--muted)}
+.soon-tag{margin-left:auto;font:700 9px var(--f);letter-spacing:.04em;color:var(--q60);background:var(--q5);border-radius:5px;padding:2px 6px}
+.side .foot{margin-top:auto;font-size:10.5px;color:var(--muted);padding:12px 8px 0}
+/* main */
+.main{padding:22px 28px 40px;display:flex;flex-direction:column;gap:18px;min-width:0}
+.ub{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.u{display:flex;align-items:center;gap:14px;border:1px solid var(--line);border-radius:14px;padding:12px 16px;background:linear-gradient(90deg,var(--q5),#fff);min-width:0}
+.u.t{background:linear-gradient(90deg,var(--tan20),#fff)}
+.u .ic{width:40px;height:40px;border-radius:11px;background:#fff;border:1px solid var(--line);display:grid;place-items:center;flex:none}
+.u .ic svg{width:19px;height:19px;fill:none;stroke:var(--q);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.u.t .ic svg{stroke:var(--tanD)}
+.u .tx{min-width:0}
+.u b{font-size:14px;display:block}.u small{font-size:11.8px;color:var(--muted);display:block}.u small em{font-style:normal;color:var(--q);font-weight:600}
+.dl{margin-left:auto;display:inline-flex;align-items:center;gap:7px;background:var(--q);color:#fff;border:0;border-radius:9px;padding:9px 14px;font:600 12.5px var(--f);cursor:pointer;white-space:nowrap;flex:none}
+.u.t .dl{background:var(--tanD)}
+.dl:disabled,.u.t .dl:disabled{background:var(--q40);cursor:default}
+.dl svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.clock{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;padding:4px 2px}
+.clock h1{margin:0;font-size:28px;letter-spacing:-.01em}
+.clock span{font-size:15px;color:var(--muted);font-variant-numeric:tabular-nums}
+.panel{border:1px solid var(--line);border-radius:18px;padding:18px 20px;background:var(--surface)}
+.ph{display:flex;gap:10px;align-items:flex-start;margin-bottom:14px;flex-wrap:wrap}
+.ph>svg{width:17px;height:17px;fill:none;stroke:var(--q);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none;margin-top:2px}
+.ph b{font-size:15px}.ph small{display:block;font-size:11.8px;color:var(--muted);margin-top:2px}
+.ph .r{margin-left:auto;display:flex;gap:6px;align-items:center}
+.mbtn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 10px;font:600 12px var(--f);color:var(--q);cursor:pointer}
+.mbtn:disabled{color:var(--q40);cursor:default}
+.mlab{font:600 12.5px var(--f);min-width:92px;text-align:center}
+.kp{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.k{border-radius:16px;padding:16px 18px;border:1.5px solid;display:flex;flex-direction:column;gap:7px;min-height:150px}
+.k .h{display:flex;align-items:center;gap:10px;font-size:13.5px;font-weight:600}
+.k .h span{width:32px;height:32px;border-radius:9px;background:#fff;display:grid;place-items:center}
+.k .h svg{width:16px;height:16px;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.k .h i{margin-left:auto;font-style:normal;font-size:11px;color:var(--muted);font-weight:500}
+.k .v{font-size:28px;font-weight:700;letter-spacing:-.01em;font-variant-numeric:tabular-nums}.k .v small{font-size:13px;color:var(--muted);font-weight:500}
+.k .m{display:flex;justify-content:space-between;font-size:11.8px;color:var(--muted);gap:8px}
+.bar{height:7px;border-radius:4px;background:rgba(255,255,255,.85);overflow:hidden}.bar i{display:block;height:100%;border-radius:4px;transition:width .6s}
+.k1{background:#F1ECEF;border-color:var(--q20)}.k1 .h svg{stroke:var(--q)}.k1 .bar i{background:var(--q)}
+.k2{background:var(--tan20);border-color:var(--tan40)}.k2 .h svg{stroke:var(--tanD)}.k2 .bar i{background:#9E857D}
+.k3{background:var(--blue10);border-color:var(--blue20)}.k3 .h svg{stroke:var(--blue)}.k3 .bar i{background:var(--blue)}
+.k .wait{margin:auto 0;font-size:12.5px;color:var(--muted);line-height:1.5}
+.good{color:var(--green);font-weight:600}.bad{color:var(--red);font-weight:600}.mid{color:var(--q80);font-weight:600}
+.chart{position:relative;overflow-x:auto}
+.chart svg text{font-family:var(--f)}
+.chart rect.b{cursor:pointer;transition:opacity .15s}.chart rect.b:hover{opacity:.8}
+.legend{display:flex;gap:14px;font-size:11.5px;color:var(--muted);flex-wrap:wrap}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.tip{position:fixed;z-index:20;background:#2B2027;color:#fff;border-radius:10px;padding:10px 12px;font-size:12px;line-height:1.5;pointer-events:none;box-shadow:0 10px 30px rgba(0,0,0,.2);min-width:170px}
+.tip b{font-size:13px}.tip .row{display:flex;justify-content:space-between;gap:16px}
+.toast{position:fixed;z-index:30;left:50%;bottom:28px;transform:translateX(-50%) translateY(20px);opacity:0;background:#2B2027;color:#fff;border-radius:12px;padding:12px 18px;font-size:13px;box-shadow:0 10px 30px rgba(0,0,0,.25);transition:.25s;max-width:calc(100vw - 32px);line-height:1.45}
+.toast.show{opacity:1;transform:translateX(-50%)}
+.toast b{display:block;font-size:13.5px}
+.status{color:var(--muted);font-size:13px;padding:24px 0;text-align:center}
+.menu-btn{display:none}
+@media (max-width:900px){
+  .app{grid-template-columns:1fr}
+  .side{position:fixed;inset:0 auto 0 0;width:260px;z-index:40;transform:translateX(-100%);transition:transform .2s;box-shadow:0 0 40px rgba(0,0,0,.2)}
+  .app.nav-open .side{transform:none}
+  .menu-btn{display:inline-flex;align-items:center;gap:8px;align-self:flex-start;border:1px solid var(--line);background:#fff;border-radius:9px;padding:8px 12px;font:600 13px var(--f);color:var(--q)}
+  .main{padding:16px}
+  .ub,.kp{grid-template-columns:1fr}
+  .clock h1{font-size:22px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
 <body>
-<header class="band">
-  <div class="in">
-    <div class="top">
-      <div class="brand"><div class="mark" aria-hidden="true">Q</div><div><div class="tag">SQ Biricina · Q Collection</div><div class="tag" style="margin-top:6px">Hues Excel Digitalisation</div></div></div>
-      <div class="date" id="today"></div>
-    </div>
-    <h1>SQ Hues Tools</h1>
-    <p class="lead">Browser tools for daily fabric planning work. Drop in your Excel files, run, and download the result. Files stay on your computer and are never uploaded.</p>
-  </div>
-</header>
+<div class="app" id="app">
+  <aside class="side" id="side">
+    <div class="logo"><div class="m">Q</div><div><b>SQ Hues Tools</b><span>Quality Seeks Quality</span></div></div>
 
-<main class="main">
-  <div class="bar">
-    <div class="filters" role="group" aria-label="Filter tools">
-      <button class="chip" data-f="all" aria-pressed="true">All</button>
-      <button class="chip" data-f="live" aria-pressed="false">Live</button>
-      <button class="chip" data-f="planned" aria-pressed="false">Coming next</button>
+    <a class="nav on" href="index.html"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9H3z"/><path d="M9 20v-6h6v6"/></svg>Home</a>
+
+    <div class="sec">DAILY UPDATE</div>
+    <div id="navDaily"></div>
+
+    <div class="sec">TOOLS</div>
+    <div id="navTools"></div>
+
+    <div class="foot">Data refreshes on every update · Asia/Dhaka</div>
+  </aside>
+
+  <main class="main">
+    <button class="menu-btn" id="menuBtn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>Menu</button>
+
+    <div class="ub">
+      <div class="u">
+        <span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 9v11"/></svg></span>
+        <div class="tx"><b>OTT Update</b><small id="ottStamp">Loading…</small></div>
+        <button class="dl" id="ottDl" disabled><svg viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Fabric Plan file</button>
+      </div>
+      <div class="u t">
+        <span class="ic"><svg viewBox="0 0 24 24"><path d="M6 4v5a4 4 0 0 0 4 4h4a4 4 0 0 1 4 4v3"/><path d="M15 17l3 3 3-3"/></svg></span>
+        <div class="tx"><b>280+217 Update</b><small id="docStamp">Loading…</small></div>
+        <button class="dl" id="docDl" disabled><svg viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>DOC master file</button>
+      </div>
     </div>
-    <input type="search" id="q" placeholder="Search tools" aria-label="Search tools">
-  </div>
-  <div class="grid" id="grid"></div>
-  <p class="empty" id="none" hidden>No tools match.</p>
-  <p class="note">To add a tool: upload its page to this repository, then edit the <code>TOOLS</code> list at the bottom of <code>index.html</code> (set <code>status: "live"</code> and its <code>link</code>). Quality Seeks Quality · #SustainabilityAtQ</p>
-</main>
+
+    <div class="clock"><h1 id="cDate">&nbsp;</h1><span id="cTime"></span></div>
+
+    <section class="panel">
+      <div class="ph"><svg viewBox="0 0 24 24"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg>
+        <div><b id="outTitle">Daily output</b><small>Knitting, dyeing and RFD for the last report day</small></div></div>
+      <div class="kp">
+        <div class="k k1"><div class="h"><span><svg viewBox="0 0 24 24"><path d="M4 18c4-8 12-8 16 0"/><path d="M4 12c4-8 12-8 16 0"/></svg></span>Knit output<i id="knitD"></i></div><div id="knitB"><p class="wait">Loading…</p></div></div>
+        <div class="k k2"><div class="h"><span><svg viewBox="0 0 24 24"><path d="M12 3c3 4 6 7 6 11a6 6 0 0 1-12 0c0-4 3-7 6-11z"/></svg></span>Dye output<i id="dyeD"></i></div><div id="dyeB"><p class="wait">Loading…</p></div></div>
+        <div class="k k3"><div class="h"><span><svg viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></svg></span>RFD output<i id="rfdD"></i></div><div id="rfdB"><p class="wait">Loading…</p></div></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="ph"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
+        <div><b>Date-wise OTT %</b><small id="chNote">RFD qty ÷ plan qty for each plan date · hover a bar for details</small></div>
+        <div class="r"><button class="mbtn" id="mPrev" aria-label="Previous month">‹</button><span class="mlab" id="mLab"></span><button class="mbtn" id="mNext" aria-label="Next month">›</button></div>
+      </div>
+      <div class="legend"><span><i style="background:var(--q)"></i>95% and above</span><span><i style="background:var(--q40)"></i>70–94%</span><span><i style="background:var(--red)"></i>below 70%</span><span><i style="background:none;border-top:2px dashed var(--blue);border-radius:0;height:0;vertical-align:3px"></i>Target 95%</span></div>
+      <div class="chart" id="chart"><p class="status">Loading…</p></div>
+    </section>
+  </main>
+</div>
+<div class="tip" id="tip" hidden></div>
+<div class="toast" id="toast"></div>
 
 <script>
-/* ===== Edit this list to add or update tools ===== */
-const TOOLS = [
-  { name:"OTT Fabric Plan Updater", status:"live", link:"ott-updater.html", icon:"table",
-    desc:"Updates Fab Plan-Final from DOC-280+217: activates AM:AX, sets M = L where Taps is done, allocates Psbl to RFD. Gives the dated SQ file, a log, a buyer chart and run history.",
-    io:["Fabric Plan .xlsx","DOC -280+217 .xlsx","→ OTT + log"] },
-  { name:"280+217 DOC master update", status:"live", link:"doc-master.html", icon:"merge",
-    desc:"Builds the DOC -280+217 master workbook from the 280 and 217 files, including the lab dip New / Repeat update.",
-    io:["280","217","→ DOC master"] },
-  { name:"Taps PO match", status:"planned", link:"", icon:"link",
-    desc:"Adds Taps PO and Taps Color columns to the Hues line-plan Split file from sheet 217 of DOC-217+280, in SQ lite format.",
-    io:["Line-plan Split","DOC sheet 217","→ Split + Taps cols"] },
-  { name:"RFD comment split", status:"planned", link:"", icon:"split",
-    desc:"Splits 'Agreed RFD Plan' comments date-wise by PO, Article and Color using Required Qty, and adds a GSM column.",
-    io:["Hues feedback file","→ date-wise RFD"] },
-  { name:"Lab dip New / Repeat", status:"planned", link:"", icon:"flask",
-    desc:"Marks lab dips New or Repeat in the DOC master (280 / Dye Q / DQ P) and adds the field to the DQ P pivot as values.",
-    io:["DOC master","→ New / Repeat"] }
+/* ============ EDIT HERE: menu ============
+   status "live" = opens the page; "soon" = shows "will be live soon". */
+const DAILY = [
+  { name:"OTT Update",     link:"ott-updater.html", status:"live", icon:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 9v11"/>' },
+  { name:"280+217 Update", link:"doc-master.html",  status:"live", icon:'<path d="M6 4v5a4 4 0 0 0 4 4h4a4 4 0 0 1 4 4v3"/><path d="M15 17l3 3 3-3"/>' }
 ];
-/* ================================================= */
+const TOOLS = [
+  { group:"Monthly Line Plan", icon:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>', items:[
+    { name:"Batch wise file", sub:"Batch Allocation", link:"", status:"soon" },
+    { name:"OTT Split / GSM identification", link:"", status:"soon" },
+    { name:"PO & Color identification", link:"", status:"soon" }
+  ]}
+];
+/* ========================================= */
 
-const ICONS={
-  table:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M3 14h18M9 9v11"/>',
-  merge:'<path d="M6 4v5a4 4 0 0 0 4 4h4a4 4 0 0 1 4 4v3M18 4v5a4 4 0 0 1-4 4"/><path d="M15 17l3 3 3-3"/>',
-  link:'<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
-  split:'<path d="M4 6h16M4 12h10M4 18h6M17 14l3 3-3 3M14 17h6"/>',
-  flask:'<path d="M9 3h6M10 3v6L5 19a1.5 1.5 0 0 0 1.3 2h11.4A1.5 1.5 0 0 0 19 19l-5-10V3"/><path d="M7.5 15h9"/>'
-};
-const LABEL={live:"Live",planned:"Coming next",link:"Add link"};
-let filter="all";
+const REPO={owner:"rakibislamra-design",repo:"sq-hues-tools"};
+const SITE=(()=>{const h=location.hostname;if(!/\.github\.io$/i.test(h))return REPO;const owner=h.split(".")[0];const seg=location.pathname.split("/").filter(Boolean);const repo=seg.length&&!/\.html?$/i.test(seg[0])?seg[0]:`${owner}.github.io`;return{owner,repo}})();
+const raw=f=>`https://raw.githubusercontent.com/${SITE.owner}/${SITE.repo}/data/${f}`;
+const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-function draw(){
-  const q=document.getElementById("q").value.toLowerCase().trim();
-  const order={live:0,link:1,planned:2};
-  const list=TOOLS.filter(t=>(filter==="all"||(filter==="live"?t.status==="live":t.status!=="live"))&&(!q||(t.name+" "+t.desc).toLowerCase().includes(q))).sort((a,b)=>order[a.status]-order[b.status]);
-  document.getElementById("none").hidden=list.length>0;
-  document.getElementById("grid").innerHTML=list.map(t=>{
-    const live=t.status==="live"&&t.link;
-    return `<article class="card ${live?"live":""}">
-      <div class="head"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[t.icon]||ICONS.table}</svg></div><span class="status ${t.status}">${LABEL[t.status]||t.status}</span></div>
-      <h2>${esc(t.name)}</h2>
-      <div style="display:grid;gap:10px;align-content:start"><p class="desc">${esc(t.desc)}</p><div class="io">${(t.io||[]).map(x=>`<span>${esc(x)}</span>`).join("")}</div></div>
-      ${live?`<a class="go" href="${esc(t.link)}">Open tool →</a>`:t.link?`<a class="go" href="${esc(t.link)}" target="_blank" rel="noopener">Open →</a>`:`<span class="go off">${t.status==="link"?"Link not added yet":"Not built yet"}</span>`}
-    </article>`}).join("");
+const MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const MONF=["January","February","March","April","May","June","July","August","September","October","November","December"];
+const fmt=n=>Math.round(n).toLocaleString("en-US");
+const sDate=s=>new Date(Date.UTC(1899,11,30)+s*864e5);
+const dTxt=d=>`${String(d.getUTCDate()).padStart(2,"0")}-${MON[d.getUTCMonth()]}-${String(d.getUTCFullYear()).slice(2)}`;
+const toSerial=iso=>{const [y,m,d]=iso.split("-").map(Number);return Math.round((Date.UTC(y,m-1,d)-Date.UTC(1899,11,30))/864e5)};
+const stamp=iso=>{const d=new Date(iso);let h=d.getHours(),ap=h>=12?"PM":"AM";h=h%12||12;return `${String(d.getDate()).padStart(2,"0")}-${MON[d.getMonth()]}-${String(d.getFullYear()).slice(2)} · ${h}:${String(d.getMinutes()).padStart(2,"0")} ${ap}`};
+const ICON=p=>`<svg viewBox="0 0 24 24">${p}</svg>`;
+
+/* ---- menu ---- */
+function toast(t,b){const el=$("toast");el.innerHTML=`<b>${esc(t)}</b>${esc(b)}`;el.classList.add("show");clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove("show"),3200)}
+function go(it){ if(it.status==="live"&&it.link){location.href=it.link;return} toast(`${it.name}`,"This tool will be live soon. OTT Update and 280+217 Update are live now."); }
+function drawNav(){
+  $("navDaily").innerHTML=DAILY.map((it,i)=>`<button class="nav" data-d="${i}">${ICON(it.icon)}${esc(it.name)}${it.status==="live"?'<span class="dot" title="Live"></span>':'<span class="soon-tag">SOON</span>'}</button>`).join("");
+  $("navTools").innerHTML=TOOLS.map((g,gi)=>`<div class="grp"><button class="nav" data-g="${gi}">${ICON(g.icon)}${esc(g.group)}<svg class="chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button><div class="sub">${g.items.map((it,ii)=>`<button class="nav s" data-t="${gi}.${ii}"><span class="nm">${esc(it.name)}</span>${it.status==="live"?'<span class="dot"></span>':'<span class="soon-tag">SOON</span>'}${it.sub?`<small>${esc(it.sub)}</small>`:""}</button>`).join("")}</div></div>`).join("");
+  document.querySelectorAll("[data-d]").forEach(b=>b.onclick=()=>go(DAILY[b.dataset.d]));
+  document.querySelectorAll("[data-t]").forEach(b=>b.onclick=()=>{const [g,i]=b.dataset.t.split(".").map(Number);go(TOOLS[g].items[i])});
+  document.querySelectorAll("[data-g]").forEach(b=>b.onclick=()=>b.parentElement.classList.toggle("open"));
 }
-document.querySelectorAll(".chip").forEach(b=>b.addEventListener("click",()=>{filter=b.dataset.f;document.querySelectorAll(".chip").forEach(x=>x.setAttribute("aria-pressed",x===b?"true":"false"));draw()}));
-document.getElementById("q").addEventListener("input",draw);
-document.getElementById("today").textContent=new Date().toLocaleDateString("en-GB",{weekday:"short",day:"2-digit",month:"short",year:"numeric"});
-draw();
+$("menuBtn").onclick=e=>{e.stopPropagation();$("app").classList.toggle("nav-open")};
+document.addEventListener("click",e=>{if(!$("side").contains(e.target))$("app").classList.remove("nav-open")});
+
+/* ---- clock ---- */
+const DAYS=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+function tick(){const d=new Date();$("cDate").textContent=`${DAYS[d.getDay()]}, ${d.getDate()} ${MONF[d.getMonth()]} ${d.getFullYear()}`;let h=d.getHours(),ap=h>=12?"PM":"AM";h=h%12||12;$("cTime").textContent=`${h}:${String(d.getMinutes()).padStart(2,"0")}:${String(d.getSeconds()).padStart(2,"0")} ${ap}`}
+tick();setInterval(tick,1000);
+
+/* ---- downloads ---- */
+async function download(path,name,btn){
+  const old=btn.innerHTML;btn.disabled=true;btn.lastChild.textContent=" Downloading…";
+  try{const r=await fetch(raw(path)+"?ts="+Date.now());if(!r.ok)throw 0;const b=await r.blob();const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000)}
+  catch(e){toast("Download failed","Could not reach the saved file. Check your connection and try again.")}
+  btn.innerHTML=old;btn.disabled=false;
+}
+
+/* ---- KPI cards ---- */
+function kpi(el,dEl,o){
+  if(!o){$(el).innerHTML=`<p class="wait">No data on the site yet. It appears here after the next 280+217 Update saves its daily output.</p>`;return}
+  const p=o.plan>0?o.act/o.plan*100:null, cls=p==null?"":p>=95?"good":p>=70?"mid":"bad";
+  $(dEl).textContent=o.label||"";
+  $(el).innerHTML=`<div class="v">${fmt(o.act)} <small>kg</small></div>
+    ${p!=null?`<div class="bar"><i style="width:${Math.min(100,p).toFixed(1)}%"></i></div>`:""}
+    <div class="m"><span>${o.plan!=null?`Plan ${fmt(o.plan)} kg`:esc(o.note||"")}</span>${p!=null?`<span class="${cls}">${p.toFixed(1)}%</span>`:""}</div>
+    ${o.foot?`<div class="m"><span>${esc(o.foot)}</span></div>`:""}`;
+}
+
+/* ---- chart ---- */
+let DAYMAP=null, MONTHS=[], mIdx=0, REPORT=null;
+function buildDays(j){
+  const by=new Map();
+  for(const r of j.rows){const s=r[1]; if(typeof s!=="number")continue; const b=j.buyers[r[0]];
+    if(!by.has(s))by.set(s,{s,d:0,a:0,bu:new Map()}); const o=by.get(s); const a=(r[4]||0)+(r[5]||0); o.d+=r[3]||0;o.a+=a;
+    if(!o.bu.has(b))o.bu.set(b,{d:0,a:0}); const q=o.bu.get(b); q.d+=r[3]||0; q.a+=a;}
+  return by;
+}
+function drawChart(){
+  const [y,m]=MONTHS[mIdx]; $("mLab").textContent=`${MON[m]} ${y}`;
+  $("mPrev").disabled=mIdx===0; $("mNext").disabled=mIdx===MONTHS.length-1;
+  const days=[...DAYMAP.values()].filter(o=>{const d=sDate(o.s);return d.getUTCFullYear()===y&&d.getUTCMonth()===m&&o.d>0&&o.s<REPORT}).sort((a,b)=>a.s-b.s);
+  if(!days.length){$("chart").innerHTML='<p class="status">No plan dates in this month up to the report date.</p>';$("chNote").textContent="";return}
+  const n=days.length, colW=Math.max(30,Math.min(56,Math.floor(1000/n))), left=44, top=26, ph=200, W=left+n*colW+10, H=top+ph+34;
+  const yMax=Math.max(100,Math.ceil(Math.max(...days.map(o=>o.a/o.d*100))/25)*25), Y=v=>top+ph-Math.min(v,yMax)/yMax*ph;
+  let g=`<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" style="max-width:none" role="img" aria-label="Date-wise OTT percent">`;
+  for(let v=0;v<=yMax;v+=25) g+=`<line x1="${left}" x2="${W}" y1="${Y(v)}" y2="${Y(v)}" stroke="#EEE9EB"/><text x="${left-6}" y="${Y(v)+4}" text-anchor="end" font-size="10.5" fill="#7A6F75">${v}%</text>`;
+  g+=`<line x1="${left}" x2="${W}" y1="${Y(95)}" y2="${Y(95)}" stroke="#366083" stroke-dasharray="5 4"/>`;
+  days.forEach((o,i)=>{const p=o.a/o.d*100, bw=colW*.62, cx=left+i*colW+colW/2, h=Math.max(3,top+ph-Y(p)), c=p>=95?"#664356":p>=70?"#B29EA6":"#AF4F5A", d=sDate(o.s);
+    g+=`<rect class="b" data-s="${o.s}" x="${(cx-bw/2).toFixed(1)}" y="${(top+ph-h).toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="4" fill="${c}"/>`;
+    g+=`<text x="${cx}" y="${top+ph-h-6}" text-anchor="middle" font-size="10.5" font-weight="600" fill="${p<70?"#AF4F5A":"#4a3f45"}">${Math.round(p)}%</text>`;
+    g+=`<text x="${cx}" y="${top+ph+16}" text-anchor="middle" font-size="10.5" fill="#7A6F75">${d.getUTCDate()}</text>`;});
+  $("chart").innerHTML=g+"</svg>";
+  const T=days.reduce((t,o)=>({d:t.d+o.d,a:t.a+o.a}),{d:0,a:0});
+  $("chNote").innerHTML=`${MONF[m]} up to ${dTxt(sDate(REPORT-1))} · month OTT <b>${(T.a/T.d*100).toFixed(1)}%</b> · RFD ${fmt(T.a)} of ${fmt(T.d)} kg · hover a bar for buyers`;
+  $("chart").querySelectorAll("rect.b").forEach(r=>{r.onmousemove=e=>showTip(e,+r.dataset.s);r.onmouseleave=()=>$("tip").hidden=true;r.onclick=e=>showTip(e,+r.dataset.s)});
+}
+function showTip(e,s){
+  const o=DAYMAP.get(s), t=$("tip");
+  const list=[...o.bu.entries()].filter(([,q])=>q.d>0).sort((a,b)=>b[1].d-a[1].d).slice(0,8);
+  t.innerHTML=`<b>${dTxt(sDate(s))} · ${(o.a/o.d*100).toFixed(1)}%</b><div class="row"><span>Plan</span><span>${fmt(o.d)} kg</span></div><div class="row"><span>RFD</span><span>${fmt(o.a)} kg</span></div><hr style="border:0;border-top:1px solid #4a3f45;margin:6px 0">`+
+    list.map(([b,q])=>`<div class="row"><span>${esc(b)}</span><span>${Math.round(q.a/q.d*100)}%</span></div>`).join("");
+  t.hidden=false; const w=t.offsetWidth,h=t.offsetHeight; let x=e.clientX+14,y=e.clientY-h-10; if(x+w>innerWidth-8)x=e.clientX-w-14; if(y<8)y=e.clientY+14; t.style.left=x+"px"; t.style.top=y+"px";
+}
+$("mPrev").onclick=()=>{if(mIdx>0){mIdx--;drawChart()}};
+$("mNext").onclick=()=>{if(mIdx<MONTHS.length-1){mIdx++;drawChart()}};
+
+/* ---- load ---- */
+async function getJSON(f){try{const r=await fetch(raw(f)+"?ts="+Date.now(),{cache:"no-store"});if(!r.ok)return null;return await r.json()}catch(e){return null}}
+async function load(){
+  const [j,doc]=await Promise.all([getJSON("dashboard.json"),getJSON("doc.json")]);
+  /* OTT */
+  if(j&&j.rows){
+    $("ottStamp").innerHTML=`Last update <em>${stamp(j.at)}</em> · report ${dTxt(sDate(toSerial(j.report)))}`;
+    if(j.ottPath){$("ottDl").disabled=false;$("ottDl").onclick=()=>download(j.ottPath,j.ott||"Fabric_Plan.xlsx",$("ottDl"))}
+    REPORT=toSerial(j.report); DAYMAP=buildDays(j);
+    const ms=new Set();for(const o of DAYMAP.values()){if(o.d>0&&o.s<REPORT){const d=sDate(o.s);ms.add(d.getUTCFullYear()*12+d.getUTCMonth())}}
+    MONTHS=[...ms].sort((a,b)=>a-b).map(v=>[Math.floor(v/12),v%12]);
+    const rd=sDate(REPORT-1), cur=rd.getUTCFullYear()*12+rd.getUTCMonth(); mIdx=Math.max(0,MONTHS.findIndex(([y,m])=>y*12+m===cur)); if(mIdx<0)mIdx=MONTHS.length-1;
+    if(MONTHS.length)drawChart(); else $("chart").innerHTML='<p class="status">No plan dates yet.</p>';
+    /* RFD output vs plan for the day before the report date */
+    const y=DAYMAP.get(REPORT-1);
+    $("outTitle").textContent=`Daily output · ${dTxt(sDate(REPORT-1))}`;
+    kpi("rfdB","rfdD",y?{act:y.a,plan:y.d,label:dTxt(sDate(REPORT-1)),foot:"RFD against that day's plan (OTT file)"}:{act:0,plan:0,label:dTxt(sDate(REPORT-1))});
+  } else {
+    $("ottStamp").textContent="No update saved to the site yet";
+    $("chart").innerHTML='<p class="status">Run OTT Update once to see the chart.</p>';
+    kpi("rfdB","rfdD",null);
+  }
+  /* 280+217: knit + dye come from doc.json when the DOC tool saves it */
+  if(doc){
+    $("docStamp").innerHTML=`Last update <em>${stamp(doc.at)}</em>${doc.report?` · report ${esc(doc.report)}`:""}`;
+    if(doc.filePath){$("docDl").disabled=false;$("docDl").onclick=()=>download(doc.filePath,doc.file||"DOC -280+217.xlsx",$("docDl"))}
+    kpi("knitB","knitD",doc.knit||null); kpi("dyeB","dyeD",doc.dye||null);
+  } else {
+    $("docStamp").innerHTML=j&&j.doc?`Last file used by OTT: <em>${esc(j.doc)}</em>`:"Not saved to the site yet"; $("docDl").title="Available once the 280+217 Update saves its file to the site";
+    kpi("knitB","knitD",null); kpi("dyeB","dyeD",null);
+  }
+}
+drawNav(); load(); setInterval(load,5*60*1000);
 </script>
 </body>
 </html>
