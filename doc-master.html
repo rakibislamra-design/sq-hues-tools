@@ -2021,13 +2021,14 @@ async function pasteDyeQFormulaCols(zip, pathOf, SST, today, report) {
   report.dyeqValueCols = { cols: [...tmpl.keys()].sort((a, b) => a - b).map(cl), values: done, keptAsFormula: kept, notes: [...why].slice(0, 6) };
 }
 
-/* ---- MC No: machine size as a number (750, 500 …); 'Need Batch Plan' → the closest machine ---- */
+/* ---- MC No: machine size as a number (750, 500 …); 'Need Batch Plan' → the next bigger machine ---- */
 const MC_CAPS = [10, 30, 60, 120, 200, 250, 500, 750];
 function mcNo(q, label) {
   const m = /^(\d+)\s*Kg/i.exec(String(label || '')); if (m) return +m[1];
   q = typeof q === 'number' ? q : parseFloat(q); if (!(q > 0)) return null;
-  let best = MC_CAPS[0]; for (const c of MC_CAPS) if (Math.abs(c - q) < Math.abs(best - q) || (Math.abs(c - q) === Math.abs(best - q) && c > best)) best = c;
-  return best;
+  // go for the bigger machine: the smallest machine that holds the qty (over 750 → 750)
+  for (const c of MC_CAPS) if (c >= q) return c;
+  return MC_CAPS[MC_CAPS.length - 1];
 }
 // insert (or refresh) one column on a sheet: cells, cols, filter, CF ranges, dimension, + workbook names / pivot sources
 async function putColumn(zip, pathOf, sheetName, INS, header, valueOf, styleCols) {
