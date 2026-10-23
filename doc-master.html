@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#664356">
-<title>Doc master AI</title>
+<title>Master File</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23664356'/%3E%3Ctext x='32' y='44' font-family='Arial' font-size='34' font-weight='700' text-anchor='middle' fill='%23fff'%3EQ%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -1538,47 +1538,6 @@ async function ldPivots(zip, rd, wr, wbx, rels, pathOf, SST, batch2ld, tcol) {
 
 
 /* ------------------------------------------- daily output summary (dashboard) */
-// WIP status of every 280 batch (column BA status, BB final status) for the home page AI
-function wipSummary(d280, c280) {
-  const S = v => String(v ?? '').replace(/\s+/g, ' ').trim(), N = v => (typeof v === 'number' && isFinite(v) ? v : 0);
-  const BA = c280.out.BA || [], BB = c280.out.BB || [];
-  const status = {}, rejects = [];
-  d280.forEach((r, i) => {
-    const H = S(r[7]); if (!H || H.toLowerCase().startsWith('trial')) return;
-    const st = S(BA[i]) || 'Unknown', fin = S(BB[i]), kg = N(r[22]), buyer = S(r[4]) || 'Unknown';
-    const o = status[st] || (status[st] = { kg: 0, n: 0, by: {} });
-    o.kg += kg; o.n++; o.by[buyer] = (o.by[buyer] || 0) + kg;
-    if (st === 'Final Reject' || /reject/i.test(fin)) rejects.push([buyer, H, S(r[5]), S(r[11]), S(r[13]).slice(0, 45), Math.round(kg * 10) / 10]);
-  });
-  for (const k in status) { const o = status[k]; o.kg = Math.round(o.kg); for (const b in o.by) o.by[b] = Math.round(o.by[b]); }
-  rejects.sort((a, b) => b[5] - a[5]);
-  return { status, rejects: rejects.slice(0, 400), rejectTotal: Math.round(rejects.reduce((t, x) => t + x[5], 0)), rejectCount: rejects.length };
-}
-// Full 280 sheet as a compact table for the home page AI (all 46 report columns + key status columns)
-function table280(src, d280, c280) {
-  const cand = (src || []).slice(0, 4), score = r => (r || []).filter(v => typeof v === 'string' && v.trim()).length;
-  const hdrRow = cand.reduce((b, r) => score(r) > score(b) ? r : b, cand[3] || []) || [];
-  const clean = v => String(v ?? '').replace(/\s+/g, ' ').trim();
-  const cols = [], pick = [];
-  for (let c = 0; c < 46; c++) { const h = clean(hdrRow[c]); cols.push(cl(c + 1) + (h ? ' ' + h : '')); pick.push(['src', c]); }
-  const extra = [['BA', 'WIP Status'], ['BB', 'Final Status'], ['BQ', 'OTT flag'], ['BR', 'OTT check date'], ['CW', 'Age days'], ['CY', 'Age bucket']];
-  for (const [k, label] of extra) if (c280.out[k]) { cols.push(k + ' ' + label); pick.push(['calc', k]); }
-  const isDateCol = cols.map(h => /date|\bdt\b|OTT check/i.test(h));
-  const iso = v => new Date(Date.UTC(1899, 11, 30) + Math.round(v) * 864e5).toISOString().slice(0, 10);
-  const val = v => {
-    if (v === null || v === undefined || v === '') return null;
-    if (typeof v === 'object') return v.err ? null : String(v);
-    if (typeof v === 'number') return Number.isFinite(v) ? Math.round(v * 1000) / 1000 : null;
-    if (typeof v === 'boolean') return v;
-    const t = clean(v); return t === '' ? null : t;
-  };
-  const rows = d280.map((r, i) => pick.map(([kind, k], j) => {
-    let v = val(kind === 'src' ? r[k] : c280.out[k][i]);
-    if (isDateCol[j] && typeof v === 'number' && v > 20000 && v < 80000) v = iso(v);
-    return v;
-  }));
-  return { cols, rows };
-}
 function dailySummary(d280, grp280, dlot, today) {
   const iso = serial => new Date(Date.UTC(1899, 11, 30) + Math.floor(serial) * 864e5).toISOString().slice(0, 10);
   const minSerial = today - 120;
@@ -1699,14 +1658,17 @@ async function build(files, opts = {}) {
   note(18, 'Reading current 280 sheet (280 (2) copy for comments / urgent / remarks)');
   const sh280 = new Sheet(await rd(pathOf['280'])); await tick();
   // Body Type (Dye Q Combo Planner) sits at DB once added; the old DB 'Extra' column is then at DC
-  const bodyTypeAtDB = String(cellValue(sh280.get(2, ci('DB')), SST) || '').trim() === 'Body Type';
-  const colOf = c => (bodyTypeAtDB && c === 'DB') ? ci('DC') : ci(c);
+  const hdr280 = c => String(cellValue(sh280.get(2, ci(c)), SST) || '').trim();
+  const bodyTypeAtDB = hdr280('DB') === 'Body Type';
+  // 'Extra' (old DB) moves right when Body Type (DB) and MC No (DC) are in front of it
+  const extraCol = !bodyTypeAtDB ? ci('DB') : (hdr280('DC') === 'MC No' ? ci('DD') : ci('DC'));
+  const colOf = c => c === 'DB' ? extraCol : ci(c);
   const oldCols = {}; const want = ['H', 'R', 'BB', 'BQ', 'BT', 'CB', 'CN', 'CR', 'CS', 'CT', 'CV', 'DB'];
   want.forEach(c => oldCols[c] = []);
   const oldRows = [...sh280.rows.keys()].sort((a, b) => a - b);
   for (const r of oldRows) for (const c of want) oldCols[c].push(cellValue(sh280.get(r, colOf(c)), SST));
   const old = { H: oldCols.H, cols: oldCols };
-  const tmpl = []; for (let c = ci('AU'); c <= ci(bodyTypeAtDB ? 'DC' : 'DB'); c++) { if (bodyTypeAtDB && c === ci('DB')) continue; const v = cellValue(sh280.get(1, c), SST); if (typeof v === 'string' && /^qq/i.test(v)) tmpl.push(c); }
+  const tmpl = []; for (const c of [...Array(ci('DA') - ci('AU') + 1).keys()].map(k => ci('AU') + k).concat([extraCol])) { const v = cellValue(sh280.get(1, c), SST); if (typeof v === 'string' && /^qq/i.test(v)) tmpl.push(c); }
   if (tmpl.length !== EXPECT_280_TEMPLATES) report.warnings.push(`280 row 1 has ${tmpl.length} qq templates in AU:DB (expected 60) — check the calc columns.`);
 
   note(24, 'Calculating 280 AU:DB (activated row-1 formulas → values)');
@@ -1727,8 +1689,8 @@ async function build(files, opts = {}) {
   note(54, 'Writing 280 (A:AT data, AU:DB values, row height 15)');
   oldLast = lastDataRow(sh280, 1, 46, 3); nl = paste(sh280, d280, 3, 1, 46, oldLast);
   for (let r = 3; r <= nl; r++) { const v = sh280.rows.get(r); v[0] = v[0].replace(/\s(ht|customHeight)="[^"]*"/g, '') + ' ht="15" customHeight="1"'; }
-  if (!bodyTypeAtDB) writeValues(sh280, ci('AU'), ci('DB'), 3, c280.vals, oldLast);
-  else { writeValues(sh280, ci('AU'), ci('DA'), 3, c280.vals.map(v => v.slice(0, 59)), oldLast); writeValues(sh280, ci('DC'), ci('DC'), 3, c280.vals.map(v => [v[59]]), oldLast); }
+  if (extraCol === ci('DB')) writeValues(sh280, ci('AU'), ci('DB'), 3, c280.vals, oldLast);
+  else { writeValues(sh280, ci('AU'), ci('DA'), 3, c280.vals.map(v => v.slice(0, 59)), oldLast); writeValues(sh280, extraCol, extraCol, 3, c280.vals.map(v => [v[59]]), oldLast); }
   filterRefs['280'] = resetFilter(sh280, nl); trimmed['280'] = trimTail(sh280, nl); slimDuplicateCF(sh280); setDimension(sh280); wr(pathOf['280'], sh280.serialize()); await tick();
 
   note(66, 'Writing Dye Q');
@@ -1839,7 +1801,7 @@ async function build(files, opts = {}) {
   report.ldPivot = await ldPivots(zip, rd, wr, wbx, rels, pathOf, SST, ld.batch2ld, cl(ldCol));
   // ---- Dye Q Combo Planner: 280 DB Body Type (B/G); Dye Q AM:AP Body Type, Combo Batch, Combo Qty, Batch Plan MC; Dye Q sorted by Combo Qty
   note(88, 'Body / Gusset combos (Dye Q Combo Planner)');
-  try { const dq = await root.DyeQEngine.runZip(zip, () => {}); report.combo = dq.summary; await pasteDyeQFormulaCols(zip, pathOf, SST, today, report); await sqStripe(zip, pathOf['Dye Q']); }
+  try { const dq = await root.DyeQEngine.runZip(zip, () => {}); report.combo = dq.summary; await addMcNo(zip, pathOf, SST, report); await pasteDyeQFormulaCols(zip, pathOf, SST, today, report); await sqStripe(zip, pathOf['Dye Q']); }
   catch (e) { report.warnings.push('Body/Gusset combo step failed: ' + (e.message || e)); }
   // ---- pivots: keep all, refresh on open
   let nPc = 0, nPt = 0, nRec = 0, recBytes = 0;
@@ -1877,8 +1839,6 @@ async function build(files, opts = {}) {
     m => log(92 + m.percent * 0.07, 'Compressing workbook'));
   note(100, 'Done');
   report.summary = dailySummary(d280, grp280, dlot, today);
-  try { report.wip = wipSummary(d280, c280); } catch (e) { report.warnings.push('WIP summary skipped: ' + (e.message || e)); }
-  try { report.t280 = table280(S.s280, d280, c280); } catch (e) { report.warnings.push('280 table for AI skipped: ' + (e.message || e)); }
   report.newArt = newArticles(d280, grp280, c280, today);
   let addBytes = null;
   try {
@@ -2059,6 +2019,84 @@ async function pasteDyeQFormulaCols(zip, pathOf, SST, today, report) {
   }
   zip.file(pathOf['Dye Q'], dq.serialize());
   report.dyeqValueCols = { cols: [...tmpl.keys()].sort((a, b) => a - b).map(cl), values: done, keptAsFormula: kept, notes: [...why].slice(0, 6) };
+}
+
+/* ---- MC No: machine size as a number (750, 500 …); 'Need Batch Plan' → the closest machine ---- */
+const MC_CAPS = [10, 30, 60, 120, 200, 250, 500, 750];
+function mcNo(q, label) {
+  const m = /^(\d+)\s*Kg/i.exec(String(label || '')); if (m) return +m[1];
+  q = typeof q === 'number' ? q : parseFloat(q); if (!(q > 0)) return null;
+  let best = MC_CAPS[0]; for (const c of MC_CAPS) if (Math.abs(c - q) < Math.abs(best - q) || (Math.abs(c - q) === Math.abs(best - q) && c > best)) best = c;
+  return best;
+}
+// insert (or refresh) one column on a sheet: cells, cols, filter, CF ranges, dimension, + workbook names / pivot sources
+async function putColumn(zip, pathOf, sheetName, INS, header, valueOf, styleCols) {
+  const path = pathOf[sheetName]; let x = await zip.file(path).async('string');
+  const a = x.indexOf('<sheetData'), b = x.indexOf('</sheetData>'); const a2 = x.indexOf('>', a) + 1;
+  let head = x.slice(0, a2), body = x.slice(a2, b), tail = x.slice(b);
+  const L = cl(INS), hdrM = new RegExp('<c r="' + L + '2"[^>]*?(?:/>|>([\\s\\S]*?)</c>)').exec(body);
+  const hv = hdrM ? (/<t[^>]*>([\s\S]*?)<\/t>/.exec(hdrM[0]) || [])[1] : null;
+  const already = (hv || '').trim() === header;
+  const shiftCol = c => (ci(c) >= INS ? cl(ci(c) + 1) : c);
+  const sty = (row, col) => { const m = new RegExp('<c r="' + col + '\\d+"[^>]*?\\bs="(\\d+)"').exec(row); return m ? ` s="${m[1]}"` : ''; };
+  body = body.replace(/<row r="(\d+)"([^>]*?)(\/>|>([\s\S]*?)<\/row>)/g, (row, rn, at, end, inner) => {
+    rn = +rn; inner = inner || '';
+    if (already) inner = inner.replace(new RegExp('<c r="' + L + '\\d+"[^>]*?(?:/>|>[\\s\\S]*?</c>)', 'g'), '');
+    else inner = inner.replace(/<c r="([A-Z]{1,3})(\d+)"/g, (m, c, r) => `<c r="${shiftCol(c)}${r}"`);
+    at = at.replace(/\sspans="[^"]*"/, '');
+    let v = rn === 2 ? header : rn >= 3 ? valueOf(rn, inner) : null;
+    if (v !== null && v !== undefined && v !== '') {
+      const st = sty(inner, rn === 2 ? styleCols[0] : styleCols[1]) || sty(inner, styleCols[0]);
+      const cell = typeof v === 'number' ? `<c r="${L}${rn}"${st}><v>${v}</v></c>` : `<c r="${L}${rn}"${st} t="inlineStr"><is><t>${esc(v)}</t></is></c>`;
+      const re = /<c r="([A-Z]{1,3})\d+"/g; let mm, pos = -1; while ((mm = re.exec(inner))) if (ci(mm[1]) > INS) { pos = mm.index; break; }
+      inner = pos >= 0 ? inner.slice(0, pos) + cell + inner.slice(pos) : inner + cell;
+    }
+    return inner ? `<row r="${rn}"${at}>${inner}</row>` : `<row r="${rn}"${at}/>`;
+  });
+  if (!already) {
+    head = head.replace(/<dimension ref="([A-Z]+)(\d+):([A-Z]+)(\d+)"\/>/, (m, c1, r1, c2, r2) => `<dimension ref="${c1}${r1}:${ci(c2) >= INS ? cl(ci(c2) + 1) : L}${r2}"/>`);
+    head = head.replace(/<cols>[\s\S]*?<\/cols>/, cols => {
+      const defs = cols.match(/<col [^>]*\/>/g) || [], keep = [];
+      for (let d of defs) { let lo = +/min="(\d+)"/.exec(d)[1], hi = +/max="(\d+)"/.exec(d)[1];
+        if (lo < INS && hi >= INS) { keep.push(d.replace(/max="\d+"/, `max="${INS - 1}"`)); d = d.replace(/min="\d+"/, `min="${INS}"`); lo = INS; }
+        if (lo >= INS) d = d.replace(/min="\d+"/, `min="${lo + 1}"`).replace(/max="\d+"/, `max="${Math.min(hi + 1, 16384)}"`);
+        keep.push(d); }
+      keep.push(`<col min="${INS}" max="${INS}" width="10" customWidth="1"/>`);
+      keep.sort((p, q) => +/min="(\d+)"/.exec(p)[1] - +/min="(\d+)"/.exec(q)[1]); return '<cols>' + keep.join('') + '</cols>';
+    });
+    tail = tail.replace(/<autoFilter ref="([A-Z]+)(\d+):([A-Z]+)(\d+)"/, (m, c1, r1, c2, r2) => `<autoFilter ref="${c1}${r1}:${ci(c2) >= INS ? cl(ci(c2) + 1) : c2}${r2}"`);
+    tail = tail.replace(/<filterColumn colId="(\d+)"/g, (m, id) => `<filterColumn colId="${+id + 1 >= INS ? +id + 1 : id}"`);
+    tail = tail.replace(/sqref="([^"]*)"/g, (m, sq) => 'sqref="' + sq.replace(/([A-Z]{1,3})(\d+)/g, (mm, c, r) => shiftCol(c) + r) + '"');
+    let wb = await zip.file('xl/workbook.xml').async('string');
+    const q = sheetName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    wb = wb.replace(new RegExp(`('${q}'|\\b${q})!\\$?([A-Z]{1,3})\\$?(\\d+):\\$?([A-Z]{1,3})\\$?(\\d+)`, 'g'), (m, sn, c1, r1, c2, r2) => `${sn}!$${shiftCol(c1)}$${r1}:$${shiftCol(c2)}$${r2}`);
+    zip.file('xl/workbook.xml', wb);
+    for (const f of Object.keys(zip.files).filter(f => /^xl\/pivotCache\/pivotCacheDefinition\d+\.xml$/.test(f))) {
+      let p = await zip.file(f).async('string');
+      const np = p.replace(new RegExp(`<worksheetSource ref="([A-Z]+)(\\d+):([A-Z]+)(\\d+)" sheet="${q}"/>`), (m, c1, r1, c2, r2) => `<worksheetSource ref="${c1}${r1}:${shiftCol(c2)}${r2}" sheet="${sheetName}"/>`);
+      if (np !== p) zip.file(f, np);
+    }
+  }
+  zip.file(path, head + body + tail);
+  return already;
+}
+async function addMcNo(zip, pathOf, SST, report) {
+  // Dye Q: MC No at AQ (after Batch Plan MC)
+  const dq = new Sheet(await zip.file(pathOf['Dye Q']).async('string'));
+  const byBatch = new Map(), byRow = new Map();
+  for (const [r, [, cells]] of dq.rows) { if (r < 3) continue; const b = cellValue(cells.get(ci('F')), SST); if (!b) continue;
+    const v = mcNo(cellValue(cells.get(ci('AO')), SST), cellValue(cells.get(ci('AP')), SST)); byRow.set(r, v); if (!byBatch.has(String(b))) byBatch.set(String(b), v); }
+  await putColumn(zip, pathOf, 'Dye Q', ci('AQ'), 'MC No', r => byRow.get(r) ?? null, ['AP', 'AP']);
+  // 280: MC No at DC (after Body Type, before Extra); batches not in Dye Q use their own plan qty
+  const sh = new Sheet(await zip.file(pathOf['280']).async('string')); const vals = new Map();
+  for (const [r, [, cells]] of sh.rows) { if (r < 3) continue; const b = cellValue(cells.get(ci('H')), SST); if (!b) continue;
+    // outside-mill batches (C filled) get no MC No — unless the outside order's batch is an Additional dyed inside (CC = Additional)
+    const outside = String(cellValue(cells.get(ci('C')), SST) ?? '').trim() !== '';
+    const additional = String(cellValue(cells.get(ci('CC')), SST) ?? '').trim().toLowerCase() === 'additional';
+    if (outside && !additional) continue;
+    vals.set(r, byBatch.has(String(b)) ? byBatch.get(String(b)) : mcNo(cellValue(cells.get(ci('W')), SST), null)); }
+  await putColumn(zip, pathOf, '280', ci('DC'), 'MC No', r => vals.get(r) ?? null, ['DB', 'DB']);
+  const cnt = {}; for (const v of byRow.values()) cnt[v ?? 'blank'] = (cnt[v ?? 'blank'] || 0) + 1; report.mcNo = cnt;
 }
 /* ==================================================================== Additional requirement (order-wise) */
 const ADD_COLS = [{"min": 1, "max": 1, "width": 8.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 2, "max": 2, "width": 11.109375, "hidden": false, "outline": 0, "collapsed": true}, {"min": 3, "max": 3, "width": 9.109375, "hidden": false, "outline": 0, "collapsed": false}, {"min": 4, "max": 4, "width": 32.0, "hidden": false, "outline": 0, "collapsed": false}, {"min": 5, "max": 5, "width": 26.88671875, "hidden": false, "outline": 0, "collapsed": false}, {"min": 6, "max": 6, "width": 32.88671875, "hidden": false, "outline": 0, "collapsed": false}, {"min": 7, "max": 7, "width": 6.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 8, "max": 15, "width": 11.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 16, "max": 16, "width": 13.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 17, "max": 17, "width": 11.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 18, "max": 18, "width": 12.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 19, "max": 19, "width": 14.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 20, "max": 20, "width": 12.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 21, "max": 21, "width": 10.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 22, "max": 22, "width": 13.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 23, "max": 23, "width": 7.33203125, "hidden": false, "outline": 0, "collapsed": true}, {"min": 24, "max": 24, "width": 34.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 25, "max": 25, "width": 11.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 26, "max": 26, "width": 11.0, "hidden": false, "outline": 0, "collapsed": true}, {"min": 27, "max": 27, "width": 24.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 28, "max": 28, "width": 10.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 29, "max": 29, "width": 21.88671875, "hidden": false, "outline": 0, "collapsed": true}, {"min": 30, "max": 31, "width": 11.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 32, "max": 32, "width": 9.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 33, "max": 33, "width": 13.0, "hidden": false, "outline": 0, "collapsed": true}, {"min": 34, "max": 34, "width": 13.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 35, "max": 35, "width": 13.0, "hidden": false, "outline": 0, "collapsed": true}, {"min": 36, "max": 36, "width": 46.88671875, "hidden": true, "outline": 1, "collapsed": false}, {"min": 37, "max": 37, "width": 8.6640625, "hidden": false, "outline": 0, "collapsed": true}];
@@ -2400,14 +2438,11 @@ async function publish(){
     const blob=await gh('/git/blobs',{method:'POST',body:JSON.stringify({content:b64(bytes),encoding:'base64'})});
     const addB=addBlob?new Uint8Array(await addBlob.arrayBuffer()):null;
     const addBlobGh=addB?await gh('/git/blobs',{method:'POST',body:JSON.stringify({content:b64(addB),encoding:'base64'})}):null;
-    const t280=lastReport&&lastReport.t280;
-    const t280Gh=t280?await gh('/git/blobs',{method:'POST',body:JSON.stringify({content:JSON.stringify({cols:t280.cols,rows:t280.rows}),encoding:'utf-8'})}):null;
     const d=rdate();
-    const meta={t280:t280?{file:'280.json',rows:t280.rows.length,cols:t280.cols}:null,summary:lastReport&&lastReport.summary,newArt:lastReport&&lastReport.newArt,updated:new Date().toISOString(),reportDate:`${pad(d.getDate())}-${MON[d.getMonth()]}-${String(d.getFullYear()).slice(2)}`,name:outName(),size:bytes.length,rows:lastReport&&lastReport.rows,ld:lastReport&&lastReport.ld,wip:lastReport&&lastReport.wip,fixSlips:true,additional:addB&&lastReport&&lastReport.additional?{name:addName(),size:addB.length,total:lastReport.additional.total,orders:lastReport.additional.orders}:null};
+    const meta={summary:lastReport&&lastReport.summary,newArt:lastReport&&lastReport.newArt,updated:new Date().toISOString(),reportDate:`${pad(d.getDate())}-${MON[d.getMonth()]}-${String(d.getFullYear()).slice(2)}`,name:outName(),size:bytes.length,rows:lastReport&&lastReport.rows,ld:lastReport&&lastReport.ld,fixSlips:true,additional:addB&&lastReport&&lastReport.additional?{name:addName(),size:addB.length,total:lastReport.additional.total,orders:lastReport.additional.orders}:null};
     const tree=await gh('/git/trees',{method:'POST',body:JSON.stringify({tree:[
       {path:DATA_FILE,mode:'100644',type:'blob',sha:blob.sha},
       ...(addBlobGh?[{path:ADD_FILE,mode:'100644',type:'blob',sha:addBlobGh.sha}]:[]),
-      ...(t280Gh?[{path:'280.json',mode:'100644',type:'blob',sha:t280Gh.sha}]:[]),
       {path:'latest.json',mode:'100644',type:'blob',content:JSON.stringify(meta,null,2)}]})});
     // parentless commit + force-moved branch: the previous file is wiped, no history builds up
     const commit=await gh('/git/commits',{method:'POST',body:JSON.stringify({message:'DOC master update '+meta.updated,tree:tree.sha,parents:[]})});
