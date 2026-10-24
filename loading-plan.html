@@ -948,7 +948,7 @@ document.addEventListener('pointermove',e=>{if(!rz)return;COLW[rz.i]=Math.max(28
 document.addEventListener('pointerup',()=>{if(!rz)return;rz.g.classList.remove('on');rz=null;store.set('mclp-cols',COLW);});
 $('list').addEventListener('dblclick',e=>{const g=e.target.closest('.rz');if(!g)return;const i=+g.dataset.i;COLW[i]=COLW0[i];applyCols();store.set('mclp-cols',COLW);});
 $('list').addEventListener('click',e=>{ if(e.target.closest('.sn,.hdl,.hd,.ed'))return; const cb=e.target.closest('.cb'); if(!cb) return;
-  if(e.shiftKey&&cb.classList.contains('pl')){ e.preventDefault(); const id=cb.dataset.id; SELSET.has(id)?SELSET.delete(id):SELSET.add(id); cb.classList.toggle('msel',SELSET.has(id)); updSel(); try{getSelection().removeAllRanges()}catch(_){} return; }
+  if((e.ctrlKey||e.metaKey)&&cb.classList.contains('pl')){ e.preventDefault(); const id=cb.dataset.id; SELSET.has(id)?SELSET.delete(id):SELSET.add(id); cb.classList.toggle('msel',SELSET.has(id)); updSel(); try{getSelection().removeAllRanges()}catch(_){} return; }
   if(clearSel()) return;   // first plain click just clears a selection
   toggle(cb.dataset.id); });
 $('list').addEventListener('keydown',e=>{ if(e.target.classList.contains('ed')&&e.key==='Enter'){e.preventDefault();e.target.blur();} });
@@ -956,7 +956,7 @@ $('list').addEventListener('change',e=>{ const t=e.target;
   if(t.classList.contains('ed')){ const b=t.dataset.b,k=t.dataset.k,v=t.value.trim(); (S.ed[b]=S.ed[b]||{})[k]=v; if(D.batches[b]) D.batches[b][k]=v; t.title=v; save(); toast('Saved.'); return; }
   if(!t.classList.contains('sn'))return; const id=t.closest('.cb').dataset.id; const v=parseInt(t.value,10); if(v>=1) moveTo(id,v-1); else draw(); });
 let dragId=null, dragSet=[], dropAt=null;
-// Shift+click planned rows to select several; drag any selected row to move them together
+// Ctrl+click (Cmd on Mac) planned rows to select several; drag any selected row to move them together
 const SELSET=new Set();
 function clearSel(){ if(!SELSET.size) return false; SELSET.clear(); document.querySelectorAll('#list .cb.msel').forEach(x=>x.classList.remove('msel')); updSel(); return true; }
 function updSel(){ $('selInfo').hidden=!SELSET.size; $('selInfo').textContent=SELSET.size?`${SELSET.size} selected · drag to move · Esc to clear`:''; }
