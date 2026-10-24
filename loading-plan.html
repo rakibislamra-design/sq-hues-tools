@@ -983,6 +983,16 @@ $('list').addEventListener('drop',e=>{if(!dragId)return;const cb=e.target.closes
   const t=C.get(cb.dataset.id); if(!t||t.mc!==C.get(dragId).mc){toast('Drag within the same machine.');return;}
   const r=cb.getBoundingClientRect(); moveMany(dragSet.length?dragSet:[dragId],cb.dataset.id,e.clientY>r.top+r.height/2); clearSel();});
 document.addEventListener('keydown',e=>{if(e.key==='Escape') clearSel();});
+// auto-scroll while dragging: near or beyond the top/bottom (and left/right on the board) edge, faster the further out
+const AS={y:0,x:0,el:null,raf:0};
+function asTick(){ if(!AS.el||(!AS.y&&!AS.x)){AS.raf=0;return;} AS.el.scrollTop+=AS.y; AS.el.scrollLeft+=AS.x; AS.raf=requestAnimationFrame(asTick); }
+function asSpeed(p,lo,hi){ const Z=70; if(p<lo+Z){ const d=lo+Z-p; return -Math.min(60,Math.round(2+d*d/120)); } if(p>hi-Z){ const d=p-(hi-Z); return Math.min(60,Math.round(2+d*d/120)); } return 0; }
+document.addEventListener('dragover',e=>{
+  const el=dragId?$('list'):(typeof bDrag!=='undefined'&&bDrag)?$('bwrap'):null; if(!el){AS.y=AS.x=0;return;}
+  const r=el.getBoundingClientRect(); AS.el=el; AS.y=asSpeed(e.clientY,r.top,r.bottom); AS.x=el.id==='bwrap'?asSpeed(e.clientX,r.left+150,r.right):0;
+  if((AS.y||AS.x)&&!AS.raf) AS.raf=requestAnimationFrame(asTick);
+});
+['dragend','drop'].forEach(t=>document.addEventListener(t,()=>{AS.y=AS.x=0;AS.el=null;}));
 // Auto-order: 1 FOC · 2 Hanger (both by Plan Date) · 3 Line Plan: today, tomorrow, day after, then backlog oldest→newest, then later dates
 //             4 AOP (shade says AOP) · 5 Urgent · 6 other Plan Type comments · 7 rest — groups 4–7 by Plan Date, then OTT
 const addDays=n=>{const d=new Date();d.setDate(d.getDate()+n);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
