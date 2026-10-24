@@ -217,7 +217,11 @@ header{gap:6px 8px!important}.mc,.hb2,.hbtn{padding:3px 8px!important}
 .mcap input{width:30px;font:600 11px var(--f-ui);border:1px solid var(--line);border-radius:3px;padding:0 2px;text-align:center;background:var(--surface);color:var(--fg);-moz-appearance:textfield}
 .mcap input::-webkit-outer-spin-button,.mcap input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 /* list drag + multi-select */
-.cb.pl{transition:transform .14s ease,box-shadow .14s ease}
+/* smoother scrolling: rows off screen are not painted; animation only while dragging */
+.cb{content-visibility:auto;contain-intrinsic-size:auto 58px}
+.cb.over,.cb.drag{content-visibility:visible}
+.list.dragging .cb.pl{transition:transform .14s ease,box-shadow .14s ease}
+.list{overscroll-behavior:contain;will-change:scroll-position}
 .cb.pl:active{cursor:grabbing}
 .cb.drag{opacity:.35!important}
 .cb.over{transform:scale(1.015);box-shadow:0 6px 18px rgba(102,67,86,.18)!important;position:relative;z-index:2}
@@ -979,10 +983,10 @@ function moveMany(ids,targetId,after){
 }
 $('list').addEventListener('dragstart',e=>{if(e.target.closest&&e.target.closest('.ed,.sn')){e.preventDefault();return;}const cb=e.target.closest('.cb.pl');if(!cb)return;dragId=cb.dataset.id;
   const mc=C.get(dragId).mc; dragSet=SELSET.has(dragId)?[...SELSET].filter(id=>C.has(id)&&C.get(id).mc===mc):[dragId];
-  document.querySelectorAll('#list .cb').forEach(x=>{if(dragSet.includes(x.dataset.id))x.classList.add('drag');});
+  document.querySelectorAll('#list .cb').forEach(x=>{if(dragSet.includes(x.dataset.id))x.classList.add('drag');});$('list').classList.add('dragging');
   e.dataTransfer.effectAllowed='move';try{e.dataTransfer.setData('text/plain',dragId)}catch(_){}
   if(dragSet.length>1){const g=document.createElement('div');g.className='dghost';g.textContent=`${dragSet.length} combos`;document.body.appendChild(g);try{e.dataTransfer.setDragImage(g,10,10)}catch(_){}setTimeout(()=>g.remove(),0);}});
-$('list').addEventListener('dragend',()=>{document.querySelectorAll('.cb.drag,.cb.over,.cb.ot,.cb.ob').forEach(x=>x.classList.remove('drag','over','ot','ob'));dragId=null;dragSet=[];dropAt=null;});
+$('list').addEventListener('dragend',()=>{$('list').classList.remove('dragging');document.querySelectorAll('.cb.drag,.cb.over,.cb.ot,.cb.ob').forEach(x=>x.classList.remove('drag','over','ot','ob'));dragId=null;dragSet=[];dropAt=null;});
 $('list').addEventListener('dragover',e=>{if(!dragId)return;const cb=e.target.closest('.cb.pl');if(!cb)return;e.preventDefault();
   const r=cb.getBoundingClientRect(); const after=e.clientY>r.top+r.height/2;
   if(dropAt&&dropAt[0]===cb&&dropAt[1]===after) return;
