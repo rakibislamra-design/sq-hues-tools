@@ -211,6 +211,8 @@ header{gap:6px 8px!important}.mc,.hb2,.hbtn{padding:3px 8px!important}
 .mc{display:inline-flex!important;flex-direction:column;align-items:flex-start;gap:2px;padding:4px 8px!important;min-width:84px;border-radius:6px!important;font-size:12.5px!important}
 .mc .mh{font-weight:600;white-space:nowrap}
 .mc.mcall{justify-content:center;min-width:64px;align-self:stretch}
+.mc .mcap{display:none!important}.mc.on .mcap{display:inline-flex!important}
+.mc{min-width:0!important}
 .mcap{display:inline-flex;align-items:center;gap:2px;font:500 10.5px var(--f-ui);color:var(--muted)}
 .mcap input{width:30px;font:600 11px var(--f-ui);border:1px solid var(--line);border-radius:3px;padding:0 2px;text-align:center;background:var(--surface);color:var(--fg);-moz-appearance:textfield}
 .mcap input::-webkit-outer-spin-button,.mcap input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
@@ -225,6 +227,13 @@ header{gap:6px 8px!important}.mc,.hb2,.hbtn{padding:3px 8px!important}
 .selinfo{font:600 11.5px var(--f-ui);color:#664356;background:var(--s-pick);border-radius:5px;padding:3px 8px}
 .selinfo[hidden]{display:none}
 .dghost{position:fixed;top:-100px;left:-100px;background:#664356;color:#fff;font:600 12px var(--f-ui);padding:4px 10px;border-radius:6px}
+/* drop a file on Load file */
+#loadBtn{font-size:15px!important;font-weight:700!important;padding:11px 26px!important;border-radius:8px!important;border-width:1.5px!important}
+#loadBtn{transition:transform .18s cubic-bezier(.3,1.6,.5,1),box-shadow .18s ease,background .18s ease}
+#loadBtn.fwait{border-style:dashed!important;border-color:var(--qp-line)!important;animation:fpulse 1s ease-in-out infinite}
+#loadBtn.fover{transform:scale(1.35);background:var(--s-pick)!important;box-shadow:0 8px 22px rgba(102,67,86,.25);animation:none;position:relative;z-index:5}
+#loadBtn.fdone{transform:scale(1.15)}
+@keyframes fpulse{50%{transform:scale(1.08)}}
 /* MC board */
 .ldy{font-weight:600;color:var(--s-ac)}
 .cpy{border:1px solid var(--line);background:var(--surface);color:var(--s-ac);border-radius:4px;font-size:12px;line-height:1;padding:2px 5px;cursor:pointer;margin-left:4px;vertical-align:1px}.cpy:hover{border-color:var(--qp-line);background:var(--s-pick)}
@@ -304,13 +313,11 @@ header{gap:6px 8px!important}.mc,.hb2,.hbtn{padding:3px 8px!important}
   <span class="sp"></span>
   <span class="file" id="fileLbl" hidden></span>
   <span class="hb">
-    <button class="hb2" id="copy">Copy plan</button>
     <button class="hb2 pri" id="xls" title="Save the loaded Loading plan file: planned batches move to the top of their M/C in SL order, with SL, Plan Date, Remarks and Hold remarks filled in">Export to Excel</button>
-    <span id="clearWrap"><button class="hb2" id="clear">Clear</button></span>
   </span>
   <span id="selInfo" class="selinfo" hidden></span>
   <span id="busy"></span>
-  <label class="hbtn" for="fileIn" tabindex="0" id="loadBtn" title="Load a new day's Loading plan workbook">Load file</label>
+  <label class="hbtn" for="fileIn" tabindex="0" id="loadBtn" title="Load a new day's Loading plan workbook — click, or drop the .xlsx here">Load file</label>
   <input type="file" id="fileIn" accept=".xlsx" hidden>
 </header>
 
@@ -814,7 +821,7 @@ function refreshView(){
   const ids=plan();
   let rest=[...C.values()].filter(c=>inView(c)&&!ids.includes(c.id));
   rest=rest.filter(passes);
-  rest.sort((a,b)=>cmpAuto(a,b,true));
+  rest.sort((a,b)=>(cur==='ALL'?MCS.indexOf(a.mc)-MCS.indexOf(b.mc):0)||cmpAuto(a,b,true));  // All MC: machine order 750 → 10
   VIEW=ids.concat(rest.map(c=>c.id)); VIEWPL=ids.length; pending=0;
   draw();
 }
@@ -856,7 +863,9 @@ function draw(){
   const a=VIEW.slice(0,VIEWPL).filter(id=>C.has(id)), b=VIEW.slice(VIEWPL).filter(id=>C.has(id));
   $('list').innerHTML=head
     +`<div class="dv">Planned · ${ids.length}</div>`+(a.length?a.map((id,i)=>{const c=C.get(id);const hd=cur==='ALL'&&(i===0||C.get(a[i-1]).mc!==c.mc)?`<div class="dv mcg">${esc(NAME(c.mc))} · ${(S.plan[c.mc]||[]).length}</div>`:'';return hd+box(c,sl(id),i%2);}).join(''):'<div class="empty">Click a combo below to plan it. Press Refresh to move ticked combos up here.</div>')
-    +`<div class="dv">Not planned · ${b.filter(id=>!ids.includes(id)).length}</div>`+(b.length?(()=>{const cnt={};return b.map((id,i)=>{const c=C.get(id);const s0=sl(id);let ns='';if(!s0){cnt[c.mc]=(cnt[c.mc]||0)+1;ns=cnt[c.mc];}return box(c,s0,i%2,ns);}).join('');})():'<div class="empty">No other combos match these filters.</div>');
+    +`<div class="dv">Not planned · ${b.filter(id=>!ids.includes(id)).length}</div>`+(b.length?(()=>{const cnt={};let last=null;return b.map((id,i)=>{const c=C.get(id);const s0=sl(id);let ns='';if(!s0){cnt[c.mc]=(cnt[c.mc]||0)+1;ns=cnt[c.mc];}
+      let hd=''; if(cur==='ALL'&&c.mc!==last){ last=c.mc; hd=`<div class="dv mcg">${esc(NAME(c.mc))} · ${b.filter(x=>C.get(x).mc===c.mc&&!sl(x)).length} not planned</div>`; }
+      return hd+box(c,s0,i%2,ns);}).join('');})():'<div class="empty">No other combos match these filters.</div>');
   const cs=ids.map(id=>C.get(id)); const kg=cs.reduce((x,c)=>x+c.q,0); const nb=cs.reduce((x,c)=>x+c.m.length,0); const ls=cs.map(loadPct).filter(x=>x!=null);
   $('foot').innerHTML=`<span><b>${esc(NAME(cur))}</b></span><span>Planned <b>${cs.length}</b> SL · <b>${nb}</b> batches · <b>${fmt(Math.round(kg))}</b> kg</span><span>Avg load <b>${ls.length?(ls.reduce((x,y)=>x+y,0)/ls.length).toFixed(0)+'%':'–'}</b></span><span>Can dye <b>${cs.filter(c=>c.can).length}</b></span><span>${esc(LABEL)}</span>`;
   $('refresh').innerHTML='Refresh'+(pending?`<span class="badge">${pending}</span>`:''); $('refresh').classList.toggle('hot',!!pending); {const n=Object.keys(FILT).length;$('clrF').disabled=!n;$('clrF').innerHTML='Clear all filters'+(n?`<span class="badge">${n}</span>`:'');}
@@ -1014,7 +1023,7 @@ function autoKey(c,simple){
 }
 const cmpAuto=(a,b,simple)=>{const x=autoKey(a,simple),y=autoKey(b,simple);for(let i=0;i<x.length;i++){if(x[i]<y[i])return -1;if(x[i]>y[i])return 1;}return cmpRank(a,b);};
 $('auto').addEventListener('click',()=>{let n=0;for(const k of MCS){const L=S.plan[k]||[];n+=L.length;L.sort((a,b)=>cmpAuto(C.get(a),C.get(b)));}if(!n){toast('Tick combos first.');return;}save();refreshView();toast(AUTO_NOTE+' (all machines)');});
-$('clearWrap').addEventListener('click',e=>{
+if($('clearWrap')) $('clearWrap').addEventListener('click',e=>{
   if(e.target.id==='clear'){ if(!plan().length)return; $('clearWrap').innerHTML='<span class="confirm">Clear '+esc(NAME(cur))+'? <button class="hb2" id="clrY">Clear</button><button class="hb2" id="clrN">Keep</button></span>'; }
   else if(e.target.id==='clrY'){ for(const id of plan()) if(C.has(id)) setPlanDate(C.get(id),false); for(const k of (cur==='ALL'?MCS:[cur])) S.plan[k]=[]; save(); $('clearWrap').innerHTML='<button class="hb2" id="clear">Clear</button>'; refreshView(); }
   else if(e.target.id==='clrN'){ $('clearWrap').innerHTML='<button class="hb2" id="clear">Clear</button>'; }
@@ -1144,7 +1153,7 @@ $('board').addEventListener('drop',e=>{if(!bDrag)return;const t=e.target.closest
   L.splice(from,1); if(to>from) to--; L.splice(Math.max(0,Math.min(L.length,to)),0,bDrag); save(); refreshView(); toast('SL '+(L.indexOf(bDrag)+1)+' on '+NAME(c.mc)+'.');});
 
 // ---------- copy / export ----------
-$('copy').addEventListener('click',()=>{
+if($('copy')) $('copy').addEventListener('click',()=>{
   const ids=plan(); const sl0=id=>(S.plan[C.get(id).mc]||[]).indexOf(id)+1; if(!ids.length){toast('Nothing planned on this machine yet.');return;}
   const rows=[['M/C','MC SL','B/G','Batch No','Buyer','Shade','Fabrics Type','Batch Qty','Combo Qty','Load %','Batch Status','Remarks','Plan Type','H/s Status','Line Plan','Plan Date','Workorder Category','Remarks (Q)','Hold remarks']];
   ids.forEach((id,i)=>{const c=C.get(id);const l=loadPct(c);c.p.forEach(x=>rows.push([NAME(c.mc),sl0(id),x.t,x.b,x.by,x.sh,x.fb,x.q,c.q,l!=null?l.toFixed(0)+'%':'',x.st,x.rm,x.pt,x.hs,x.lp,x.pd,x.cat,x.rmk,x.hold]));});
@@ -1190,8 +1199,18 @@ $('xls').addEventListener('click',async()=>{
 
 // ---------- load a new day's file ----------
 $('loadBtn').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();$('fileIn').click();}});
-$('fileIn').addEventListener('change',async e=>{
-  const f=e.target.files[0]; if(!f)return; e.target.value='';
+$('fileIn').addEventListener('change',e=>{ const f=e.target.files[0]; e.target.value=''; if(f) loadFile(f); });
+// drop a workbook on "Load file" (it zooms in while a file is held over it)
+const isFileDrag=e=>e.dataTransfer&&[...(e.dataTransfer.types||[])].includes('Files');
+let fdT=0;
+window.addEventListener('dragenter',e=>{ if(isFileDrag(e)){ $('loadBtn').classList.add('fwait'); clearTimeout(fdT); } });
+window.addEventListener('dragover',e=>{ if(!isFileDrag(e)) return; e.preventDefault(); e.dataTransfer.dropEffect=e.target.closest&&e.target.closest('#loadBtn')?'copy':'none'; clearTimeout(fdT); fdT=setTimeout(()=>$('loadBtn').classList.remove('fwait','fover'),250);
+  $('loadBtn').classList.toggle('fover',!!(e.target.closest&&e.target.closest('#loadBtn'))); });
+window.addEventListener('drop',e=>{ if(!isFileDrag(e)) return; e.preventDefault(); $('loadBtn').classList.remove('fwait','fover');
+  if(!(e.target.closest&&e.target.closest('#loadBtn'))){ toast('Drop the file on “Load file”.'); return; }
+  const f=e.dataTransfer.files[0]; if(!f) return; if(!/\.xlsx$/i.test(f.name)){ toast('Please drop the Loading plan .xlsx file.'); return; }
+  $('loadBtn').classList.add('fdone'); setTimeout(()=>$('loadBtn').classList.remove('fdone'),500); loadFile(f); });
+async function loadFile(f){
   if(!window.JSZip){toast('The file reader library did not load. Check the internet connection and reload.');return;}
   $('busy').textContent='Reading '+f.name+'…';
   try{
@@ -1203,7 +1222,7 @@ $('fileIn').addEventListener('change',async e=>{
     save(); refreshView(); $('busy').textContent='';
     toast(`Loaded ${f.name}. ${nf} SL with a Plan Date are planned, in the file's M/C and SL order.`);
   }catch(err){ console.error(err); $('busy').textContent=''; toast('Could not read this file: '+(err.message||err)); }
-});
+}
 
 build(); if(S.seeded!==LABEL){ S.plan={}; S.ed={}; S.seeded=LABEL; build(); } save(); refreshView();
 })();
