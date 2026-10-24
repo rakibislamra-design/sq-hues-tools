@@ -206,6 +206,14 @@ header{gap:6px 8px!important}.mc,.hb2,.hbtn{padding:3px 8px!important}
 #toast{background:var(--surface);color:var(--fg);border:1px solid var(--hdr-line);box-shadow:0 4px 14px rgba(0,0,0,.08)}
 .foot b{font-weight:600}
 
+/* machine chips with capacity */
+.mcs{gap:4px!important}
+.mc{display:inline-flex!important;flex-direction:column;align-items:flex-start;gap:2px;padding:4px 8px!important;min-width:84px;border-radius:6px!important;font-size:12.5px!important}
+.mc .mh{font-weight:600;white-space:nowrap}
+.mc.mcall{justify-content:center;min-width:64px;align-self:stretch}
+.mcap{display:inline-flex;align-items:center;gap:2px;font:500 10.5px var(--f-ui);color:var(--muted)}
+.mcap input{width:30px;font:600 11px var(--f-ui);border:1px solid var(--line);border-radius:3px;padding:0 2px;text-align:center;background:var(--surface);color:var(--fg);-moz-appearance:textfield}
+.mcap input::-webkit-outer-spin-button,.mcap input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 /* MC board */
 .ldy{font-weight:600;color:var(--s-ac)}
 .cpy{border:1px solid var(--line);background:var(--surface);color:var(--s-ac);border-radius:4px;font-size:12px;line-height:1;padding:2px 5px;cursor:pointer;margin-left:4px;vertical-align:1px}.cpy:hover{border-color:var(--qp-line);background:var(--s-pick)}
@@ -272,12 +280,14 @@ header{gap:6px 8px!important}.mc,.hb2,.hbtn{padding:3px 8px!important}
 <div class="app">
 <header>
   <a class="hb2" href="index.html" title="Back to SQ Hues Tools" style="text-decoration:none;display:inline-flex;align-items:center;white-space:nowrap">← Tools</a>
-  <nav class="mcs" id="mcs" aria-label="Machine"></nav>
   <span class="hb">
     <button class="hb2" id="refresh" title="Move ticked combos up into the plan by priority">Refresh</button>
     <button class="hb2" id="auto" title="Sort every machine: FOC → Hanger → Line Plan (today, tomorrow, day after, backlog, later dates nearest first) → AOP → Urgent → other Plan Type → rest">Auto-order</button>
-    <button class="hb2 home" id="home" title="Back to the top of the list">⌂ Home</button>
     <span class="vseg" id="vseg"><button class="hb2 on" data-v="list">List</button><button class="hb2" data-v="board" title="Machine-wise day board: see the load and drag batches to re-sequence">MC Board</button></span>
+  </span>
+  <nav class="mcs" id="mcs" aria-label="Machine"></nav>
+  <span class="hb">
+    <button class="hb2 home" id="home" title="Back to the top of the list">⌂ Home</button>
     <button class="hb2" id="clrF" title="Remove all column filters">Clear all filters</button>
   </span>
   <span class="sp"></span>
@@ -826,7 +836,9 @@ function draw(){
   if(typeof VMODE!=='undefined'&&VMODE==='board') setTimeout(drawBoard,0);
   $('fileLbl').textContent=LABEL;
   const tot=MCS.reduce((a,k)=>a+(S.plan[k]||[]).length,0);
-  $('mcs').innerHTML=`<button class="mc${cur==='ALL'?' on':''}" data-k="ALL">All MC${tot?`<small>${tot}</small>`:''}</button>`+MCS.map(k=>{const n=(S.plan[k]||[]).length;return `<button class="mc${k===cur?' on':''}" data-k="${k}">${SHORT(k)} kg${n?`<small>${n}</small>`:''}</button>`;}).join('');
+  const ae=document.activeElement; const keepIn=ae&&ae.closest&&ae.closest('#mcs')?[ae.dataset.k,ae.dataset.cap]:null;
+  $('mcs').innerHTML=`<div class="mc mcall${cur==='ALL'?' on':''}" data-k="ALL" role="button" tabindex="0"><span class="mh">All MC${tot?`<small>${tot}</small>`:''}</span></div>`+MCS.map(k=>{const n=(S.plan[k]||[]).length;const cp=capOf(k);return `<div class="mc${k===cur?' on':''}" data-k="${k}" role="button" tabindex="0"><span class="mh">${SHORT(k)} kg${n?`<small>${n}</small>`:''}</span><span class="mcap" title="No. of machines × target batches per machine per day"><input type="number" min="1" step="1" data-cap="m" data-k="${k}" value="${cp.m}" aria-label="${k} kg no. of MC">MC×<input type="number" min="0.5" step="0.5" data-cap="b" data-k="${k}" value="${cp.b}" aria-label="${k} kg batches per MC per day">/d</span></div>`;}).join('');
+  if(keepIn){const el=$('mcs').querySelector(`input[data-k="${keepIn[0]}"][data-cap="${keepIn[1]}"]`); if(el) el.focus();}
   const ids=plan(), sl=id=>{const c=C.get(id);return c?(S.plan[c.mc]||[]).indexOf(id)+1:0;};
   const head=`<div class="ln hd"><span class="lh"><b data-f="s" class="${FILT.s?'f':''}" title="Filter: can dye / not ready">SL</b></span>${HEAD.map((h,i)=>`<span class="${CLS[i]}${i===8?' n':''}"><b data-f="${i}" class="${FILT[i]?'f':''}" title="Filter ${h}">${h}</b><i class="rz" data-i="${i}" title="Drag to resize · double-click to reset"></i></span>`).join('')}</div>`;
   const a=VIEW.slice(0,VIEWPL).filter(id=>C.has(id)), b=VIEW.slice(VIEWPL).filter(id=>C.has(id));
@@ -890,7 +902,9 @@ window.__lp={C:()=>C,D:()=>D,plan:()=>plan(),go:k=>{cur=k;refreshView();}};
 $('dlgW').addEventListener('pointerdown',e=>{if(e.target.id==='dlgW')$('dlgW').hidden=true;});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('dlgW').hidden)$('dlgW').hidden=true;});
 function moveTo(id,pos){ const L=mlist(C.get(id)); const i=L.indexOf(id); if(i<0)return; L.splice(i,1); pos=Math.max(0,Math.min(L.length,pos)); L.splice(pos,0,id); save(); refreshView(); }
-$('mcs').addEventListener('click',e=>{const b=e.target.closest('.mc');if(!b)return;cur=b.dataset.k;refreshView();});
+$('mcs').addEventListener('click',e=>{if(e.target.closest('input'))return;const b=e.target.closest('.mc');if(!b)return;cur=b.dataset.k;refreshView();});
+$('mcs').addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.classList.contains('mc')){e.preventDefault();cur=e.target.dataset.k;refreshView();}});
+$('mcs').addEventListener('change',e=>{const t=e.target; if(!t.dataset.cap) return; const k=t.dataset.k, v=parseFloat(t.value); if(!(v>0)){draw();return;} S.cap[k]=Object.assign(capOf(k),{[t.dataset.cap]:v}); save(); draw(); toast(`${k} kg: ${capOf(k).m} MC × ${capOf(k).b} batches/day = ${Math.round(capOf(k).m*capOf(k).b)} loads/day.`);});
 $('refresh').addEventListener('click',()=>{refreshView();});
 $('home').addEventListener('click',()=>{$('fp').hidden=true;$('list').scrollTo({top:0,behavior:'smooth'});});
 $('clrF').addEventListener('click',()=>{FILT={};saveF();refreshView();toast('All filters removed.');});
@@ -1069,7 +1083,7 @@ $('board').addEventListener('keydown',e=>{ if(e.target.id==='bQ'&&e.key==='Enter
 $('board').addEventListener('change',e=>{const t=e.target;
   if(t.id==='bStart'){S.bstart=t.value;save();drawBoard();return;}
   if(t.id==='bHol'){S.hol=t.value;save();drawBoard();return;}
-  if(t.dataset.cap){const k=t.dataset.k; const v=parseFloat(t.value); if(!(v>0)) return; S.cap[k]=Object.assign(capOf(k),{[t.dataset.cap]:v}); save(); drawBoard();}});
+  if(t.dataset.cap){const k=t.dataset.k; const v=parseFloat(t.value); if(!(v>0)) return; S.cap[k]=Object.assign(capOf(k),{[t.dataset.cap]:v}); save(); draw();}});
 let bDrag=null;
 $('board').addEventListener('dragstart',e=>{const c=e.target.closest('.bcard');if(!c)return;bDrag=c.dataset.id;c.classList.add('drag');e.dataTransfer.effectAllowed='move';try{e.dataTransfer.setData('text/plain',bDrag)}catch(_){}});
 $('board').addEventListener('dragend',()=>{document.querySelectorAll('.bcard.drag,.bcard.over,.bend.over').forEach(x=>x.classList.remove('drag','over'));bDrag=null;});
