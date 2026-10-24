@@ -1,0 +1,1137 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Daily loading plan</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Carlito:wght@400;700&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+/* Layout: one screen. Slim header + one control bar, a single list that scrolls inside, sticky totals at the bottom. */
+:root{
+  --qp:#664356; --qp-ink:#ffffff; --qp-soft:#EFECED; --qp-mid:#D2C7CB; --qp-line:#B29EA6;
+  --tan-soft:#ECE6E3; --blue:#366083; --blue-soft:#CCD0DB; --red:#AF4F5A; --red-soft:#E7D1CE; --ok:#3c7a5a; --ok-soft:#d8e8de;
+  --bg:#f6f3f4; --surface:#ffffff; --raise:#faf8f9; --fg:#2a1f25; --muted:#6e6268; --line:#e4dbdf;
+  --accent:#664356; --accent-ink:#ffffff; --sel:#f1e7ec; --sel-line:#957B87;
+  --f-ui:Calibri,"Carlito","Segoe UI",system-ui,sans-serif; --f-mono:Calibri,"Carlito","Segoe UI",system-ui,sans-serif;
+  --cols:minmax(64px,.55fr) 262px minmax(70px,.75fr) minmax(90px,1.05fr) minmax(100px,1.35fr) minmax(80px,.9fr) 34px 26px 48px minmax(70px,.75fr);
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --qp:#4a3040; --qp-ink:#f3eaee; --qp-soft:#2c2228; --qp-mid:#4b3a43; --qp-line:#7C5D6D;
+  --tan-soft:#3a302c; --blue:#9fb3d1; --blue-soft:#273445; --red:#e0959c; --red-soft:#4a2a2e; --ok:#8fcaa8; --ok-soft:#24392d;
+  --bg:#1a1417; --surface:#211a1e; --raise:#272025; --fg:#f0e8ec; --muted:#b4a6ad; --line:#3a2f35;
+  --accent:#c9a7b8; --accent-ink:#1a1417; --sel:#33262d; --sel-line:#957B87; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --qp:#4a3040; --qp-ink:#f3eaee; --qp-soft:#2c2228; --qp-mid:#4b3a43; --qp-line:#7C5D6D;
+  --tan-soft:#3a302c; --blue:#9fb3d1; --blue-soft:#273445; --red:#e0959c; --red-soft:#4a2a2e; --ok:#8fcaa8; --ok-soft:#24392d;
+  --bg:#1a1417; --surface:#211a1e; --raise:#272025; --fg:#f0e8ec; --muted:#b4a6ad; --line:#3a2f35;
+  --accent:#c9a7b8; --accent-ink:#1a1417; --sel:#33262d; --sel-line:#957B87; color-scheme:dark}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font:13.5px/1.4 var(--f-ui);overflow:hidden}
+.app{height:100%;display:flex;flex-direction:column;padding-left:max(12px,env(safe-area-inset-left,0px));padding-right:max(12px,env(safe-area-inset-right,0px));padding-block:8px;gap:6px}
+header{display:flex;align-items:center;gap:6px 12px;flex-wrap:wrap;background:var(--qp);color:var(--qp-ink);border-radius:8px;padding:6px 12px}
+header h1{margin:0;font-size:15px;font-weight:700;white-space:nowrap}
+header .file{font-size:11.5px;opacity:.85;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+header .sp{flex:1}
+#busy{font-size:11.5px}
+.hbtn{font:600 12px var(--f-ui);border:1px solid rgba(255,255,255,.45);color:var(--qp-ink);border-radius:5px;padding:3px 9px;cursor:pointer;white-space:nowrap}
+.hbtn:hover{background:rgba(255,255,255,.12)}
+.mcs{display:flex;gap:3px;flex-wrap:wrap}
+.mc{font:600 12px var(--f-ui);border:1px solid rgba(255,255,255,.35);background:transparent;color:var(--qp-ink);border-radius:5px;padding:3px 8px;cursor:pointer;white-space:nowrap}
+.mc small{font-weight:500;opacity:.8;margin-left:3px;font-variant-numeric:tabular-nums}
+.mc.on{background:var(--qp-ink);color:var(--qp);border-color:var(--qp-ink)}
+.bar{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:5px;overflow:hidden;background:var(--surface)}
+.seg button{font:500 11.5px var(--f-ui);border:0;background:transparent;color:var(--muted);padding:3px 8px;cursor:pointer}
+.seg button.on{background:var(--qp-soft);color:var(--fg);font-weight:700}
+input[type=search]{font:12px var(--f-ui);border:1px solid var(--line);border-radius:5px;padding:3px 8px;background:var(--surface);color:var(--fg);flex:1 1 160px;min-width:120px}
+.btn{font:600 12px var(--f-ui);border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:5px;padding:3px 10px;cursor:pointer;white-space:nowrap}
+.btn.pri{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.warn{color:var(--red)}
+.btn.hot{border-color:var(--accent);box-shadow:0 0 0 2px var(--sel)}
+.btn .badge{display:inline-block;margin-left:5px;background:var(--accent);color:var(--accent-ink);border-radius:8px;padding:0 5px;font-size:10.5px}
+button:focus-visible,input:focus-visible,.hbtn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.panel{flex:1;min-height:0;display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.list{flex:1;min-height:0;overflow:auto}
+.ln.hd>span:not(.lh){position:relative;overflow:visible}
+.hd>span>b{display:block;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+.rz{position:absolute;top:-4px;bottom:-4px;right:-7px;width:9px;cursor:col-resize;z-index:3}
+.rz::after{content:"";position:absolute;left:4px;top:3px;bottom:3px;border-left:1px solid var(--line)}
+.rz:hover::after,.rz.on::after{border-left:2px solid var(--accent)}
+.cb,.hd{min-width:max-content}
+.ln{display:grid;grid-template-columns:var(--cols);gap:7px;align-items:center;min-height:24px}
+.ln>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.hd{position:sticky;top:0;z-index:2;background:var(--surface);border-bottom:1px solid var(--line);font:600 10px var(--f-ui);text-transform:uppercase;letter-spacing:.35px;color:var(--muted);padding:7px 12px 6px 104px}
+.hd .lh{position:absolute;left:14px;z-index:3}
+.cb{display:grid;grid-template-columns:104px minmax(0,1fr);border-bottom:1px solid var(--line);background:var(--surface);cursor:pointer}
+.cb:hover{background:var(--raise)}
+.cb.pl{background:var(--sel)}
+.cb.pl:hover{background:var(--sel)}
+.cb.drag{opacity:.4}.cb.over{box-shadow:inset 0 3px 0 var(--accent)}
+.ns{width:24px;font-size:11.5px;color:var(--muted);text-align:center;flex:none;font-variant-numeric:tabular-nums}
+.mct{font-size:10.5px;color:var(--muted);background:var(--qp-soft);border-radius:3px;padding:0 4px;flex:none}
+.dv.mcg{background:var(--raise);color:var(--muted);padding:3px 14px;font-size:10px}
+.lead{display:flex;align-items:center;gap:6px;padding:2px 0 2px 12px;overflow:hidden;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tick{width:14px;height:14px;border:1.5px solid var(--qp-line);border-radius:4px;display:inline-block;flex:none}
+.cb:hover .tick{border-color:var(--accent)}
+.hdl{cursor:grab;color:var(--muted);font-size:12px;user-select:none;letter-spacing:-2px;margin-left:-6px}
+.sn{width:34px;font:700 12px var(--f-mono);text-align:center;border:1px solid transparent;border-radius:4px;padding:1px;background:var(--surface);color:var(--accent)}
+.sn:hover,.sn:focus{border-color:var(--sel-line)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--red);flex:none}
+.dot.on{background:var(--ok)}
+.kg{font-weight:700;font-size:12px}
+.ld{font-size:11px;color:var(--muted)}
+.ld.bad{color:var(--red);font-weight:700}
+.lines{padding:2px 12px 2px 0;min-width:0}
+.lines .ln+.ln{border-top:1px dotted var(--line)}
+.bn{font:400 13px var(--f-mono);font-variant-numeric:tabular-nums}
+.mut{color:var(--muted)}
+.n{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+.bg{display:inline-block;min-width:18px;text-align:center;font:700 10.5px var(--f-mono);border-radius:3px}
+.bg.B{background:var(--qp-mid);color:var(--fg)}.bg.G{background:var(--blue-soft);color:var(--blue)}
+.ok{color:var(--ok);font-weight:600}.no{color:var(--red);font-weight:600}
+.dv{font:700 10.5px var(--f-ui);text-transform:uppercase;letter-spacing:.5px;color:var(--accent);padding:6px 14px 5px;background:var(--raise);border-bottom:1px solid var(--line)}
+.empty{color:var(--muted);text-align:center;padding:14px;font-size:12px}
+.foot{display:flex;flex-wrap:wrap;gap:4px 16px;padding:5px 10px;border-top:1px solid var(--line);font-size:12px;color:var(--muted);background:var(--raise)}
+.foot b{color:var(--fg);font-variant-numeric:tabular-nums}
+.chk{display:inline-flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;user-select:none}
+input[type=checkbox]{accent-color:var(--accent);margin:0}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(40px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:7px 12px;border-radius:6px;font-size:12.5px;max-width:calc(100% - 32px);z-index:20}
+.confirm{display:inline-flex;gap:4px;align-items:center;font-size:12px;color:var(--red)}
+
+.hb{display:inline-flex;gap:4px;align-items:center;flex-wrap:wrap}
+.hb2{font:600 12px var(--f-ui);border:1px solid rgba(255,255,255,.4);background:transparent;color:var(--qp-ink);border-radius:5px;padding:3px 9px;cursor:pointer;white-space:nowrap}
+.hb2:hover{background:rgba(255,255,255,.12)}
+.hb2:disabled{opacity:.45;cursor:default;background:transparent}
+.hb2.home{font-size:12.5px}
+.hb2.pri{background:var(--qp-ink);color:var(--qp);border-color:var(--qp-ink)}
+.hb2.hot{background:rgba(255,255,255,.2);border-color:var(--qp-ink)}
+.hb2 .badge{display:inline-block;margin-left:5px;background:var(--qp-ink);color:var(--qp);border-radius:8px;padding:0 5px;font-size:10.5px}
+header .confirm{color:var(--qp-ink)}
+.hd b{cursor:pointer}
+.hd b::after{content:" ▾";opacity:.55;font-size:9px}
+.hd b.f{color:var(--accent)}
+.hd b.f::after{content:" ▼";opacity:1}
+.hd b:hover{color:var(--fg)}
+#dlgW{position:fixed;inset:0;z-index:40;background:rgba(30,20,26,.28);display:flex;align-items:center;justify-content:center;padding:16px}
+#dlgW[hidden]{display:none}
+#dlg{background:var(--surface);border:1px solid var(--line);border-top:4px solid #C98A1B;border-radius:8px;box-shadow:0 12px 36px rgba(0,0,0,.22);width:560px;max-width:100%;max-height:calc(100vh - 32px);overflow:auto;padding:12px 14px;font-size:12.5px;display:flex;flex-direction:column;gap:8px}
+#dlg.red{border-top-color:var(--red)}
+#dlg h3{margin:0;font:700 14px var(--f-ui);color:#9A6A12}
+#dlg.red h3{color:var(--red)}
+#dlg .note{background:#FBF3E2;color:#7A5410;border-radius:5px;padding:5px 8px}
+#dlg .over{background:var(--red-soft);color:var(--red);border-radius:5px;padding:5px 8px;font-weight:600}
+#dlg table{border-collapse:collapse;width:100%;font-size:11.5px}
+#dlg th,#dlg td{border-bottom:1px solid var(--line);padding:3px 5px;text-align:right;white-space:nowrap}
+#dlg th:first-child,#dlg td:first-child{text-align:left;white-space:normal}
+#dlg th{font-weight:600;color:var(--muted);font-size:10.5px}
+#dlg td.bad{color:var(--red);font-weight:700}
+#dlg .acts{display:flex;justify-content:flex-end;gap:6px;margin-top:2px}
+#dlg .btn.go{background:var(--red);border-color:var(--red);color:#fff}
+#dlg .btn.go.amb{background:#C98A1B;border-color:#C98A1B}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) #dlg .note{background:#3a3020;color:#e8c98a}:root:not([data-theme="light"]) #dlg h3{color:#e8c98a}}
+:root[data-theme="dark"] #dlg .note{background:#3a3020;color:#e8c98a}
+#fp{position:fixed;z-index:30;background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 28px rgba(0,0,0,.18);width:260px;max-width:calc(100vw - 24px);padding:8px;display:flex;flex-direction:column;gap:6px;font-size:12.5px}
+#fp[hidden]{display:none}
+#fp input[type=search]{flex:none;width:100%;min-width:0;font:12.5px var(--f-ui);border:1px solid var(--line);border-radius:5px;padding:4px 8px;background:var(--raise);color:var(--fg)}
+#fp .vals{max-height:240px;overflow:auto;border:1px solid var(--line);border-radius:5px;padding:4px 6px}
+#fp label{display:flex;gap:6px;align-items:center;padding:1px 0;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#fp label[hidden]{display:none}
+#fp .row{display:flex;gap:6px;justify-content:space-between}
+#fp .ttl{font-weight:700;color:var(--accent)}
+
+/* light theme for header + controls */
+:root{--hdr-bg:#F6F2F4;--hdr-ink:#664356;--hdr-line:#D2C7CB;--sel:#F3ECF0;--sel-line:#D2C7CB}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--hdr-bg:#2a2126;--hdr-ink:#e6dfe1;--hdr-line:#4b3a43;--sel:#2c2328}}
+:root[data-theme="dark"]{--hdr-bg:#2a2126;--hdr-ink:#e6dfe1;--hdr-line:#4b3a43;--sel:#2c2328}
+header{background:var(--hdr-bg)!important;color:var(--hdr-ink)!important;border:1px solid var(--hdr-line)}
+.mc,.hb2,.hbtn{border-color:var(--hdr-line)!important;color:var(--hdr-ink)!important;background:var(--surface)!important}
+.mc:hover,.hb2:hover,.hbtn:hover{border-color:var(--qp-line)!important}
+.mc.on,.hb2.pri{background:var(--accent)!important;color:var(--accent-ink)!important;border-color:var(--accent)!important}
+.mc.on small{color:var(--accent-ink)!important}
+.hb2.hot{border-color:var(--accent)!important;box-shadow:0 0 0 2px var(--sel)}
+.hb2 .badge{background:var(--accent)!important;color:var(--accent-ink)!important}
+header .confirm{color:var(--red)!important}
+.sn{color:var(--accent)}
+.dv{background:var(--surface)}
+.ed{font:inherit;color:var(--fg);border:1px solid transparent;background:transparent;padding:0 3px;width:100%;min-width:0;border-radius:3px;height:20px}
+.ed:hover{border-color:var(--line);background:var(--surface)}
+.ed:focus{border-color:var(--accent);background:var(--surface);outline:none}
+
+/* clearer combo separation */
+:root{--band:#F4F4F3;--sep:#D2C7CB;--pick:#E9DDE4}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--band:#242224;--sep:#4a3c44;--pick:#3d2b36}}
+:root[data-theme="dark"]{--band:#242224;--sep:#4a3c44;--pick:#3d2b36}
+.cb{border-bottom:1px solid var(--sep)!important}
+.cb.alt{background:var(--band)}
+.cb.pl,.cb.pl.alt,.cb.pl:hover{background:var(--pick)!important;box-shadow:inset 4px 0 0 var(--accent)}
+.cb:hover{background:var(--qp-soft)}
+.lines .ln+.ln{border-top:1px dotted var(--line)!important}
+.dv{border-top:1px solid var(--sep)}
+
+
+/* soft palette: no solid fills, lighter tones */
+:root{--s-red:#B8737B;--s-red-bg:#F7ECEC;--s-ok:#5E9277;--s-amb:#B08A4A;--s-amb-bg:#FAF4E8;--s-pick:#EFE6EB;--s-ac:#8A6B7C}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--s-red:#d9a2a8;--s-red-bg:#3a2a2d;--s-ok:#9cc9b0;--s-amb:#d8bd8a;--s-amb-bg:#353024;--s-pick:#33282e;--s-ac:#c9a7b8}}
+:root[data-theme="dark"]{--s-red:#d9a2a8;--s-red-bg:#3a2a2d;--s-ok:#9cc9b0;--s-amb:#d8bd8a;--s-amb-bg:#353024;--s-pick:#33282e;--s-ac:#c9a7b8}
+header h1{font-weight:600}
+.mc,.hb2,.hbtn{font-weight:500!important}
+.mc.on,.hb2.pri{background:var(--s-pick)!important;color:var(--hdr-ink)!important;border-color:var(--hdr-line)!important;font-weight:600!important}
+.mc.on small,.mc small{color:var(--s-ac)!important}
+.hb2 .badge,.btn .badge{background:var(--s-pick)!important;color:var(--s-ac)!important;font-weight:600}
+.hb2.hot{border-color:var(--qp-line)!important;box-shadow:none}
+.cb.pl,.cb.pl.alt,.cb.pl:hover{background:var(--s-pick)!important;box-shadow:inset 3px 0 0 var(--qp-line)}
+.sn{color:var(--s-ac);font-weight:600}
+.n{font-weight:400}
+.ok{color:var(--s-ok);font-weight:400}.no{color:var(--s-red);font-weight:400}
+.dot{background:var(--s-red);opacity:.7}.dot.on{background:var(--s-ok)}
+.bg{font-weight:500}.bg.B{background:var(--qp-soft);color:var(--muted)}.bg.G{background:#E8ECF2;color:#6F86A3}
+.dv{color:var(--s-ac);font-weight:600}
+.hd b.f{color:var(--s-ac)}
+#dlg{border-top:3px solid var(--s-amb)}
+#dlg.red{border-top-color:var(--s-red)}
+#dlg h3{color:var(--s-amb);font-weight:600}#dlg.red h3{color:var(--s-red)}
+#dlg .note{background:var(--s-amb-bg);color:var(--fg)}
+#dlg .note b{font-weight:600;color:var(--s-amb)}
+#dlg .over{background:var(--s-red-bg);color:var(--s-red);font-weight:500}
+#dlg td.bad{color:var(--s-red);font-weight:600}
+#dlg .btn{font-weight:500}
+#dlg .btn.go{background:var(--s-red-bg);border-color:var(--s-red);color:var(--s-red)}
+#dlg .btn.go.amb{background:var(--s-amb-bg);border-color:var(--s-amb);color:var(--s-amb)}
+#dlgW{background:rgba(60,45,52,.12)}
+.hd{font-weight:700!important;color:var(--fg)!important;font-size:10.5px!important}.hd>span>b{font-weight:700}
+header{gap:6px 8px!important}.mc,.hb2,.hbtn{padding:3px 8px!important}
+#toast{background:var(--surface);color:var(--fg);border:1px solid var(--hdr-line);box-shadow:0 4px 14px rgba(0,0,0,.08)}
+.foot b{font-weight:600}
+
+/* MC board */
+.cpy{border:1px solid var(--line);background:var(--surface);color:var(--s-ac);border-radius:4px;font-size:12px;line-height:1;padding:2px 5px;cursor:pointer;margin-left:4px;vertical-align:1px}.cpy:hover{border-color:var(--qp-line);background:var(--s-pick)}
+.bcard .stag{font-weight:700;font-size:10px;color:#C0392B}
+.bdl{position:sticky;left:158px;display:inline-block}
+.bcard .tg{white-space:normal;line-height:1.35}.bcard .tg i{font-style:normal;opacity:.5;margin:0 1px}
+#bQ{font:12px var(--f-ui);border:1px solid var(--line);border-radius:5px;padding:3px 8px;width:220px;flex:none;min-width:0;background:var(--surface);color:var(--fg)}
+.lgb{border:1px solid transparent;background:transparent;font:inherit;color:inherit;cursor:pointer;border-radius:4px;padding:1px 4px}.lgb:hover{border-color:var(--line)}
+.lgb.offg{opacity:.4;text-decoration:line-through}
+.bcard.dim{opacity:.18}.bcard.hit{box-shadow:0 0 0 2px #8A6B7C}.bcard.cur{box-shadow:0 0 0 3px #664356,0 4px 14px rgba(102,67,86,.35)}
+.bcard .gtag.foc{color:#C0392B}
+.bcard .gtag{font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.3px;color:#5b4552;background:rgba(255,255,255,.6);border-radius:3px;padding:0 3px}
+.bbody{flex:1;min-height:0;display:flex}
+.bbody .bwrap{flex:1;min-width:0}
+.bside{width:300px;flex:none;border-left:1px solid var(--line);background:var(--raise);overflow:auto;padding:10px 12px;font-size:12px;cursor:pointer}
+.bside[hidden]{display:none}
+.bside .pt,#bpop .pt{font-weight:700;font-size:13px}
+.bside .pg,#bpop .pg{color:var(--s-ac);font-size:11.5px;margin-bottom:6px}
+.kv{display:flex;justify-content:space-between;gap:8px;padding:1px 0}.kv span{color:var(--muted)}.kv b{font-weight:600;text-align:right;overflow-wrap:anywhere}.kv b.bad{color:#C0505C}
+.bb{border-top:1px solid var(--line);margin-top:6px;padding-top:6px}.bn2{font-weight:600;margin-bottom:3px;overflow-wrap:anywhere}
+.bad2{background:var(--s-red-bg);color:#B04A55;border-radius:4px;padding:3px 6px;margin-top:4px}
+.amb2{background:var(--s-amb-bg);color:var(--s-amb);border-radius:4px;padding:3px 6px;margin-top:4px}
+#bpop{position:fixed;z-index:50;background:var(--surface);border:1px solid var(--line);border-radius:7px;box-shadow:0 6px 20px rgba(0,0,0,.14);padding:8px 10px;width:250px;font-size:11.5px;pointer-events:none}
+#bpop[hidden]{display:none}
+#bpop .pb{margin-top:4px;color:var(--muted);overflow-wrap:anywhere}
+.bcard.late{outline:2px solid #C0505C;outline-offset:-2px}
+.bcard .lpd{font-weight:600}.bcard.late .lpd{color:#B04A55}.bcard.back .lpd{color:#A07A2E}
+.bcard.back{outline:2px solid #D9B36A;outline-offset:-2px}
+.bcard.sel{box-shadow:0 0 0 2px var(--qp)}
+
+.vseg{display:inline-flex}.vseg .hb2{border-radius:0!important}.vseg .hb2:first-child{border-radius:5px 0 0 5px!important}.vseg .hb2:last-child{border-radius:0 5px 5px 0!important;margin-left:-1px}
+.vseg .hb2.on{background:var(--s-pick)!important;font-weight:600!important}
+.board{flex:1;min-height:0;display:flex;flex-direction:column}
+.board[hidden]{display:none}
+.bctl{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center;padding:6px 12px;border-bottom:1px solid var(--line);font-size:11.5px;color:var(--muted)}
+.bctl label{display:inline-flex;gap:5px;align-items:center}
+.bctl input,.bctl select{font:12px var(--f-ui);border:1px solid var(--line);border-radius:4px;padding:2px 5px;background:var(--surface);color:var(--fg)}
+.bctl input[type=number]{width:46px}
+.lg{display:inline-flex;align-items:center;gap:4px}.lg i{width:11px;height:11px;border-radius:3px;display:inline-block;border:1px solid rgba(0,0,0,.08)}
+.bwrap{flex:1;min-height:0;overflow:auto;position:relative}
+.bgrid{display:grid;grid-template-columns:150px max-content;min-width:max-content}
+.bhd{position:sticky;top:0;z-index:3;background:var(--surface);border-bottom:1px solid var(--line);font:600 11px var(--f-ui);color:var(--fg);display:flex}
+.bhd0{position:sticky;left:0;top:0;z-index:4;background:var(--surface);border-bottom:1px solid var(--line);border-right:1px solid var(--line);font:600 10px var(--f-ui);text-transform:uppercase;letter-spacing:.35px;color:var(--muted);padding:8px 10px}
+.bday{border-left:1px solid var(--line);padding:7px 8px;flex:none;white-space:nowrap}
+.bday.off{background:var(--raise);color:var(--muted)}
+.brh{position:sticky;left:0;z-index:2;background:var(--surface);border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:6px 10px;font-size:11px;color:var(--muted);display:flex;flex-direction:column;gap:2px}
+.brh b{font-size:13px;color:var(--fg)}
+.brh .cap{display:flex;gap:4px;align-items:center}
+.brh .cap input{width:36px;font:11px var(--f-ui);border:1px solid var(--line);border-radius:3px;padding:0 3px;background:var(--surface);color:var(--fg)}
+.brow{border-bottom:1px solid var(--line);display:flex;position:relative;min-height:76px}
+.bcell{flex:none;border-left:1px solid var(--line);display:flex;gap:4px;padding:5px 4px;align-items:flex-start}
+.bcell.off{background:repeating-linear-gradient(45deg,var(--raise),var(--raise) 6px,transparent 6px,transparent 12px)}
+.bcard{width:146px;flex:none;border-radius:5px;padding:4px 6px;font-size:11px;line-height:1.3;cursor:grab;border:1px solid rgba(0,0,0,.06);position:relative;color:#2a1f25;user-select:none}
+.bcard .t{font-weight:700;font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bcard .s{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.85}
+.bcard .k{position:absolute;top:3px;right:5px;width:6px;height:6px;border-radius:50%}
+.bcard.drag{opacity:.35}.bcard.over{box-shadow:-3px 0 0 var(--qp)}
+.bcard.hold{outline:1.5px dashed #B8737B;outline-offset:-2px}
+.bend{width:40px;flex:none;align-self:stretch}.bend.over{box-shadow:inset 3px 0 0 var(--qp)}
+.bempty{padding:10px;color:var(--muted);font-size:11.5px}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+  <a class="hb2" href="index.html" title="Back to SQ Hues Tools" style="text-decoration:none;display:inline-flex;align-items:center;white-space:nowrap">← Tools</a>
+  <nav class="mcs" id="mcs" aria-label="Machine"></nav>
+  <span class="hb">
+    <button class="hb2" id="refresh" title="Move ticked combos up into the plan by priority">Refresh</button>
+    <button class="hb2" id="auto" title="Sort every machine: FOC → Hanger → Line Plan (today, tomorrow, day after, backlog, later dates nearest first) → AOP → Urgent → other Plan Type → rest">Auto-order</button>
+    <button class="hb2 home" id="home" title="Back to the top of the list">⌂ Home</button>
+    <span class="vseg" id="vseg"><button class="hb2 on" data-v="list">List</button><button class="hb2" data-v="board" title="Machine-wise day board: see the load and drag batches to re-sequence">MC Board</button></span>
+    <button class="hb2" id="clrF" title="Remove all column filters">Clear all filters</button>
+  </span>
+  <span class="sp"></span>
+  <span class="file" id="fileLbl" hidden></span>
+  <span class="hb">
+    <button class="hb2" id="copy">Copy plan</button>
+    <button class="hb2 pri" id="xls" title="Save the loaded Loading plan file: planned batches move to the top of their M/C in SL order, with SL, Plan Date, Remarks and Hold remarks filled in">Export to Excel</button>
+    <span id="clearWrap"><button class="hb2" id="clear">Clear</button></span>
+  </span>
+  <span id="busy"></span>
+  <label class="hbtn" for="fileIn" tabindex="0" id="loadBtn" title="Load a new day's Loading plan workbook">Load file</label>
+  <input type="file" id="fileIn" accept=".xlsx" hidden>
+</header>
+
+
+
+<section class="panel">
+  <div class="list" id="list"></div>
+  <div class="board" id="board" hidden></div>
+  <div class="foot" id="foot"></div>
+</section>
+</div>
+<div id="toast" hidden></div>
+<div id="fp" hidden></div>
+<div id="bpop" hidden></div>
+<div id="dlgW" hidden><div id="dlg" role="alertdialog" aria-modal="true"></div></div>
+
+<script type="application/json" id="seed">{"label":"No file loaded","data":{"batches":{},"combos":[],"itemsKg":{}}}</script>
+<script>
+/* MC Loading Planner engine: body/gusset rules (same as Dye Q Combo Planner) applied to the Loading plan Master Sheet. */
+(function (root) {
+  'use strict';
+  // ---------- small helpers ----------
+  const unesc = s => s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&#(\d+);/g, (m, d) => String.fromCharCode(+d)).replace(/&#x([0-9a-f]+);/gi, (m, h) => String.fromCharCode(parseInt(h, 16))).replace(/&amp;/g, '&');
+  const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const cn = c => { let n = 0; for (const ch of c) n = n * 26 + ch.charCodeAt(0) - 64; return n; };
+  const cl = n => { let s = ''; while (n) { const r = (n - 1) % 26; s = String.fromCharCode(65 + r) + s; n = Math.floor((n - 1) / 26); } return s; };
+  const str = v => (v === null || v === undefined) ? '' : String(v);
+  const cmpStr = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
+
+  function parseSST(xml) {
+    const out = [];
+    if (!xml) return out;
+    const re = /<si>([\s\S]*?)<\/si>/g; let m;
+    while ((m = re.exec(xml))) {
+      let t = ''; const tr = /<t(?:\s[^>]*)?>([\s\S]*?)<\/t>/g; let k;
+      while ((k = tr.exec(m[1]))) t += k[1];
+      out.push(unesc(t));
+    }
+    return out;
+  }
+  // returns Map(row -> {colLetter: value}) for wanted columns
+  function readCells(xml, want, sst, fromRow) {
+    const rows = new Map();
+    const re = /<c r="([A-Z]{1,3})(\d+)"([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g; let m;
+    while ((m = re.exec(xml))) {
+      const col = m[1]; if (!want.has(col)) continue;
+      const r = +m[2]; if (r < fromRow) continue;
+      const attrs = m[3], inner = m[4] || '';
+      const tm = /\bt="(\w+)"/.exec(attrs); const t = tm ? tm[1] : null;
+      let val = null;
+      if (t === 'inlineStr') { let s = ''; const tr = /<t(?:\s[^>]*)?>([\s\S]*?)<\/t>/g; let k; while ((k = tr.exec(inner))) s += k[1]; val = unesc(s); }
+      else {
+        const vm = /<v>([\s\S]*?)<\/v>/.exec(inner);
+        if (vm) {
+          if (t === 's') val = sst[+vm[1]];
+          else if (t === 'str' || t === 'e' || t === 'b') val = unesc(vm[1]);
+          else { const f = parseFloat(vm[1]); val = isNaN(f) ? unesc(vm[1]) : f; }
+        }
+      }
+      let o = rows.get(r); if (!o) { o = {}; rows.set(r, o); }
+      o[col] = val;
+    }
+    return rows;
+  }
+
+  // ---------- classification (fabric rules) ----------
+  const ELAS = /spandex|lycra|elas|creora|\d+\s*d\b|\/\s*5\b/i;
+  const elastic = f => ELAS.test(str(f));
+  const gsm = f => { const m = /-\s*(\d{2,3})\s*-\s*\d{2,3}\s*-/.exec(str(f)); return m ? +m[1] : null; };
+  const gkey = o => { o = str(o).trim(); return o.includes('+') ? o.split('+').pop().trim() : o; };
+  const norm = f => str(f).replace(/\s+/g, '').toLowerCase();
+  const isT33 = b => str(b).toUpperCase().replace(/ /g, '').includes('T33');
+
+  function buildOrders(rows280) {
+    const orders = new Map(); const seen = new Set();
+    for (const r of rows280) {
+      const o = r.G, b = r.H, f = r.N, q = r.W;
+      if (!o || !f) continue;
+      const bk = b === null || b === undefined ? '\u0000null' : b;
+      if (seen.has(bk)) continue; seen.add(bk);
+      const g = gkey(o); if (!orders.has(g)) orders.set(g, new Map());
+      const fm = orders.get(g), k = norm(f);
+      if (!fm.has(k)) fm.set(k, { qty: 0, name: null });
+      const d = fm.get(k); d.name = f; d.qty += (typeof q === 'number') ? q : 0;
+    }
+    return orders;
+  }
+  function classify(orders, order, fabric, buyer) {
+    if (buyer && isT33(buyer)) return 'Body';
+    const fabs = orders.get(gkey(order)); const key = norm(fabric);
+    if (!fabs || !fabs.has(key) || fabs.size === 1) return 'Body';
+    const me = fabs.get(key);
+    const vals = [...fabs.values()];
+    const eAny = vals.map(v => elastic(v.name));
+    const anyE = eAny.some(Boolean), allE = eAny.every(Boolean);
+    if (anyE && !allE) {
+      if (elastic(fabric)) return 'Body';
+      const bodyQ = vals.filter(v => elastic(v.name)).reduce((a, v) => a + v.qty, 0);
+      return me.qty <= bodyQ * 1.05 ? 'Gusset' : 'Body';
+    }
+    if (allE) return 'Body';
+    let low = null, lk = null;
+    for (const v of vals) { const k = [gsm(v.name) || 999, v.qty]; if (!low || k[0] < lk[0] || (k[0] === lk[0] && k[1] < lk[1])) { low = v; lk = k; } }
+    const othersMax = Math.max(...[...fabs.entries()].filter(([k]) => k !== key).map(([, v]) => v.qty));
+    return (low === me && me.qty <= othersMax) ? 'Gusset' : 'Body';
+  }
+
+  // ---------- pairing ----------
+  const nshade = s => str(s).toLowerCase().replace(/[^a-z0-9]/g, '');
+  function parseB(b) {
+    const p = str(b).split('|').map(x => x.trim());
+    if (p.length < 3) return null;
+    if (!/^[+-]?\d+$/.test(p[1])) return null;
+    return { o: p[0], seq: parseInt(p[1], 10), sub: p[2] };
+  }
+  const subkey = s => s.split('/').map(x => /^\d+$/.test(x) ? +x : 0);
+  const cmpArr = (a, b) => { for (let i = 0; i < Math.min(a.length, b.length); i++) { if (a[i] !== b[i]) return a[i] - b[i]; } return a.length - b.length; };
+  const kExact = sh => nshade(sh);
+  const kMinusG = sh => nshade(str(sh).trim().replace(/[-\s]+g\s*$/i, ''));
+  const kStrip = sh => { let t = str(sh).replace(/\b(aop|gusset|gst|body|wing)\b/gi, ''); t = t.trim().replace(/[-\s]+g\s*$/i, ''); t = t.trim().replace(/[-\s]+(g|b)\s*$/i, ''); return nshade(t); };
+  const kCode = sh => { const m = /\d{4,6}/.exec(str(sh)); return m ? m[0] : null; };
+  const LEVELS = [['exact', kExact], ['minusG', kMinusG], ['stripped', kStrip], ['code', kCode]];
+  const GSUF = /[-\s]g\s*$/i;
+  const isG = sh => GSUF.test(str(sh));
+
+  function buildModel(rows280) {
+    const orders = buildOrders(rows280);
+    const rows = new Map(); // batch -> data
+    for (const r of rows280) {
+      const b = r.H; if (!b || rows.has(b)) continue;
+      const p = parseB(b); if (!p) continue;
+      rows.set(b, { buyer: r.E, po: str(r.F).trim(), order: r.G, shade: r.L, fab: r.N, qty: r.W || 0, pos: r.BB, o: p.o, seq: p.seq, sub: p.sub });
+    }
+    for (const d of rows.values()) d.type = classify(orders, d.order, d.fab, d.buyer);
+    // items
+    const IK = (po, o, seq) => po + '\u0001' + o + '\u0001' + seq;
+    const items = new Map(); // key -> {po,o,seq,batches:[]}
+    for (const [b, d] of rows) {
+      const k = IK(d.po, d.o, d.seq);
+      if (!items.has(k)) items.set(k, { key: k, po: d.po, o: d.o, seq: d.seq, batches: [] });
+      items.get(k).batches.push(b);
+    }
+    const itype = new Map(), ishade = new Map();
+    for (const it of items.values()) {
+      const cnt = new Map(); let best = null, bc = 0;
+      for (const b of it.batches) { const t = rows.get(b).type; cnt.set(t, (cnt.get(t) || 0) + 1); }
+      for (const [t, c] of cnt) if (c > bc) { best = t; bc = c; }
+      itype.set(it.key, best); ishade.set(it.key, rows.get(it.batches[0]).shade);
+    }
+    const itT33 = k => isT33(rows.get(items.get(k).batches[0]).buyer);
+    for (const k of items.keys()) {
+      if (isG(ishade.get(k)) && !itT33(k)) itype.set(k, 'Gusset');
+      if (itT33(k)) itype.set(k, 'Body');
+    }
+    const cmatch = (a, b) => LEVELS.some(([, kf]) => { const x = kf(a); return x && x === kf(b); });
+    const sortedItems = [...items.values()].sort((a, b) => cmpStr(a.po, b.po) || cmpStr(a.o, b.o) || (a.seq - b.seq));
+    const byOS = (a, b) => cmpStr(a.o, b.o) || (a.seq - b.seq);
+
+    function runPairing() {
+      const ip = new Map(), taken = new Set();
+      for (const gi of sortedItems) {
+        if (itype.get(gi.key) !== 'Gusset') continue;
+        const bk = IK(gi.po, gi.o, gi.seq - 1);
+        if (itype.has(bk) && itype.get(bk) === 'Body' && !taken.has(bk) && cmatch(ishade.get(gi.key), ishade.get(bk))) {
+          ip.set(gi.key, bk); ip.set(bk, gi.key); taken.add(bk);
+        }
+      }
+      for (const [, kf] of LEVELS) {
+        const grp = new Map();
+        for (const it of items.values()) {
+          const k = kf(ishade.get(it.key)); if (!k) continue;
+          const gk = it.po + '\u0002' + k; if (!grp.has(gk)) grp.set(gk, []); grp.get(gk).push(it);
+        }
+        for (const its of grp.values()) {
+          let bodies = its.filter(i => itype.get(i.key) === 'Body' && !taken.has(i.key)).sort(byOS);
+          const gus = its.filter(i => itype.get(i.key) === 'Gusset' && !ip.has(i.key)).sort(byOS);
+          if (!bodies.length || !gus.length) continue;
+          for (const gi of gus) {
+            bodies = bodies.filter(b => !taken.has(b.key));
+            if (!bodies.length) break;
+            const same = bodies.filter(b => b.o === gi.o && b.seq < gi.seq);
+            let bi;
+            if (same.length) { bi = same[0]; for (const s of same) if (s.seq > bi.seq) bi = s; }
+            else {
+              const sameo = bodies.filter(b => b.o === gi.o);
+              const pool = sameo.length ? sameo : bodies;
+              const cand = sameo.length ? gus.filter(x => x.o === gi.o) : gus;
+              bi = pool[Math.min(cand.indexOf(gi), pool.length - 1)];
+            }
+            ip.set(gi.key, bi.key); ip.set(bi.key, gi.key); taken.add(bi.key);
+          }
+        }
+      }
+      return ip;
+    }
+    let pair = null;
+    for (let i = 0; i < 5; i++) {
+      pair = runPairing();
+      const ribbody = k => { if (!pair.has(k)) return false; const bk = pair.get(k); return /\brib/i.test(str(rows.get(items.get(bk).batches[0]).fab)); };
+      const demote = [...items.keys()].filter(k => itype.get(k) === 'Gusset' && !isG(ishade.get(k)) && (!pair.has(k) || ribbody(k)));
+      if (!demote.length) break;
+      for (const k of demote) itype.set(k, 'Body');
+    }
+    const finalType = b => { const d = rows.get(b); return d ? itype.get(IK(d.po, d.o, d.seq)) : null; };
+    const partner = b => {
+      const d = rows.get(b); if (!d) return null;
+      const k = IK(d.po, d.o, d.seq); if (!pair.has(k)) return null;
+      const pbs = items.get(pair.get(k)).batches;
+      const same = pbs.filter(x => parseB(x).sub === d.sub);
+      if (same.length) return same[0];
+      return [...pbs].sort((a, b) => cmpArr(subkey(parseB(a).sub), subkey(parseB(b).sub)))[0];
+    };
+    return { orders, rows, finalType, partner, classify: (o, f, b) => classify(orders, o, f, b) };
+  }
+
+  // ---------- MC ----------
+  const MC = [[4, 10, '10 Kg MC', true], [18, 39, '30 Kg MC', false], [39, 62, '60 Kg MC', true], [80, 125, '120 Kg MC', true],
+    [135, 201, '200 Kg MC', false], [201, 262, '250 Kg MC', true], [350, 521, '500 Kg MC', false], [521, 770, '750 Kg MC', true]];
+  const mc = q => { for (const [lo, hi, lab, inc] of MC) if (inc ? (q >= lo && q <= hi) : (q >= lo && q < hi)) return lab; return 'Need Batch Plan'; };
+  // workbook plumbing
+  // ---------- workbook plumbing ----------
+  async function sheetPaths(zip) {
+    const wb = await zip.file('xl/workbook.xml').async('string');
+    const rels = await zip.file('xl/_rels/workbook.xml.rels').async('string');
+    const relMap = {}; let m; const rr = /<Relationship\b([^>]*)\/>/g;
+    while ((m = rr.exec(rels))) { const id = /Id="([^"]+)"/.exec(m[1]), t = /Target="([^"]+)"/.exec(m[1]); if (id && t) relMap[id[1]] = t[1]; }
+    const out = {}; const sr = /<sheet\b([^>]*)\/>/g; let idx = 0;
+    while ((m = sr.exec(wb))) {
+      const name = unesc(/name="([^"]+)"/.exec(m[1])[1]); const rid = /r:id="([^"]+)"/.exec(m[1])[1];
+      let t = relMap[rid]; t = t.startsWith('/') ? t.slice(1) : 'xl/' + t.replace(/^\.\//, '');
+      out[name] = { path: t, index: idx++ };
+    }
+    return out;
+  }
+
+  // ---------- Loading plan (Master Sheet) ----------
+  const MCS = ['750','500','250','200','120','60','30','10'];
+  const mcKey = q => { const l = mc(q); return l === 'Need Batch Plan' ? 'NBP' : l.split(' ')[0]; };
+  const xlDate = v => { if (typeof v !== 'number' || v < 20000 || v > 80000) return ''; const d = new Date(Date.UTC(1899, 11, 30) + Math.round(v * 86400000)); return d.toISOString().slice(0, 10); };
+  async function parseLoadingPlan(JSZip, input, log = () => {}) {
+    const zip = await JSZip.loadAsync(input);
+    const sp = await sheetPaths(zip);
+    if (!sp['Master Sheet'] || !sp['280']) throw new Error('This file needs a "Master Sheet" and a "280" sheet (the daily Loading plan workbook).');
+    log('Reading shared strings…');
+    const sstFile = zip.file('xl/sharedStrings.xml');
+    const sst = parseSST(sstFile ? await sstFile.async('string') : '');
+    log('Reading 280 sheet…');
+    const x280 = await zip.file(sp['280'].path).async('string');
+    const c280 = readCells(x280, new Set(['E', 'F', 'G', 'H', 'L', 'N', 'W', 'AB', 'BB', 'BC', 'BF']), sst, 3);
+    const rows280 = [...c280.entries()].sort((a, b) => a[0] - b[0]).map(([r, o]) => o);
+    log('Matching body and gusset…');
+    const M = buildModel(rows280);
+    log('Reading Master Sheet…');
+    const xm = await zip.file(sp['Master Sheet'].path).async('string');
+    const cols = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','X','AF','AH','AV','AY','AZ','BA','BD','BF','BG'];
+    const cm = readCells(xm, new Set(cols), sst, 4);
+    const batches = {}; const queue = [];
+    for (const [r, o] of [...cm.entries()].sort((a, b) => a[0] - b[0])) {
+      const b = str(o.D).trim(); if (!b || !parseB(b) || batches[b]) continue;
+      let t = M.finalType(b);
+      if (!t) t = M.classify(parseB(b).o, o.G, o.E);
+      batches[b] = { b, row: r, mc0: str(o.A), sl: str(o.B), kq: typeof o.L === 'number' ? o.L : str(o.L), ga: str(o.M), n1: str(o.P), tb: str(o.S), lb: str(o.U), pt: str(o.C).trim(), by: str(o.E), sh: str(o.F), fb: str(o.G), ld: str(o.H), kn: str(o.I).trim().toUpperCase(), bt: str(o.J), t: t === 'Gusset' ? 'G' : 'B', q: typeof o.K === 'number' ? o.K : (parseFloat(o.K) || 0), pd: xlDate(o.N), cat: str(o.O), rmk: str(o.Q), hold: str(o.R), gsm: str(o.T), hs: str(o.X), po: str(o.AF), ott: xlDate(o.AH), age: typeof o.AV === 'number' ? Math.round(o.AV) : null, st: str(o.AY), rm: str(o.AZ), pg: str(o.BA), mill: str(o.BD), lp: xlDate(o.BF), lab: xlDate(o.BG) };
+      queue.push(b);
+    }
+    // 102% Req Qty Kg per order item (280 BF), and kg already in process (dyed, not yet RFD)
+    const ik = b => str(b).split('|').slice(0, 2).map(x => x.trim()).join(' | ');
+    const WIP = new Set(['DYEING', 'FINISHING', 'QAD-INHOUSE', 'QAD-OUTSIDE', 'OUTSIDE DYEING']);
+    const bal = {}, wip = {};
+    for (const o of rows280) {
+      const h = str(o.H).trim(); if (!h) continue;
+      const bc = str(o.BC).trim(); if (bc && bc !== '-' && typeof o.BF === 'number') bal[ik(bc)] = o.BF;
+      if (WIP.has(str(o.BB).trim().toUpperCase()) && !(o.AB > 0) && !batches[h] && typeof o.W === 'number') wip[ik(h)] = (wip[ik(h)] || 0) + o.W;
+    }
+    const items = {};
+    for (const b of queue) {
+      const x = batches[b]; x.ik = ik(b);
+      if (x.ik in bal) items[x.ik] = [Math.round(bal[x.ik] * 10) / 10, Math.round((wip[x.ik] || 0) * 10) / 10];
+    }
+    // batch-level combos inside the Master Sheet queue (max 2: one body + one gusset)
+    const pos = new Map(queue.map((b, i) => [b, i]));
+    const typ = b => batches[b].t;
+    const grp = new Map();
+    for (const b of queue) if (typ(b) === 'B') grp.set(b, [b]);
+    const freeBody = g => {
+      const pb = M.partner(g); if (!pb) return null;
+      if (grp.has(pb) && grp.get(pb).length === 1 && typ(pb) === 'B') return pb;
+      const p = parseB(pb);
+      for (const b of queue) { if (!grp.has(b) || typ(b) !== 'B' || grp.get(b).length !== 1) continue; const q = parseB(b); if (q.o === p.o && q.seq === p.seq) return b; }
+      return null;
+    };
+    const gus = queue.filter(b => typ(b) === 'G').map(g => { const pb = M.partner(g); return { g, k: (pb && parseB(pb).sub === parseB(g).sub) ? 0 : 1 }; })
+      .sort((a, b) => a.k - b.k || pos.get(a.g) - pos.get(b.g)).map(x => x.g);
+    for (const g of gus) { const pb = freeBody(g); if (pb) grp.get(pb).push(g); else grp.set(g, [g]); }
+    const combos = [...grp.values()].map(m => ({ id: m[0], m, outside: (m.length === 1 ? (M.partner(m[0]) && !batches[M.partner(m[0])] ? M.partner(m[0]) : '') : '') }));
+    log(`${queue.length} batches · ${combos.length} combos`);
+    return { batches, combos, itemsKg: items };
+  }
+
+  // ---------- write the plan back into the original workbook (only B, N, Q, R of the Master Sheet) ----------
+  // edits: { rowNumber: { B: number|string|null, N: 'yyyy-mm-dd'|'' , Q: string, R: string } }
+  const xesc = v => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const serial = d => { const t = Date.UTC(+d.slice(0, 4), +d.slice(5, 7) - 1, +d.slice(8, 10)); return Math.round((t - Date.UTC(1899, 11, 30)) / 86400000); };
+  function cellXml(ref, sAttr, v) {
+    const s = sAttr ? ` s="${sAttr}"` : '';
+    if (v === null || v === undefined || v === '') return `<c r="${ref}"${s}/>`;
+    if (typeof v === 'number') return `<c r="${ref}"${s}><v>${v}</v></c>`;
+    return `<c r="${ref}"${s} t="inlineStr"><is><t xml:space="preserve">${xesc(v)}</t></is></c>`;
+  }
+  function patchRow(inner, r, cells) {
+    for (const col of Object.keys(cells)) {
+      const ref = col + r; let v = cells[col];
+      const re = new RegExp(`<c r="${ref}"([^>]*?)(?:/>|>[\\s\\S]*?</c>)`);
+      const m = re.exec(inner);
+      if (m) { const sm = /\bs="(\d+)"/.exec(m[1]); inner = inner.slice(0, m.index) + cellXml(ref, sm && sm[1], v) + inner.slice(m.index + m[0].length); continue; }
+      if (v === null || v === undefined || v === '') continue;
+      // insert in column order
+      const want = cn(col); const cr = /<c r="([A-Z]{1,3})\d+"/g; let k, at = inner.length;
+      while ((k = cr.exec(inner))) if (cn(k[1]) > want) { at = k.index; break; }
+      inner = inner.slice(0, at) + cellXml(ref, null, v) + inner.slice(at);
+    }
+    return inner;
+  }
+  // shift relative row numbers in an A1 formula by d (strings and absolute $rows untouched)
+  function shiftF(f, d) {
+    if (!d) return f;
+    let out = '', i = 0;
+    while (i < f.length) {
+      if (f[i] === '"') { const j = f.indexOf('"', i + 1); const e = j < 0 ? f.length : j + 1; out += f.slice(i, e); i = e; continue; }
+      if (f[i] === "'") { const j = f.indexOf("'", i + 1); const e = j < 0 ? f.length : j + 1; out += f.slice(i, e); i = e; continue; }
+      const m = /^(\$?)([A-Z]{1,3})(\$?)(\d+)/.exec(f.slice(i));
+      const prev = i ? f[i - 1] : '';
+      if (m && !/[A-Za-z0-9_.$]/.test(prev)) {
+        const nx = f[i + m[0].length] || '';
+        if (!/[A-Za-z0-9_(]/.test(nx)) { out += m[1] + m[2] + m[3] + (m[3] ? m[4] : String(+m[4] + d)); i += m[0].length; continue; }
+      }
+      out += f[i++];
+    }
+    return out;
+  }
+  // plan: [{mc:'750', rows:[original row numbers in SL order]}]  edits: {origRow:{A,B,N,Q,R}}
+  async function writePlan(JSZip, input, edits, plan = [], sheetName = 'Master Sheet', firstRow = 4) {
+    const zip = await JSZip.loadAsync(input);
+    const sp = await sheetPaths(zip); if (!sp[sheetName]) throw new Error('No "' + sheetName + '" sheet in this file.');
+    const sstFile = zip.file('xl/sharedStrings.xml'); const sst = parseSST(sstFile ? await sstFile.async('string') : '');
+    const path = sp[sheetName].path; let x = await zip.file(path).async('string');
+    const E = {}; for (const r in edits) { const o = {}; for (const c in edits[r]) { let v = edits[r][c]; if (c === 'N') v = v ? serial(v) : ''; else if ((c === 'B' || c === 'A') && v !== '' && v != null && !isNaN(+v)) v = +v; o[c] = v; } E[r] = o; }
+    const sdA = x.indexOf('<sheetData>'), sdB = x.indexOf('</sheetData>');
+    if (sdA < 0 || sdB < 0) throw new Error('Unexpected sheet layout.');
+    const head = x.slice(0, sdA + 11), body = x.slice(sdA + 11, sdB), tail = x.slice(sdB);
+    const rows = []; const rr = /<row r="(\d+)"([^>]*?)(?:\/>|>([\s\S]*?)<\/row>)/g; let m;
+    while ((m = rr.exec(body))) rows.push({ r: +m[1], attrs: m[2], inner: m[3] || '' });
+    // shared formula masters
+    const master = {};
+    for (const R of rows) { const fr = /<c r="([A-Z]{1,3})\d+"[^>]*>\s*<f t="shared" ref="[^"]*" si="(\d+)"[^>]*>([^<]*)<\/f>/g; let k; while ((k = fr.exec(R.inner))) master[k[2]] = { f: unesc(k[3]), row: R.r }; }
+    const af = /<autoFilter ref="[A-Z]+\d+:[A-Z]+(\d+)"/.exec(tail); const lastRow = af ? +af[1] : (rows.length ? rows[rows.length - 1].r : firstRow);
+    const data = rows.filter(R => R.r >= firstRow && R.r <= lastRow);
+    const aVal = R => { const k = new RegExp(`<c r="A${R.r}"([^>]*?)(?:/>|>([\\s\\S]*?)</c>)`).exec(R.inner); if (!k) return ''; const v = /<v>([^<]*)<\/v>/.exec(k[2] || ''); if (!v) return ''; return /t="s"/.test(k[1]) ? str(sst[+v[1]]).trim() : unesc(v[1]).trim(); };
+    // separator rows: "MC NO #500" in column D
+    const dVal = R => { const k = new RegExp(`<c r="D${R.r}"([^>]*?)(?:/>|>([\\s\\S]*?)</c>)`).exec(R.inner); if (!k) return ''; const v = /<v>([^<]*)<\/v>/.exec(k[2] || ''); if (!v) { const t = /<t[^>]*>([^<]*)<\/t>/.exec(k[2] || ''); return t ? unesc(t[1]) : ''; } return /t="s"/.test(k[1]) ? str(sst[+v[1]]) : unesc(v[1]); };
+    const sepOf = new Map(); for (const R of data) { const mm = /^\s*MC\s*NO\s*#\s*(\w+)/i.exec(dVal(R)); if (mm) sepOf.set(R.r, mm[1]); }
+    // new order: per machine (750, 500 … 10): separator row, planned rows (SL order), then that machine's other rows; then everything else
+    const byRow = new Map(data.map(R => [R.r, R])); const used = new Set(); const order = [];
+    const mcOrder = ['750', '500', '250', '200', '120', '60', '30', '10'];
+    for (const p of plan) if (!mcOrder.includes(p.mc)) mcOrder.push(p.mc);
+    for (const R of data) { const a = aVal(R); if (a && !mcOrder.includes(a) && /^\d+$/.test(a)) mcOrder.push(a); }
+    const planned = new Map(); for (const p of plan) planned.set(p.mc, (planned.get(p.mc) || []).concat(p.rows.filter(r => byRow.has(r))));
+    const allPlanned = new Set([].concat(...[...planned.values()]));
+    for (const mc of mcOrder) {
+      for (const [r, k] of sepOf) if (k === mc && !used.has(r)) { used.add(r); order.push(r); }
+      for (const r of planned.get(mc) || []) if (!used.has(r)) { used.add(r); order.push(r); }
+      for (const p of plan) if (p.mc === mc) for (const r of p.rest || []) if (byRow.has(r) && !used.has(r) && !allPlanned.has(r) && !sepOf.has(r)) { used.add(r); order.push(r); }
+      for (const R of data) if (!used.has(R.r) && !allPlanned.has(R.r) && !sepOf.has(R.r) && aVal(R) === mc) { used.add(R.r); order.push(R.r); }
+    }
+    for (const R of data) if (!used.has(R.r)) { used.add(R.r); order.push(R.r); }
+    // M/C column colour: the file's own green style for rows with a plan date, plain style otherwise
+    const styleOf = (R, col) => { const k = new RegExp(`<c r="${col}${R.r}"( s="(\\d+)")?`).exec(R.inner); return k ? k[2] : null; };
+    const hasN = (R, inner) => { const k = new RegExp(`<c r="N${R}"[^>]*?(?:/>|>([\\s\\S]*?)</c>)`).exec(inner); return !!(k && k[1] && /<v>[^<]/.test(k[1])); };
+    const cnt = { g: {}, p: {} }; for (const R of data) { if (sepOf.has(R.r)) continue; const st = styleOf(R, 'A'); if (st == null) continue; const b = hasN(R.r, R.inner) ? cnt.g : cnt.p; b[st] = (b[st] || 0) + 1; }
+    const top = o => Object.keys(o).sort((p, q) => o[q] - o[p])[0];
+    const GREEN = top(cnt.g), PLAIN = top(cnt.p);
+    const slots = data.map(R => R.r); const dest = new Map(order.map((src, i) => [src, slots[i]]));
+    const rewrite = (R, dst) => {
+      let inner = R.inner;
+      // formulas → explicit, shifted to the destination row
+      inner = inner.replace(/<c r="([A-Z]{1,3})\d+"([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g, (all, col, at, ci) => {
+        if (ci == null) return `<c r="${col}${dst}"${at}/>`;
+        const fm = /<f\b([^>]*?)(?:\/>|>([^<]*)<\/f>)/.exec(ci); let nci = ci;
+        if (fm) {
+          let src = null; const si = /si="(\d+)"/.exec(fm[1]);
+          if (/t="shared"/.test(fm[1]) && si && master[si[1]]) src = shiftF(master[si[1]].f, R.r - master[si[1]].row);
+          else if (fm[2] != null && !/t="(shared|array)"/.test(fm[1])) src = unesc(fm[2]);
+          if (src != null) nci = ci.replace(fm[0], `<f>${xesc(shiftF(src, dst - R.r))}</f>`);
+        }
+        return `<c r="${col}${dst}"${at}>${nci}</c>`;
+      });
+      let attrs = R.attrs;
+      const e = E[R.r]; if (e) { inner = patchRow(inner, dst, e); if (e.N) attrs = attrs.replace(/\shidden="1"/, ''); }
+      if (R.r >= firstRow && R.r <= lastRow) {
+        if (sepOf.has(R.r)) attrs = attrs.replace(/\shidden="1"/, '');
+        else if (GREEN && PLAIN && GREEN !== PLAIN) { const want = hasN(dst, inner) ? GREEN : PLAIN; inner = inner.replace(new RegExp(`<c r="A${dst}"( s="\\d+")?`), `<c r="A${dst}" s="${want}"`); }
+      }
+      return `<row r="${dst}"${attrs}>${inner}</row>`;
+    };
+    let nb = '';
+    // expand shared formulas outside the data block too (their masters may have moved)
+    const srcAt = new Map(order.map((src, i) => [slots[i], src]));
+    for (let i = 0; i < rows.length; i++) {
+      const R = rows[i];
+      if (R.r >= firstRow && R.r <= lastRow) { const src = byRow.get(srcAt.get(R.r)); nb += rewrite(src, R.r); }
+      else nb += rewrite(R, R.r);
+    }
+    zip.file(path, head + nb + tail);
+    // drop calcChain (cell positions changed); Excel rebuilds it
+    if (zip.file('xl/calcChain.xml')) {
+      zip.remove('xl/calcChain.xml');
+      const rel = 'xl/_rels/workbook.xml.rels'; zip.file(rel, (await zip.file(rel).async('string')).replace(/<Relationship\b[^>]*calcChain[^>]*\/>/g, ''));
+      const ct = '[Content_Types].xml'; zip.file(ct, (await zip.file(ct).async('string')).replace(/<Override\b[^>]*calcChain[^>]*\/>/g, ''));
+    }
+    let wb = await zip.file('xl/workbook.xml').async('string');
+    if (/<calcPr\b/.test(wb)) wb = wb.replace(/<calcPr\b([^>]*?)\s*(\/?)>/, (mm, a2, sl) => `<calcPr${a2.replace(/\sfullCalcOnLoad="[^"]*"/, '')} fullCalcOnLoad="1"${sl ? '/' : ''}>`);
+    zip.file('xl/workbook.xml', wb);
+    const out = await zip.generateAsync({ type: typeof window === 'undefined' ? 'nodebuffer' : 'blob', compression: 'DEFLATE', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    return { out, rows: Object.keys(E).length, order, slots };
+  }
+  const api = { writePlan, parseLoadingPlan, mc, mcKey, MCS, parseB };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.LPEngine = api;
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+(function(){
+'use strict';
+const $=id=>document.getElementById(id);
+const MCS=['750','500','250','200','120','60','30','10'];
+const NAME=k=>k==='ALL'?'All MC':k==='NBP'?'Need Batch Plan':k+' Kg MC';
+const SHORT=k=>k==='NBP'?'Need plan':k;
+const CAP={'750':750,'500':500,'250':250,'200':200,'120':120,'60':60,'30':30,'10':10};
+const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const fmt=n=>Number(n).toLocaleString('en-US',{maximumFractionDigits:1});
+const store={get(k){try{return JSON.parse(localStorage.getItem(k)||'null')}catch(e){return null}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+
+const SEED=JSON.parse($('seed').textContent);
+let D=SEED.data, LABEL=SEED.label;
+const saved=store.get('mclp-data'); if(saved&&saved.data&&saved.label){D=saved.data;LABEL=saved.label;}
+let S=Object.assign({plan:{},over:{},split:[],ed:{}},store.get('mclp-state')||{}); S.ed=S.ed||{};
+let cur='750';
+// column filters: key -> allowed values (absent = no filter). Default: Knit = KOK
+let FILT=(()=>{try{const f=JSON.parse(localStorage.getItem('mclp-filt')||'null');if(f&&typeof f==='object')return f;}catch(e){}return {6:['KOK']};})();
+const saveF=()=>{try{localStorage.setItem('mclp-filt',JSON.stringify(FILT))}catch(e){}};
+let C=new Map();
+let VIEW=[], VIEWPL=0, pending=0;   // frozen display order until Refresh
+function toast(m){const t=$('toast');t.textContent=m;t.hidden=false;clearTimeout(toast._t);toast._t=setTimeout(()=>t.hidden=true,2400);}
+function save(){store.set('mclp-state',S);}
+
+// ---------- combos ----------
+function stRank(c){ if(c.can) return 0; const r=(c.body.rm||'').toUpperCase(); if(r.includes('H/S'))return 1; if(r.includes('LAST'))return 2; if(r.includes('LD'))return 3; if(r==='KBL')return 4; return 5; }
+function ptRank(p){ p=(p||'').toUpperCase(); const L=['URGENT','LINE PLAN','AOP','FOC','HANGER','PSI']; const i=L.findIndex(x=>p.includes(x)); return i<0?6:i; }
+function mk(id,m,outside,from){
+  const p=m.map(b=>D.batches[b]); const q=p.reduce((a,x)=>a+(x.q||0),0);
+  const kOK=p.filter(x=>x.kn==='KOK').length;
+  const c={id,m,p,q,outside,from,body:p[0],kn:kOK===p.length?'ok':kOK?'part':'kbl',can:p.every(x=>x.st==='CAN DYE')};
+  c.auto=LPEngine.mcKey(q); { const fm=String(p[0].mc0||'').trim(); c.mc=MCS.includes(fm)?fm:(MCS.includes(c.auto)?c.auto:'750'); }  // machine = file M/C No
+  c.rank=[stRank(c),ptRank(c.body.pt),c.body.lp||'9999',c.body.pd||'9999',-(c.body.age||0)];
+  c.text=p.map(x=>[x.b,x.sh,x.by,x.po,x.fb,x.pt].join(' ')).join(' ').toLowerCase();
+  return c;
+}
+function build(){
+  for(const b in S.ed){ const x=D.batches[b]; if(x) Object.assign(x,S.ed[b]); }
+  C=new Map(); const split=new Set(S.split);
+  for(const c of D.combos){
+    let m=c.m.filter(b=>D.batches[b]); if(!m.length) continue;
+    const solo=m.length>1?m.slice(1).filter(g=>split.has(g)):[];
+    m=m.filter(b=>!solo.includes(b));
+    C.set(c.id,mk(c.id,m,c.outside,null));
+    for(const g of solo) C.set('S|'+g,mk('S|'+g,[g],'',c.id));
+  }
+  // planned = has a Plan Date; keep the user's order, add any dated combo that is missing (file SL order)
+  S.over={}; for(const k of Object.keys(S.plan)) if(!MCS.includes(k)) delete S.plan[k];
+  const isPl=c=>c.p.some(x=>x.pd);
+  const seen=new Set();
+  for(const k of MCS){ S.plan[k]=(S.plan[k]||[]).filter(id=>{const c=C.get(id); if(!c||c.mc!==k||!isPl(c)||seen.has(id)) return false; seen.add(id); return true;}); }
+  const slN=c=>{const v=parseFloat(c.body.sl);return isNaN(v)?1e9:v;};
+  const miss=[...C.values()].filter(c=>isPl(c)&&!seen.has(c.id)).sort((a,b)=>slN(a)-slN(b)||a.body.row-b.body.row);
+  for(const c of miss) S.plan[c.mc].push(c.id);
+}
+const cmpRank=(a,b)=>{for(let i=0;i<a.rank.length;i++){if(a.rank[i]<b.rank[i])return -1;if(a.rank[i]>b.rank[i])return 1;}return 0;};
+const loadPct=c=>CAP[c.mc]?c.q/CAP[c.mc]*100:null;
+const loadBad=c=>{const l=loadPct(c);return l!=null&&c.body.t==='B'&&(l<70||l>102);};
+const plan=()=>cur==='ALL'?[].concat(...MCS.map(k=>S.plan[k]||[])):(S.plan[cur]=S.plan[cur]||[]);
+const mlist=c=>S.plan[c.mc]=S.plan[c.mc]||[];          // the plan list of a combo's own machine
+const inView=c=>cur==='ALL'||c.mc===cur;
+const COLW0=[68,240,84,106,84,68,34,26,46,52,70,84,80,78];
+let COLW=(()=>{const w=store.get('mclp-cols');return Array.isArray(w)&&w.length===COLW0.length?w:COLW0.slice();})();
+function applyCols(){document.documentElement.style.setProperty('--cols',COLW.map(w=>w+'px').join(' '));}
+applyCols();
+
+// ---------- view ----------
+function refreshView(){
+  const ids=plan();
+  let rest=[...C.values()].filter(c=>inView(c)&&!ids.includes(c.id));
+  rest=rest.filter(passes);
+  rest.sort((a,b)=>cmpAuto(a,b,true));
+  VIEW=ids.concat(rest.map(c=>c.id)); VIEWPL=ids.length; pending=0;
+  draw();
+}
+const HEAD=['Plan Type','Batch No','Buyer Name','Shade','Fabrics Type','LD/Matching','Knit','B/G','Batch qty','Plan Date','Workorder Category','Remarks','Hold remarks','H/s Status'];
+const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const dshort=d=>d?(+d.slice(8,10))+'-'+MON[+d.slice(5,7)-1]:'';
+const GET=[x=>x.pt,x=>x.b,x=>x.by,x=>x.sh,x=>x.fb,x=>x.ld,x=>x.kn,x=>x.t,x=>String(Math.round(x.q)),x=>dshort(x.pd),x=>x.cat,x=>x.rmk,x=>x.hold,x=>x.hs];
+const cval=(c,k)=>k==='s'?[c.can?'Can dye':'Not ready']:c.p.map(x=>String(GET[k](x)||'(blank)'));
+function passes(c){ for(const k in FILT){ const set=FILT[k]; if(!set) continue; if(!cval(c,k==='s'?'s':+k).some(v=>set.includes(v))) return false; } return true; }
+const CLS=['','','','','c-fb','c-ld','','','','','','','',''];
+const sp=(v,cls)=>`<span${cls?' class="'+cls+'"':''} title="${esc(v)}">${esc(v)}</span>`;
+function line(x){
+  return `<div class="ln">${sp(x.pt)}${sp(x.b,'bn')}${sp(x.by)}${sp(x.sh)}${sp(x.fb,'mut c-fb')}${sp(x.ld,'mut c-ld')}<span class="${x.kn==='KOK'?'ok':'mut'}">${esc(x.kn)}</span><span><span class="bg ${x.t}">${x.t}</span></span><span class="n">${fmt(x.q)}</span><span class="mut">${dshort(x.pd)}</span>${sp(x.cat,'mut')}<span><input class="ed" data-b="${esc(x.b)}" data-k="rmk" value="${esc(x.rmk)}" title="${esc(x.rmk)}" aria-label="Remarks"></span><span><input class="ed" data-b="${esc(x.b)}" data-k="hold" value="${esc(x.hold)}" title="${esc(x.hold)}" aria-label="Hold remarks"></span><span class="${/OK/i.test(x.hs)?'ok':'no'}" title="${esc(x.hs)}">${esc(x.hs)}</span></div>`;
+}
+function box(c,sl,alt,ns){
+  const l=loadPct(c);
+  const lead=sl?`<span class="hdl" title="Drag to reorder">⋮⋮</span><input class="sn" type="number" min="1" value="${sl}" aria-label="SL">`:`<span class="tick"></span><span class="ns" title="Suggested serial (Auto-order rules)">${ns||''}</span>`+(cur==='ALL'?`<span class="mct" title="M/C">${esc(c.mc)}</span>`:'');
+  const tip=`${c.can?'Can dye':'Not ready: '+(c.body.rm||'')}${c.m.length===2?' · body + gusset':''}${c.outside?' · partner '+c.outside:''} · combo ${fmt(c.q)} kg${l!=null?' · load '+l.toFixed(0)+'%':''} · click to ${sl?'take out of':'add to'} the plan`;
+  return `<div class="cb${sl?' pl':''}${c.can?' can':''}${alt?' alt':''}" data-id="${esc(c.id)}"${sl?' draggable="true"':''} title="${esc(tip)}"><div class="lead">${lead}<span class="dot${c.can?' on':''}"></span></div><div class="lines">${c.p.map(line).join('')}</div></div>`;
+}
+function draw(){
+  if(typeof VMODE!=='undefined'&&VMODE==='board') setTimeout(drawBoard,0);
+  $('fileLbl').textContent=LABEL;
+  const tot=MCS.reduce((a,k)=>a+(S.plan[k]||[]).length,0);
+  $('mcs').innerHTML=`<button class="mc${cur==='ALL'?' on':''}" data-k="ALL">All MC${tot?`<small>${tot}</small>`:''}</button>`+MCS.map(k=>{const n=(S.plan[k]||[]).length;return `<button class="mc${k===cur?' on':''}" data-k="${k}">${SHORT(k)} kg${n?`<small>${n}</small>`:''}</button>`;}).join('');
+  const ids=plan(), sl=id=>{const c=C.get(id);return c?(S.plan[c.mc]||[]).indexOf(id)+1:0;};
+  const head=`<div class="ln hd"><span class="lh"><b data-f="s" class="${FILT.s?'f':''}" title="Filter: can dye / not ready">SL</b></span>${HEAD.map((h,i)=>`<span class="${CLS[i]}${i===8?' n':''}"><b data-f="${i}" class="${FILT[i]?'f':''}" title="Filter ${h}">${h}</b><i class="rz" data-i="${i}" title="Drag to resize · double-click to reset"></i></span>`).join('')}</div>`;
+  const a=VIEW.slice(0,VIEWPL).filter(id=>C.has(id)), b=VIEW.slice(VIEWPL).filter(id=>C.has(id));
+  $('list').innerHTML=head
+    +`<div class="dv">Planned · ${ids.length}</div>`+(a.length?a.map((id,i)=>{const c=C.get(id);const hd=cur==='ALL'&&(i===0||C.get(a[i-1]).mc!==c.mc)?`<div class="dv mcg">${esc(NAME(c.mc))} · ${(S.plan[c.mc]||[]).length}</div>`:'';return hd+box(c,sl(id),i%2);}).join(''):'<div class="empty">Click a combo below to plan it. Press Refresh to move ticked combos up here.</div>')
+    +`<div class="dv">Not planned · ${b.filter(id=>!ids.includes(id)).length}</div>`+(b.length?(()=>{const cnt={};return b.map((id,i)=>{const c=C.get(id);const s0=sl(id);let ns='';if(!s0){cnt[c.mc]=(cnt[c.mc]||0)+1;ns=cnt[c.mc];}return box(c,s0,i%2,ns);}).join('');})():'<div class="empty">No other combos match these filters.</div>');
+  const cs=ids.map(id=>C.get(id)); const kg=cs.reduce((x,c)=>x+c.q,0); const nb=cs.reduce((x,c)=>x+c.m.length,0); const ls=cs.map(loadPct).filter(x=>x!=null);
+  $('foot').innerHTML=`<span><b>${esc(NAME(cur))}</b></span><span>Planned <b>${cs.length}</b> SL · <b>${nb}</b> batches · <b>${fmt(Math.round(kg))}</b> kg</span><span>Avg load <b>${ls.length?(ls.reduce((x,y)=>x+y,0)/ls.length).toFixed(0)+'%':'–'}</b></span><span>Can dye <b>${cs.filter(c=>c.can).length}</b></span><span>${esc(LABEL)}</span>`;
+  $('refresh').innerHTML='Refresh'+(pending?`<span class="badge">${pending}</span>`:''); $('refresh').classList.toggle('hot',!!pending); {const n=Object.keys(FILT).length;$('clrF').disabled=!n;$('clrF').innerHTML='Clear all filters'+(n?`<span class="badge">${n}</span>`:'');}
+}
+
+// ---------- actions ----------
+const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
+// Plan Date: tick → today (or back to the file's own date); untick → blank (file date cleared on export)
+function setPlanDate(c,on){
+  for(const b of c.m){ const x=D.batches[b]; if(!x) continue; const e=S.ed[b]=S.ed[b]||{};
+    const orig=('pd0' in e)?e.pd0:(x.pd||'');
+    if(on){ if(orig){ x.pd=orig; delete e.pd; delete e.pd0; } else { e.pd0=''; e.pd=today(); x.pd=e.pd; } }
+    else { if(orig){ e.pd0=orig; e.pd=''; } else { delete e.pd; delete e.pd0; } x.pd=''; }
+    if(!Object.keys(e).length) delete S.ed[b];
+  }
+}
+function toggle(id,ok){
+  const c=C.get(id), L=mlist(c);
+  if(L.includes(id)){ S.plan[c.mc]=L.filter(x=>x!==id); setPlanDate(c,false); }
+  else { if(!ok&&checkPlan(c)) return; let pos=L.findIndex(x=>cmpAuto(C.get(x),c)>0); if(pos<0) pos=L.length; L.splice(pos,0,id); setPlanDate(c,true); }
+  pending++; save(); draw();
+}
+// ---------- checks before planning: KBL / LD pending, and 102% Req Qty Kg ----------
+const f0=v=>fmt(Math.round(v));
+function plannedKg(ik,skip){ let t=0; for(const k in S.plan) for(const id of S.plan[k]||[]){ const c=C.get(id); if(!c) continue; for(const x of c.p) if(x.ik===ik&&!skip.has(x.b)) t+=x.q||0; } return t; }
+function checkPlan(c){
+  const notes=[];
+  for(const x of c.p){
+    const tag=c.p.length>1?`<b>${x.t==='G'?'Gusset':'Body'}</b> `:'';
+    if(x.kn==='KBL') notes.push(`${tag}${esc(x.b)}: <b>knitting balance (KBL)</b> — knitting is not complete.`);
+    if(!String(x.ld||'').trim()) notes.push(`${tag}${esc(x.b)}: <b>LD pending</b> — no LD / matching reference.`);
+  }
+  if(!D.itemsKg&&!checkPlan.w){checkPlan.w=1;toast('Load the file again to turn on the 102% Req Qty Kg check.');}
+  const rows=[]; const skip=new Set(c.m); const seen={};
+  if(D.itemsKg) for(const x of c.p){
+    const it=D.itemsKg[x.ik]; if(!it) continue;
+    const [bal,wip]=it; const pl=plannedKg(x.ik,skip)+(seen[x.ik]||0); const tot=wip+pl+(x.q||0); seen[x.ik]=(seen[x.ik]||0)+(x.q||0);
+    if(tot>bal+0.5) rows.push({x,bal,wip,pl,tot});
+  }
+  if(!notes.length&&!rows.length) return false;
+  const red=rows.length>0;
+  if(!red){ // KBL / LD pending: plan it, then show a message
+    setTimeout(()=>{const d=$('dlg'); d.className=''; d.innerHTML=`<h3>Planned — please note</h3>${notes.map(n=>`<div class="note">${n}</div>`).join('')}<div class="acts"><button class="btn go amb" id="dlgY">OK</button></div>`; $('dlgW').hidden=false; $('dlgY').focus(); $('dlgY').onclick=()=>{$('dlgW').hidden=true;};},0);
+    return false;
+  }
+  const tbl=red?`<div class="over">Batch qty will go over the 102% Req Qty Kg. This batch is on hold.</div><table><tr><th>Batch</th><th>102% Req Qty Kg</th><th>In process</th><th>Already planned</th><th>This batch</th><th>Total</th><th>Over by</th></tr>${rows.map(r=>`<tr><td>${c.p.length>1?`<span class="bg ${r.x.t}">${r.x.t}</span> `:''}${esc(r.x.b)}</td><td>${f0(r.bal)}</td><td>${f0(r.wip)}</td><td>${f0(r.pl)}</td><td>${f0(r.x.q)}</td><td class="bad">${f0(r.tot)}</td><td class="bad">${f0(r.tot-r.bal)}</td></tr>`).join('')}</table><div class="mut" style="font-size:11px">All in kg, for the same order item; 102% Req Qty Kg is from the 280 sheet (${esc(rows[0].x.ik)}${rows.length>1?' …':''}). In process = dyed batches not yet RFD. Already planned = batches ticked in this planner.</div>`:'';
+  const d=$('dlg'); d.className=red?'red':'';
+  d.innerHTML=`<h3>${red?'Hold — over 102% Req Qty Kg':'Check before planning'}</h3>${notes.map(n=>`<div class="note">${n}</div>`).join('')}${tbl}<div class="acts"><button class="btn" id="dlgN">Cancel</button><button class="btn go${red?'':' amb'}" id="dlgY">${red?'Proceed anyway':'Plan anyway'}</button></div>`;
+  $('dlgW').hidden=false; $('dlgN').focus();
+  $('dlgN').onclick=()=>{$('dlgW').hidden=true;};
+  $('dlgY').onclick=()=>{$('dlgW').hidden=true; toggle(c.id,true); toast(red?'Planned over the 102% Req Qty Kg.':'Planned.');};
+  return true;
+}
+window.__lp={C:()=>C,D:()=>D,plan:()=>plan(),go:k=>{cur=k;refreshView();}};
+$('dlgW').addEventListener('pointerdown',e=>{if(e.target.id==='dlgW')$('dlgW').hidden=true;});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('dlgW').hidden)$('dlgW').hidden=true;});
+function moveTo(id,pos){ const L=mlist(C.get(id)); const i=L.indexOf(id); if(i<0)return; L.splice(i,1); pos=Math.max(0,Math.min(L.length,pos)); L.splice(pos,0,id); save(); refreshView(); }
+$('mcs').addEventListener('click',e=>{const b=e.target.closest('.mc');if(!b)return;cur=b.dataset.k;refreshView();});
+$('refresh').addEventListener('click',()=>{refreshView();});
+$('home').addEventListener('click',()=>{$('fp').hidden=true;$('list').scrollTo({top:0,behavior:'smooth'});});
+$('clrF').addEventListener('click',()=>{FILT={};saveF();refreshView();toast('All filters removed.');});
+function openFilter(key,anchor){
+  const pool=[...C.values()].filter(inView);
+  const counts=new Map(); for(const c of pool) for(const v of new Set(cval(c,key==='s'?'s':+key))) counts.set(v,(counts.get(v)||0)+1);
+  const vals=[...counts.keys()].sort((a,b)=>key==='8'?(+a)-(+b):String(a).localeCompare(String(b)));
+  const was=FILT[key]?new Set(FILT[key]):null;
+  const name=key==='s'?'SL · can dye':HEAD[+key];
+  const fp=$('fp');
+  fp.innerHTML=`<div class="ttl">${esc(name)}</div><input type="search" id="fpq" placeholder="Search values"><div class="row"><button class="btn" id="fpAll">Select all</button><button class="btn" id="fpNone">Select none</button></div><div class="vals" id="fpv">${vals.map(v=>`<label title="${esc(v)}"><input type="checkbox" value="${esc(v)}" ${!was||was.has(v)?'checked':''}>${esc(v)} <span class="mut">(${counts.get(v)})</span></label>`).join('')}</div><div class="row"><button class="btn" id="fpClr">Clear filter</button><span><button class="btn" id="fpX">Cancel</button> <button class="btn pri" id="fpOk">OK</button></span></div>`;
+  fp.hidden=false; const r=anchor.getBoundingClientRect();
+  fp.style.top=Math.max(8,Math.min(r.bottom+4,innerHeight-fp.offsetHeight-8))+'px'; fp.style.left=Math.max(8,Math.min(r.left,innerWidth-fp.offsetWidth-8))+'px';
+  const boxes=()=>[...fp.querySelectorAll('#fpv input')];
+  $('fpq').oninput=e=>{const t=e.target.value.toLowerCase();fp.querySelectorAll('#fpv label').forEach(l=>{l.hidden=!l.textContent.toLowerCase().includes(t);});};
+  $('fpAll').onclick=()=>boxes().forEach(b=>{if(!b.parentElement.hidden)b.checked=true;});
+  $('fpNone').onclick=()=>boxes().forEach(b=>{if(!b.parentElement.hidden)b.checked=false;});
+  $('fpX').onclick=()=>{fp.hidden=true;};
+  $('fpClr').onclick=()=>{delete FILT[key];saveF();fp.hidden=true;refreshView();};
+  $('fpOk').onclick=()=>{const on=boxes().filter(b=>b.checked).map(b=>b.value); if(on.length===vals.length) delete FILT[key]; else FILT[key]=on; saveF(); fp.hidden=true; refreshView();};
+  $('fpq').focus();
+}
+$('list').addEventListener('click',e=>{const h=e.target.closest('.hd b[data-f]');if(!h)return;e.stopPropagation();openFilter(h.dataset.f,h);},true);
+document.addEventListener('pointerdown',e=>{const fp=$('fp');if(!fp.hidden&&!fp.contains(e.target)&&!e.target.closest('.hd b[data-f]'))fp.hidden=true;});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')$('fp').hidden=true;});
+let rz=null;
+$('list').addEventListener('pointerdown',e=>{const g=e.target.closest('.rz');if(!g)return;e.preventDefault();e.stopPropagation();const i=+g.dataset.i;rz={i,x:e.clientX,w:COLW[i],g};g.classList.add('on');try{g.setPointerCapture(e.pointerId)}catch(_){}});
+document.addEventListener('pointermove',e=>{if(!rz)return;COLW[rz.i]=Math.max(28,Math.round(rz.w+e.clientX-rz.x));applyCols();});
+document.addEventListener('pointerup',()=>{if(!rz)return;rz.g.classList.remove('on');rz=null;store.set('mclp-cols',COLW);});
+$('list').addEventListener('dblclick',e=>{const g=e.target.closest('.rz');if(!g)return;const i=+g.dataset.i;COLW[i]=COLW0[i];applyCols();store.set('mclp-cols',COLW);});
+$('list').addEventListener('click',e=>{ if(e.target.closest('.sn,.hdl,.hd,.ed'))return; const cb=e.target.closest('.cb'); if(cb) toggle(cb.dataset.id); });
+$('list').addEventListener('keydown',e=>{ if(e.target.classList.contains('ed')&&e.key==='Enter'){e.preventDefault();e.target.blur();} });
+$('list').addEventListener('change',e=>{ const t=e.target;
+  if(t.classList.contains('ed')){ const b=t.dataset.b,k=t.dataset.k,v=t.value.trim(); (S.ed[b]=S.ed[b]||{})[k]=v; if(D.batches[b]) D.batches[b][k]=v; t.title=v; save(); toast('Saved.'); return; }
+  if(!t.classList.contains('sn'))return; const id=t.closest('.cb').dataset.id; const v=parseInt(t.value,10); if(v>=1) moveTo(id,v-1); else draw(); });
+let dragId=null;
+$('list').addEventListener('dragstart',e=>{if(e.target.closest&&e.target.closest('.ed')){e.preventDefault();return;}const cb=e.target.closest('.cb.pl');if(!cb)return;dragId=cb.dataset.id;cb.classList.add('drag');e.dataTransfer.effectAllowed='move';try{e.dataTransfer.setData('text/plain',dragId)}catch(_){}});
+$('list').addEventListener('dragend',()=>{document.querySelectorAll('.cb.drag,.cb.over').forEach(x=>x.classList.remove('drag','over'));dragId=null;});
+$('list').addEventListener('dragover',e=>{if(!dragId)return;const cb=e.target.closest('.cb.pl');if(!cb)return;e.preventDefault();document.querySelectorAll('.cb.over').forEach(x=>x.classList.remove('over'));if(cb.dataset.id!==dragId)cb.classList.add('over');});
+$('list').addEventListener('drop',e=>{if(!dragId)return;const cb=e.target.closest('.cb.pl');if(!cb)return;e.preventDefault();const L=mlist(C.get(dragId));const to=L.indexOf(cb.dataset.id),from=L.indexOf(dragId);if(to<0){toast('Drag within the same machine.');return;}if(to>=0&&from>=0&&to!==from)moveTo(dragId,from<to?to-1:to);});
+// Auto-order: 1 FOC · 2 Hanger (both by Plan Date) · 3 Line Plan: today, tomorrow, day after, then backlog oldest→newest, then later dates
+//             4 AOP (shade says AOP) · 5 Urgent · 6 other Plan Type comments · 7 rest — groups 4–7 by Plan Date, then OTT
+const addDays=n=>{const d=new Date();d.setDate(d.getDate()+n);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
+const AUTO_NOTE='Auto-ordered: FOC → Hanger → Line Plan (today, tomorrow, day after, backlog, later dates nearest first) → AOP → Urgent → other Plan Type → rest.';
+function autoKey(c,simple){
+  const t0=addDays(0),t1=addDays(1),t2=addDays(2);
+  const first=f=>c.p.map(f).filter(Boolean).sort()[0]||'';
+  const lp=first(x=>x.lp), pd=first(x=>x.pd)||'9999', ott=first(x=>x.ott)||'9999';
+  const has=re=>c.p.some(x=>re.test(x.pt||'')||re.test(x.cat||''));
+  let g,sub=0,d=pd;
+  if(has(/FOC/i)) g=0;
+  else if(has(/HANGER/i)) g=1;
+  else if(lp){ g=2; d=lp; if(!simple) sub=lp===t0?0:lp===t1?1:lp===t2?2:lp<t0?3:4; }  // planned: today, tomorrow, day after, backlog, later · not planned: oldest first
+  else if(c.p.some(x=>/AOP/i.test(x.sh||''))) g=3;
+  else if(c.p.some(x=>/URGENT/i.test(x.pt||''))) g=4;
+  else if(c.p.some(x=>String(x.pt||'').trim())) g=5;
+  else g=6;
+  return [g,sub,d,ott];
+}
+const cmpAuto=(a,b,simple)=>{const x=autoKey(a,simple),y=autoKey(b,simple);for(let i=0;i<x.length;i++){if(x[i]<y[i])return -1;if(x[i]>y[i])return 1;}return cmpRank(a,b);};
+$('auto').addEventListener('click',()=>{let n=0;for(const k of MCS){const L=S.plan[k]||[];n+=L.length;L.sort((a,b)=>cmpAuto(C.get(a),C.get(b)));}if(!n){toast('Tick combos first.');return;}save();refreshView();toast(AUTO_NOTE+' (all machines)');});
+$('clearWrap').addEventListener('click',e=>{
+  if(e.target.id==='clear'){ if(!plan().length)return; $('clearWrap').innerHTML='<span class="confirm">Clear '+esc(NAME(cur))+'? <button class="hb2" id="clrY">Clear</button><button class="hb2" id="clrN">Keep</button></span>'; }
+  else if(e.target.id==='clrY'){ for(const id of plan()) if(C.has(id)) setPlanDate(C.get(id),false); for(const k of (cur==='ALL'?MCS:[cur])) S.plan[k]=[]; save(); $('clearWrap').innerHTML='<button class="hb2" id="clear">Clear</button>'; refreshView(); }
+  else if(e.target.id==='clrN'){ $('clearWrap').innerHTML='<button class="hb2" id="clear">Clear</button>'; }
+});
+
+
+// ---------- MC board (day view of the planned sequence) ----------
+let VMODE='list';
+const GRP=[['FOC','#F3D9C9'],['Hanger','#E9DDF0'],['Line Plan','#D6E6F2'],['AOP','#F6E7BF'],['Urgent','#F2D3D6'],['Other','#E3E9DF'],['Rest','#EFECED']];
+S.cap=S.cap||{}; S.bstart=S.bstart||''; S.hol=S.hol||'';
+const capOf=k=>Object.assign({m:1,b:2},S.cap[k]||{});
+function bDays(n0){const out=[];const d=new Date((S.bstart||addDays(0))+'T00:00:00');let guard=0;while(out.length<n0&&guard++<400){const iso=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');out.push({iso,off:S.hol!==''&&d.getDay()===+S.hol,lab:d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})});d.setDate(d.getDate()+1);}return out;}
+let SIDE=null; let BINFO={}; let BQ=''; let BG=new Set();  // board search text, groups switched off
+function drawBoard(){
+  BINFO={};
+  const ks=cur==='ALL'?MCS:[cur];
+  // lay out each machine: per working day capacity = MCs × batches/MC/day (a combo counts as one batch load)
+  const lay={}; let maxDay=1;
+  for(const k of ks){ const ids=(S.plan[k]||[]).filter(id=>C.has(id)); const {m,b}=capOf(k); const per=Math.max(1,Math.round(m*b)); lay[k]={ids,per}; }
+  const dayList=bDays(60);
+  for(const k of ks){ const L=lay[k]; let di=0,used=0; L.pos=[]; for(const id of L.ids){ while(dayList[di]&&dayList[di].off) di++; if(used>=L.per){di++;used=0; while(dayList[di]&&dayList[di].off) di++;} L.pos.push(di); used++; } L.days=(L.pos.length?L.pos[L.pos.length-1]+1:1); maxDay=Math.max(maxDay,L.days); }
+  const days=dayList.slice(0,Math.max(maxDay,3));
+  const colW=k=>lay[k].per*150+8;
+  const W=Math.max(...ks.map(colW));
+  const hol=['','5','6','0'].map((v,i)=>`<option value="${v}"${S.hol===v?' selected':''}>${['None','Friday','Saturday','Sunday'][i]}</option>`).join('');
+  const legend=GRP.map(([n,c],gi)=>`<button class="lg lgb${BG.has(gi)?' offg':''}" data-g="${gi}" title="Show / hide ${n}"><i style="background:${c}"></i>${n}</button>`).join('');
+  let h=`<div class="bctl"><input type="search" id="bQ" placeholder="Search batch, buyer, shade, PO…" value="${esc(BQ)}"><span id="bHits" class="mut"></span><label>Plan start <input type="date" id="bStart" value="${S.bstart||addDays(0)}"></label><label>Weekly holiday <select id="bHol">${hol}</select></label>${legend}<span class="lg"><i style="background:#fff;outline:1.5px dashed #B8737B;outline-offset:-2px"></i>Over 102% req.</span><span class="lg"><i style="background:#C9A35A;border-radius:50%"></i>KBL / LD pending</span><span class="lg"><i style="background:#fff;outline:2px solid #C0505C;outline-offset:-2px"></i>Capacity misses Line Plan date</span><span class="lg"><i style="background:#fff;outline:2px solid #D9B36A;outline-offset:-2px"></i>Backlog (Line Plan date passed)</span></div>`;
+  h+=`<div class="bbody"><div class="bwrap" id="bwrap"><div class="bgrid"><div class="bhd0">Machine</div><div class="bhd">${days.map(d=>`<div class="bday${d.off?' off':''}" style="width:${W}px"><span class="bdl">${esc(d.lab)}${d.off?' · off':''}</span></div>`).join('')}</div>`;
+  for(const k of ks){
+    const L=lay[k]; const cs=L.ids.map(id=>C.get(id)); const kg=cs.reduce((a,c)=>a+c.q,0); const ls=cs.map(loadPct).filter(x=>x!=null); const {m,b}=capOf(k);
+    h+=`<div class="brh"><b>${esc(k)} kg</b><span>${cs.length} SL · ${fmt(Math.round(kg))} kg</span><span>Avg load ${ls.length?(ls.reduce((x,y)=>x+y,0)/ls.length).toFixed(0)+'%':'–'} · ${L.days} day${L.days>1?'s':''}</span><span class="cap" title="Machines of this size × batches per machine per day">MC <input type="number" min="1" step="1" data-cap="m" data-k="${k}" value="${m}"> × <input type="number" min="0.5" step="0.5" data-cap="b" data-k="${k}" value="${b}">/day</span></div>`;
+    h+=`<div class="brow" data-k="${k}">`;
+    days.forEach((d,di)=>{ const here=L.ids.map((id,i)=>[id,i]).filter(([id,i])=>L.pos[i]===di);
+      h+=`<div class="bcell${d.off?' off':''}" style="width:${W}px">${here.map(([id,i])=>bcard(C.get(id),i+1,d.iso)).join('')}${di===Math.max(0,L.days-1)?`<div class="bend" data-k="${k}" title="Drop here to put last"></div>`:''}</div>`; });
+    h+=`</div>`;
+  }
+  h+=`</div></div><aside class="bside" id="bside"${SIDE&&C.has(SIDE)?'':' hidden'} title="Click to close"></aside></div>`;
+  const keep=$('bwrap')?[$('bwrap').scrollLeft,$('bwrap').scrollTop]:null;
+  $('board').innerHTML=h; if(keep){$('bwrap').scrollLeft=keep[0];$('bwrap').scrollTop=keep[1];}
+  if(SIDE&&C.has(SIDE)) fillSide(SIDE);
+  const nh=document.querySelectorAll('#board .bcard.hit').length;
+  $('bHits').textContent=BQ.trim()?(nh?`${nh} found${nh>1?' · Enter for next':''}`:'Not in the plan'):'';
+}
+function bcard(c,sl,day){
+  const k=autoKey(c)[0]; const col=GRP[Math.min(k,6)][1];
+  const x=c.body; const short=x.b.replace(/^SQHUE-FY\d\d-\d\d-/,'');
+  const warn=c.p.some(y=>y.kn==='KBL'||!String(y.ld||'').trim());
+  let over=false; if(D.itemsKg){ for(const y of c.p){ const it=D.itemsKg[y.ik]; if(!it) continue; let pl=0; for(const kk in S.plan) for(const id of S.plan[kk]||[]){ const cc=C.get(id); if(cc) for(const z of cc.p) if(z.ik===y.ik) pl+=z.q||0; } if(it[1]+pl>it[0]+0.5) over=true; } }
+  const lp=c.p.map(y=>y.lp).filter(Boolean).sort()[0]||''; const back=!!(lp&&lp<addDays(0)); const late=!!(lp&&day&&day>lp&&!back);
+  BINFO[c.id]={sl,day,lp,late,back,over,warn};
+  const g=Math.min(k,6), q=BQ.trim().toLowerCase(); const hit=!!q&&(c.text.includes(q)||c.p.some(y=>String(y.po).toLowerCase().includes(q)));
+  return `<div class="bcard${hit?' hit':''}${BG.has(g)?' dim':''}${over?' hold':''}${late?' late':''}${back?' back':''}${SIDE===c.id?' sel':''}" draggable="true" data-id="${esc(c.id)}" style="background:${col}"><div class="t">${sl} · ${esc(short)}${c.m.length>1?' +G':''}</div>${(()=>{const tg=tagsOf(c); const st=[]; if(c.p.some(y=>y.kn==='KBL')) st.push('KBL'); if(c.p.some(y=>y.hs&&!/OK/i.test(y.hs))) st.push('H/S Pending');
+  return (tg.length||st.length)?`<div class="s tg">${tg.map(t=>`<span class="gtag${t==='FOC'?' foc':''}">${esc(t)}</span>`).join('<i>/</i>')}${st.map(t=>` <span class="stag">${t}</span>`).join('')}</div>`:'';})()}<div class="s">${esc(x.by)} · ${fmt(Math.round(c.q))} kg</div><div class="s">${lp?`<span class="lpd">LP ${dshort(lp)}</span> · `:''}${esc(x.sh)}</div>${warn?'<span class="k" style="background:#C9A35A"></span>':''}</div>`;
+}
+
+// all labels of a combo: main group first, then FOC / Hanger / Line Plan / AOP / Urgent / other Plan Type words / Additional / Last Batch
+function tagsOf(c){
+  const out=[]; const add=t=>{t=String(t||'').trim(); if(!t) return; const u=t.toUpperCase(); if(!out.some(o=>o.toUpperCase()===u)) out.push(t);};
+  const nice=t=>{const u=t.trim().toUpperCase(); return u==='FOC'?'FOC':u==='AOP'?'AOP':u==='PSI'?'PSI':u==='LINE PLAN'?'Line Plan':u.toLowerCase().replace(/\b\w/g,ch=>ch.toUpperCase());};
+  const g=Math.min(autoKey(c)[0],6);
+  const pts=[]; for(const y of c.p) for(const t of String(y.pt||'').split('/')) if(t.trim()) pts.push(nice(t));
+  const cats=[]; for(const y of c.p) if(String(y.cat||'').trim()) cats.push(nice(y.cat));
+  const all=[...pts,...cats]; const hasW=w=>all.some(t=>t.toUpperCase()===w.toUpperCase());
+  const aop=c.p.some(y=>/AOP/i.test(y.sh||''))||hasW('AOP'); const lp=c.p.some(y=>y.lp)||hasW('Line Plan');
+  if(g===0) add('FOC'); else if(g===1) add('Hanger'); else if(g===2) add('Line Plan'); else if(g===3) add('AOP'); else if(g===4) add('Urgent'); else if(g===5) add(pts[0]||'Others');
+  if(hasW('FOC')) add('FOC'); if(hasW('Hanger')) add('Hanger'); if(lp) add('Line Plan'); if(aop) add('AOP'); if(hasW('Urgent')) add('Urgent');
+  for(const t of all) add(t);
+  return out;
+}
+function grpName(c){const t=tagsOf(c);return t.length?t.join(' / '):'Rest';}
+function bDetail(c,full){
+  const i=BINFO[c.id]||{}; const x=c.body; const l=loadPct(c);
+  const kv=(k,v,cls)=>v?`<div class="kv"><span>${k}</span><b${cls?` class="${cls}"`:''}>${esc(v)}</b></div>`:'';
+  let h=`<div class="pt">SL ${i.sl||''} · ${esc(NAME(c.mc))}</div><div class="pg">${grpName(c)}${x.pt?' · '+esc(x.pt):''}</div>`;
+  h+=kv('Load day',i.day?dshort(i.day):'')+kv('Line Plan',i.lp?dshort(i.lp)+(i.back?' (backlog)':''):'',i.late?'bad':'')+kv('Plan Date',dshort(x.pd))+kv('OTT',dshort(x.ott))+kv('Combo kg',fmt(Math.round(c.q))+(l!=null?' · load '+l.toFixed(0)+'%':''));
+  if(i.late) h+=`<div class="bad2">Loads ${dshort(i.day)}, after its Line Plan date ${dshort(i.lp)} — not enough capacity before then.</div>`;
+  if(i.back) h+=`<div class="amb2">Backlog: Line Plan date ${dshort(i.lp)} has already passed.</div>`;
+  if(i.over) h+=`<div class="bad2">Over 102% Req Qty Kg for this order item.</div>`;
+  if(i.warn) h+=`<div class="amb2">KBL / LD pending.</div>`;
+  if(full){
+    for(const y of c.p){ h+=`<div class="bb"><div class="bn2"><span class="bg ${y.t}">${y.t}</span> ${esc(y.b)} <button class="cpy" data-copy="${esc(y.b)}" title="Copy batch no">⧉</button></div>`+kv('Buyer',y.by)+kv('Shade',y.sh)+kv('Fabric',y.fb)+kv('LD/Matching',y.ld||'LD pending')+kv('Knit',y.kn)+kv('Batch qty',fmt(Math.round(y.q))+' kg')+kv('H/s',y.hs)+kv('Status',y.rm)+kv('Category',y.cat)+kv('Customer PO',y.po)+kv('Remarks',y.rmk)+kv('Hold remarks',y.hold);
+      if(D.itemsKg&&D.itemsKg[y.ik]){ const it=D.itemsKg[y.ik]; let pl=0; for(const kk in S.plan) for(const id of S.plan[kk]||[]){ const cc=C.get(id); if(cc) for(const z of cc.p) if(z.ik===y.ik) pl+=z.q||0; } h+=kv('102% Req Qty Kg',fmt(Math.round(it[0])))+kv('In process kg',fmt(Math.round(it[1])))+kv('Planned kg (item)',fmt(Math.round(pl)),it[1]+pl>it[0]+0.5?'bad':''); }
+      h+=`</div>`; }
+    h+=`<div class="mut" style="font-size:11px;margin-top:6px">Click the card again or this panel to close.</div>`;
+  } else h+=`<div class="pb">${c.m.map(esc).join('<br>')}</div><div class="pb">${esc(x.by)} · ${esc(x.sh)}</div>`;
+  return h;
+}
+function copyText(t){ const ok=()=>toast('Copied '+t); const fb=()=>{const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');ok();}catch(_){toast('Copy did not work here.');}ta.remove();};
+  if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(ok,fb); else fb(); }
+function fillSide(id){ const c=C.get(id); if(!c) return; $('bside').innerHTML=bDetail(c,true); $('bside').hidden=false; }
+$('board').addEventListener('click',e=>{
+  const lg=e.target.closest('.lgb'); if(lg){ const gi=+lg.dataset.g; BG.has(gi)?BG.delete(gi):BG.add(gi); drawBoard(); return; }
+  const cp=e.target.closest('.cpy'); if(cp){ copyText(cp.dataset.copy); cp.textContent='✓'; setTimeout(()=>{cp.textContent='⧉';},1200); return; }
+  if(e.target.closest('#bside')){ SIDE=null; $('bside').hidden=true; document.querySelectorAll('.bcard.sel').forEach(x=>x.classList.remove('sel')); return; }
+  const cd=e.target.closest('.bcard'); if(!cd) return;
+  const id=cd.dataset.id; document.querySelectorAll('.bcard.sel').forEach(x=>x.classList.remove('sel'));
+  if(SIDE===id){ SIDE=null; $('bside').hidden=true; } else { SIDE=id; cd.classList.add('sel'); fillSide(id); }
+  $('bpop').hidden=true;
+});
+$('board').addEventListener('mousemove',e=>{
+  const cd=e.target.closest('.bcard'); const pop=$('bpop');
+  if(!cd||bDrag){ pop.hidden=true; return; }
+  if(pop.dataset.id!==cd.dataset.id){ const c=C.get(cd.dataset.id); if(!c) return; pop.innerHTML=bDetail(c,false); pop.dataset.id=cd.dataset.id; }
+  pop.hidden=false; const w=pop.offsetWidth,h=pop.offsetHeight;
+  pop.style.left=Math.min(innerWidth-w-8,e.clientX+14)+'px'; pop.style.top=Math.min(innerHeight-h-8,e.clientY+14)+'px';
+});
+$('board').addEventListener('mouseleave',()=>{$('bpop').hidden=true;});
+function setMode(v){ VMODE=v; $('vseg').querySelectorAll('.hb2').forEach(b=>b.classList.toggle('on',b.dataset.v===v)); $('list').hidden=v!=='list'; $('board').hidden=v!=='board'; if(v==='board') drawBoard(); }
+$('vseg').addEventListener('click',e=>{const b=e.target.closest('[data-v]'); if(b) setMode(b.dataset.v);});
+$('board').addEventListener('input',e=>{ if(e.target.id!=='bQ') return; BQ=e.target.value; clearTimeout(drawBoard._t); drawBoard._t=setTimeout(()=>{ const pos=e.target.selectionStart; drawBoard(); const el=$('bQ'); el.focus(); try{el.setSelectionRange(pos,pos);}catch(_){} HITI=0; goHit(); },250); });
+let HITI=0;
+function goHit(){ const hs=[...document.querySelectorAll('#board .bcard.hit')]; if(!hs.length||!BQ.trim()) return; const el=hs[HITI%hs.length]; document.querySelectorAll('#board .bcard.cur').forEach(x=>x.classList.remove('cur')); el.classList.add('cur'); el.scrollIntoView({block:'center',inline:'center',behavior:'smooth'}); if(hs.length>1) $('bHits').textContent=`${HITI%hs.length+1} of ${hs.length} · Enter for next`; }
+$('board').addEventListener('keydown',e=>{ if(e.target.id==='bQ'&&e.key==='Enter'){ e.preventDefault(); HITI++; goHit(); } });
+$('board').addEventListener('change',e=>{const t=e.target;
+  if(t.id==='bStart'){S.bstart=t.value;save();drawBoard();return;}
+  if(t.id==='bHol'){S.hol=t.value;save();drawBoard();return;}
+  if(t.dataset.cap){const k=t.dataset.k; const v=parseFloat(t.value); if(!(v>0)) return; S.cap[k]=Object.assign(capOf(k),{[t.dataset.cap]:v}); save(); drawBoard();}});
+let bDrag=null;
+$('board').addEventListener('dragstart',e=>{const c=e.target.closest('.bcard');if(!c)return;bDrag=c.dataset.id;c.classList.add('drag');e.dataTransfer.effectAllowed='move';try{e.dataTransfer.setData('text/plain',bDrag)}catch(_){}});
+$('board').addEventListener('dragend',()=>{document.querySelectorAll('.bcard.drag,.bcard.over,.bend.over').forEach(x=>x.classList.remove('drag','over'));bDrag=null;});
+$('board').addEventListener('dragover',e=>{if(!bDrag)return;const t=e.target.closest('.bcard,.bend');if(!t)return;e.preventDefault();document.querySelectorAll('.bcard.over,.bend.over').forEach(x=>x.classList.remove('over'));if(t.dataset.id!==bDrag)t.classList.add('over');});
+$('board').addEventListener('drop',e=>{if(!bDrag)return;const t=e.target.closest('.bcard,.bend');if(!t)return;e.preventDefault();
+  const c=C.get(bDrag); const L=mlist(c); const from=L.indexOf(bDrag); if(from<0)return;
+  let to;
+  if(t.classList.contains('bend')){ if(t.dataset.k!==c.mc){toast('Drag within the same machine.');return;} to=L.length; }
+  else { const tc=C.get(t.dataset.id); if(!tc||tc.mc!==c.mc){toast('Drag within the same machine.');return;} to=L.indexOf(t.dataset.id); }
+  L.splice(from,1); if(to>from) to--; L.splice(Math.max(0,Math.min(L.length,to)),0,bDrag); save(); refreshView(); toast('SL '+(L.indexOf(bDrag)+1)+' on '+NAME(c.mc)+'.');});
+
+// ---------- copy / export ----------
+$('copy').addEventListener('click',()=>{
+  const ids=plan(); const sl0=id=>(S.plan[C.get(id).mc]||[]).indexOf(id)+1; if(!ids.length){toast('Nothing planned on this machine yet.');return;}
+  const rows=[['M/C','MC SL','B/G','Batch No','Buyer','Shade','Fabrics Type','Batch Qty','Combo Qty','Load %','Batch Status','Remarks','Plan Type','H/s Status','Line Plan','Plan Date','Workorder Category','Remarks (Q)','Hold remarks']];
+  ids.forEach((id,i)=>{const c=C.get(id);const l=loadPct(c);c.p.forEach(x=>rows.push([NAME(c.mc),sl0(id),x.t,x.b,x.by,x.sh,x.fb,x.q,c.q,l!=null?l.toFixed(0)+'%':'',x.st,x.rm,x.pt,x.hs,x.lp,x.pd,x.cat,x.rmk,x.hold]));});
+  const tsv=rows.map(r=>r.join('\t')).join('\n');
+  const done=()=>toast('Copied '+ids.length+' SL. Paste into Excel.');
+  const fallback=()=>{const ta=document.createElement('textarea');ta.value=tsv;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');done();}catch(e){toast('Copy did not work here.');}ta.remove();};
+  if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(tsv).then(done,fallback); else fallback();
+});
+// original workbook kept in this browser (IndexedDB) so Export can write back into it
+const IDB={db:null,open(){return new Promise(res=>{try{const r=indexedDB.open('mclp',1);r.onupgradeneeded=()=>r.result.createObjectStore('f');r.onsuccess=()=>res(r.result);r.onerror=()=>res(null);}catch(e){res(null);}});},
+  async put(v){try{const db=await this.open();if(!db)return;await new Promise(r=>{const t=db.transaction('f','readwrite');t.objectStore('f').put(v,'file');t.oncomplete=t.onerror=t.onabort=()=>r();});}catch(e){}},
+  async get(){try{const db=await this.open();if(!db)return null;return await new Promise(r=>{const q=db.transaction('f').objectStore('f').get('file');q.onsuccess=()=>r(q.result||null);q.onerror=()=>r(null);});}catch(e){return null;}}};
+let FILE=null; // {label, buf}
+$('xls').addEventListener('click',async()=>{
+  if(!window.JSZip){toast('The file library did not load. Check the internet connection and reload.');return;}
+  if(!FILE||FILE.label!==LABEL) FILE=await IDB.get();
+  if(!FILE||FILE.label!==LABEL){toast('Load the day\'s Loading plan file first — Export writes the plan into that file.');return;}
+  const ed={}; const row=b=>{const x=D.batches[b];return x&&x.row?(ed[x.row]=ed[x.row]||{}):null;};
+  let n=0;
+  const order=[];
+  const lists={}; for(const k of MCS) lists[k]=(S.plan[k]||[]).filter(id=>C.has(id));
+  for(const k in lists){ const rows=[]; lists[k].forEach((id,i)=>{const c=C.get(id); n++; for(const b of c.m){const r=row(b); if(!r) continue; r.B=i+1; r.A=k; rows.push(D.batches[b].row);}});
+    // not-planned combos of this machine follow, in the Not planned order (FOC → Hanger → Line Plan old→new → AOP → Urgent → other → rest)
+    const inPl=new Set(lists[k]); const rest=[...C.values()].filter(c=>c.mc===k&&!inPl.has(c.id)).sort((a,b)=>cmpAuto(a,b,true));
+    const restRows=[]; for(const c of rest) for(const b of c.m){ const x=D.batches[b]; if(x&&x.row) restRows.push(x.row); }
+    order.push({mc:k,rows,rest:restRows}); }
+  for(const b in S.ed){const e=S.ed[b], r=row(b); if(!r) continue; if('pd' in e) r.N=e.pd||''; if('rmk' in e) r.Q=e.rmk; if('hold' in e) r.R=e.hold;}
+  if(!Object.keys(ed).length){toast('Nothing to write yet — plan a combo or type a remark first.');return;}
+  $('busy').textContent='Writing your file…';
+  try{
+    const {out}=await LPEngine.writePlan(JSZip,FILE.buf.slice(0),ed,order);
+    $('busy').textContent='';
+    const name=LABEL.replace(/[\\/:*?"<>|]/g,'');
+    if(window.claude&&window.claude.use){
+      try{ const dl=await window.claude.use('downloads'); if(dl){ await dl.save({filename:name,data:out}); toast('Saved '+name+' — '+n+' SL planned.'); return; } }
+      catch(e){ if(e&&e.code==='declined'){toast('Save cancelled.');return;} toast('Could not save the file here ('+(e&&e.code||'error')+').'); return; }
+    }
+    const a=document.createElement('a'); a.href=URL.createObjectURL(out); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1500);
+  }catch(err){ console.error(err); $('busy').textContent=''; toast('Could not write the file: '+(err.message||err)); }
+});
+
+// ---------- load a new day's file ----------
+$('loadBtn').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();$('fileIn').click();}});
+$('fileIn').addEventListener('change',async e=>{
+  const f=e.target.files[0]; if(!f)return; e.target.value='';
+  if(!window.JSZip){toast('The file reader library did not load. Check the internet connection and reload.');return;}
+  $('busy').textContent='Reading '+f.name+'…';
+  try{
+    const buf=await f.arrayBuffer();
+    const d=await LPEngine.parseLoadingPlan(JSZip,buf.slice(0),m=>{$('busy').textContent=m;});
+    FILE={label:f.name,buf}; IDB.put(FILE);
+    const before=MCS.reduce((a,k)=>a+(S.plan[k]||[]).length,0);
+    D=d; LABEL=f.name; store.set('mclp-data',{label:LABEL,data:D}); S.plan={}; S.ed={}; S.over={}; build(); const nf=MCS.reduce((a,k)=>a+(S.plan[k]||[]).length,0); S.seeded=LABEL;
+    save(); refreshView(); $('busy').textContent='';
+    toast(`Loaded ${f.name}. ${nf} SL with a Plan Date are planned, in the file's M/C and SL order.`);
+  }catch(err){ console.error(err); $('busy').textContent=''; toast('Could not read this file: '+(err.message||err)); }
+});
+
+build(); if(S.seeded!==LABEL){ S.plan={}; S.ed={}; S.seeded=LABEL; build(); } save(); refreshView();
+})();
+</script>
+
+</body>
+</html>
