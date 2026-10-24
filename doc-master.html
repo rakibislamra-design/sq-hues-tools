@@ -1626,6 +1626,8 @@ async function build(files, opts = {}) {
   const sstXml = zip.file('xl/sharedStrings.xml') ? await rd('xl/sharedStrings.xml') : '';
   const SST = [...sstXml.matchAll(/<si>([\s\S]*?)<\/si>/g)].map(m => unx([...m[1].matchAll(/<t[^>]*>([\s\S]*?)<\/t>/g)].map(x => x[1]).join('')));
 
+  // clean up a doubled 'MC No' column left by an earlier version
+  for (const sn of ['280', 'Dye Q']) { const r = await dropDupColumns(zip, pathOf, SST, sn, 'MC No', wbx); wbx = r.wbx; if (r.removed) report.warnings.push(`${sn}: removed ${r.removed} repeated MC No column`); }
   note(6, 'Reading TAPS files');
   const S = {};
   for (const [k, buf] of Object.entries(files.sources)) { S[k] = readSource(buf); await tick(); }
@@ -2031,13 +2033,13 @@ function mcNo(q, label) {
   return MC_CAPS[MC_CAPS.length - 1];
 }
 // insert (or refresh) one column on a sheet: cells, cols, filter, CF ranges, dimension, + workbook names / pivot sources
-async function putColumn(zip, pathOf, sheetName, INS, header, valueOf, styleCols) {
+async function putColumn(zip, pathOf, sheetName, INS, header, valueOf, styleCols, SST) {
   const path = pathOf[sheetName]; let x = await zip.file(path).async('string');
   const a = x.indexOf('<sheetData'), b = x.indexOf('</sheetData>'); const a2 = x.indexOf('>', a) + 1;
   let head = x.slice(0, a2), body = x.slice(a2, b), tail = x.slice(b);
   const L = cl(INS), hdrM = new RegExp('<c r="' + L + '2"[^>]*?(?:/>|>([\\s\\S]*?)</c>)').exec(body);
-  const hv = hdrM ? (/<t[^>]*>([\s\S]*?)<\/t>/.exec(hdrM[0]) || [])[1] : null;
-  const already = (hv || '').trim() === header;
+  const hv = hdrM ? cellValue(hdrM[0], SST || []) : null;     // header may be a shared string after Excel saves the file
+  const already = String(hv ?? '').trim() === header;
   const shiftCol = c => (ci(c) >= INS ? cl(ci(c) + 1) : c);
   const sty = (row, col) => { const m = new RegExp('<c r="' + col + '\\d+"[^>]*?\\bs="(\\d+)"').exec(row); return m ? ` s="${m[1]}"` : ''; };
   body = body.replace(/<row r="(\d+)"([^>]*?)(\/>|>([\s\S]*?)<\/row>)/g, (row, rn, at, end, inner) => {
@@ -2087,7 +2089,7 @@ async function addMcNo(zip, pathOf, SST, report) {
   const byBatch = new Map(), byRow = new Map();
   for (const [r, [, cells]] of dq.rows) { if (r < 3) continue; const b = cellValue(cells.get(ci('F')), SST); if (!b) continue;
     const v = mcNo(cellValue(cells.get(ci('AO')), SST), cellValue(cells.get(ci('AP')), SST)); byRow.set(r, v); if (!byBatch.has(String(b))) byBatch.set(String(b), v); }
-  await putColumn(zip, pathOf, 'Dye Q', ci('AQ'), 'MC No', r => byRow.get(r) ?? null, ['AP', 'AP']);
+  await putColumn(zip, pathOf, 'Dye Q', ci('AQ'), 'MC No', r => byRow.get(r) ?? null, ['AP', 'AP'], SST);
   // 280: MC No at DC (after Body Type, before Extra); batches not in Dye Q use their own plan qty
   const sh = new Sheet(await zip.file(pathOf['280']).async('string')); const vals = new Map();
   for (const [r, [, cells]] of sh.rows) { if (r < 3) continue; const b = cellValue(cells.get(ci('H')), SST); if (!b) continue;
@@ -2096,8 +2098,45 @@ async function addMcNo(zip, pathOf, SST, report) {
     const additional = String(cellValue(cells.get(ci('CC')), SST) ?? '').trim().toLowerCase() === 'additional';
     if (outside && !additional) continue;
     vals.set(r, byBatch.has(String(b)) ? byBatch.get(String(b)) : mcNo(cellValue(cells.get(ci('W')), SST), null)); }
-  await putColumn(zip, pathOf, '280', ci('DC'), 'MC No', r => vals.get(r) ?? null, ['DB', 'DB']);
+  await putColumn(zip, pathOf, '280', ci('DC'), 'MC No', r => vals.get(r) ?? null, ['DB', 'DB'], SST);
   const cnt = {}; for (const v of byRow.values()) cnt[v ?? 'blank'] = (cnt[v ?? 'blank'] || 0) + 1; report.mcNo = cnt;
+}
+
+// remove repeated columns with the same header (e.g. two 'MC No' columns) — keeps the first one
+async function dropDupColumns(zip, pathOf, SST, sheetName, header, wbx) {
+  const path = pathOf[sheetName]; let x = await zip.file(path).async('string');
+  const sh = new Sheet(x); const hdr = (sh.rows.get(2) || ['', new Map()])[1];
+  const hits = [...hdr.entries()].filter(([, c]) => String(cellValue(c, SST) ?? '').trim() === header).map(([k]) => k).sort((a, b) => a - b);
+  if (hits.length < 2) return { wbx, removed: 0 };
+  for (const DEL of hits.slice(1).reverse()) {
+    const sh2 = new Sheet(x);
+    for (const [, v] of sh2.rows) { const cells = v[1], nm = new Map();
+      for (const [c, cx] of cells) { if (c === DEL) continue; if (c > DEL) nm.set(c - 1, cx.replace(/(<c r=")[A-Z]{1,3}(\d+")/, (m, a, b) => a + cl(c - 1) + b)); else nm.set(c, cx); }
+      v[1] = nm; }
+    let head = sh2.head, tail = sh2.tail;
+    const back = c => (ci(c) > DEL ? cl(ci(c) - 1) : c);
+    head = head.replace(/<dimension ref="([A-Z]+)(\d+):([A-Z]+)(\d+)"\/>/, (m, c1, r1, c2, r2) => `<dimension ref="${c1}${r1}:${back(c2)}${r2}"/>`);
+    head = head.replace(/<cols>[\s\S]*?<\/cols>/, cols => {
+      const out = [];
+      for (let d of cols.match(/<col [^>]*\/>/g) || []) { let lo = +/min="(\d+)"/.exec(d)[1], hi = +/max="(\d+)"/.exec(d)[1];
+        if (lo === DEL && hi === DEL) continue;
+        if (lo > DEL) lo--; if (hi >= DEL) hi--; if (hi < lo) continue;
+        out.push(d.replace(/min="\d+"/, `min="${lo}"`).replace(/max="\d+"/, `max="${hi}"`)); }
+      return '<cols>' + out.join('') + '</cols>'; });
+    tail = tail.replace(/<autoFilter ref="([A-Z]+)(\d+):([A-Z]+)(\d+)"/, (m, c1, r1, c2, r2) => `<autoFilter ref="${c1}${r1}:${back(c2)}${r2}"`);
+    tail = tail.replace(/<filterColumn colId="(\d+)"[\s\S]*?<\/filterColumn>|<filterColumn colId="(\d+)"\/>/g, (m, a, b) => { const id = +(a ?? b); if (id + 1 === DEL) return ''; return id + 1 > DEL ? m.replace(/colId="\d+"/, `colId="${id - 1}"`) : m; });
+    tail = tail.replace(/sqref="([^"]*)"/g, (m, sq) => 'sqref="' + sq.replace(/([A-Z]{1,3})(\d+)/g, (mm, c, r) => back(c) + r) + '"');
+    sh2.head = head; sh2.tail = tail; x = sh2.serialize();
+    const q = sheetName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    wbx = wbx.replace(new RegExp(`('${q}'|\\b${q})!\\$?([A-Z]{1,3})\\$?(\\d+):\\$?([A-Z]{1,3})\\$?(\\d+)`, 'g'), (m, sn, c1, r1, c2, r2) => `${sn}!$${back(c1)}$${r1}:$${back(c2)}$${r2}`);
+    for (const f of Object.keys(zip.files).filter(f => /^xl\/pivotCache\/pivotCacheDefinition\d+\.xml$/.test(f))) {
+      const p = await zip.file(f).async('string');
+      const np = p.replace(new RegExp(`<worksheetSource ref="([A-Z]+)(\\d+):([A-Z]+)(\\d+)" sheet="${q}"/>`), (m, c1, r1, c2, r2) => `<worksheetSource ref="${c1}${r1}:${back(c2)}${r2}" sheet="${sheetName}"/>`);
+      if (np !== p) zip.file(f, np);
+    }
+  }
+  zip.file(path, x);
+  return { wbx, removed: hits.length - 1 };
 }
 /* ==================================================================== Additional requirement (order-wise) */
 const ADD_COLS = [{"min": 1, "max": 1, "width": 8.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 2, "max": 2, "width": 11.109375, "hidden": false, "outline": 0, "collapsed": true}, {"min": 3, "max": 3, "width": 9.109375, "hidden": false, "outline": 0, "collapsed": false}, {"min": 4, "max": 4, "width": 32.0, "hidden": false, "outline": 0, "collapsed": false}, {"min": 5, "max": 5, "width": 26.88671875, "hidden": false, "outline": 0, "collapsed": false}, {"min": 6, "max": 6, "width": 32.88671875, "hidden": false, "outline": 0, "collapsed": false}, {"min": 7, "max": 7, "width": 6.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 8, "max": 15, "width": 11.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 16, "max": 16, "width": 13.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 17, "max": 17, "width": 11.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 18, "max": 18, "width": 12.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 19, "max": 19, "width": 14.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 20, "max": 20, "width": 12.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 21, "max": 21, "width": 10.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 22, "max": 22, "width": 13.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 23, "max": 23, "width": 7.33203125, "hidden": false, "outline": 0, "collapsed": true}, {"min": 24, "max": 24, "width": 34.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 25, "max": 25, "width": 11.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 26, "max": 26, "width": 11.0, "hidden": false, "outline": 0, "collapsed": true}, {"min": 27, "max": 27, "width": 24.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 28, "max": 28, "width": 10.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 29, "max": 29, "width": 21.88671875, "hidden": false, "outline": 0, "collapsed": true}, {"min": 30, "max": 31, "width": 11.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 32, "max": 32, "width": 9.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 33, "max": 33, "width": 13.0, "hidden": false, "outline": 0, "collapsed": true}, {"min": 34, "max": 34, "width": 13.0, "hidden": true, "outline": 1, "collapsed": false}, {"min": 35, "max": 35, "width": 13.0, "hidden": false, "outline": 0, "collapsed": true}, {"min": 36, "max": 36, "width": 46.88671875, "hidden": true, "outline": 1, "collapsed": false}, {"min": 37, "max": 37, "width": 8.6640625, "hidden": false, "outline": 0, "collapsed": true}];
