@@ -300,6 +300,51 @@ header{gap:6px 6px!important}
 .qs b{font-weight:700}
 .qs.ok{background:#EEF7EF;border-color:#BFDDC6}.qs.ok em{color:#3c7a5a}
 .qs.cp{color:var(--muted);font-size:11.5px}
+/* compact rows */
+.list .ln.xl{min-height:20px}
+.list .ln.xl>span{font-size:12px;line-height:1.25}
+.list .ln.xl .mcc{font-size:13.5px}
+.list .ln.xl .ptc{font-size:12.5px}
+.list .lines{padding-top:0!important;padding-bottom:0!important}
+.list .lead{padding-top:0!important;padding-bottom:0!important}
+.list .ed{height:18px}
+.list .sn{height:18px;padding:0 1px}
+.cb{contain-intrinsic-size:auto 42px!important}
+/* Q menu + two-row bar */
+.qbrand{position:relative}
+.qbtn{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--hdr-line);background:var(--surface);border-radius:8px;padding:4px 10px 4px 5px;cursor:pointer;font:inherit;color:var(--fg)}
+.qbtn:hover{border-color:var(--qp-line)}
+.qlogo{width:30px;height:30px;border-radius:50%;background:#664356;color:#fff;font:700 18px Georgia,'Times New Roman',serif;display:inline-flex;align-items:center;justify-content:center;box-shadow:inset 0 0 0 2px #B29EA6}
+.qtt{display:flex;flex-direction:column;line-height:1.15;text-align:left}
+.qtt b{font-size:13px;color:#664356}.qtt small{font-size:10.5px;color:var(--muted)}
+.qcar{color:var(--muted);font-size:11px}
+.qdd{position:absolute;left:0;top:calc(100% + 4px);z-index:70;background:var(--surface);border:1px solid var(--line);border-radius:9px;box-shadow:0 10px 28px rgba(0,0,0,.16);padding:5px;min-width:250px}
+.qdd[hidden]{display:none}
+.qi{display:flex;align-items:center;gap:10px;width:100%;border:0;background:transparent;font:600 13px var(--f-ui);color:var(--fg);padding:8px 10px;border-radius:6px;cursor:pointer;text-align:left;text-decoration:none;flex-wrap:wrap}
+.qi span{width:18px;text-align:center;color:#664356}
+.qi em{flex-basis:100%;margin-left:28px;margin-top:-2px;font:400 11px var(--f-ui);color:var(--muted);font-style:normal}
+.qi:hover{background:var(--s-pick)}.qi.on{background:var(--qp-soft)}
+.qsep{height:1px;background:var(--line);margin:4px 2px}
+header .brk{flex-basis:100%;height:0}
+#dropov{position:fixed;inset:0;z-index:90;background:rgba(102,67,86,.12);display:flex;align-items:center;justify-content:center;pointer-events:none}
+#dropov[hidden]{display:none}
+#dropov .dbox{background:var(--surface);border:2px dashed #957B87;border-radius:14px;padding:28px 40px;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:16px;color:#664356;animation:dzoom .25s cubic-bezier(.3,1.6,.5,1)}
+#dropov .dbox span{font-size:12.5px;color:var(--muted)}
+@keyframes dzoom{from{transform:scale(.85);opacity:.4}to{transform:scale(1);opacity:1}}
+/* two-row bar: Q menu on the left, machines on top, buttons + queue summary below */
+header{display:grid!important;grid-template-columns:auto minmax(0,1fr);align-items:start!important;gap:6px 10px!important;position:relative;transition:transform .2s cubic-bezier(.3,1.5,.5,1),box-shadow .2s}
+header .qbrand{grid-row:1;align-self:start}
+header .hcol{display:flex;flex-direction:column;gap:6px;min-width:0}
+header .row2{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+header .row2 .qsum{margin-left:auto;flex:0 0 auto!important;justify-content:flex-end}
+.qs{font-size:12px!important;padding:3px 8px!important;border-radius:6px!important}
+.qs b{font-size:12.5px}
+header .row1{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+header .row1 .qsum{margin-left:auto;flex:0 0 auto!important;justify-content:flex-end;gap:5px}
+header.fdrag{box-shadow:0 0 0 2px #B29EA6,0 8px 24px rgba(102,67,86,.18);transform:translateY(1px) scale(1.004)}
+header.fover{transform:scale(1.015);box-shadow:0 0 0 3px #664356,0 12px 30px rgba(102,67,86,.28)}
+header.fdrag::after{content:"Drop the Loading plan .xlsx to load it";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(246,242,244,.86);border:2px dashed #957B87;border-radius:8px;font:700 15px var(--f-ui);color:#664356;animation:dzoom .25s cubic-bezier(.3,1.6,.5,1);pointer-events:none}
+header.fover::after{background:rgba(239,230,235,.92)}
 /* close buttons + ready glow */
 #dlg .btn.dlgdel{color:#AF4F5A;border-color:#E7D1CE}
 #dlg .btn.dlgdel:hover{background:var(--s-red-bg)}
@@ -377,26 +422,33 @@ header{gap:6px 6px!important}
 <body>
 <div class="app">
 <header>
-  <a class="hb2" href="index.html" title="Back to SQ Hues Tools" style="text-decoration:none;display:inline-flex;align-items:center;white-space:nowrap">← Tools</a>
+  <div class="qbrand">
+    <button class="qbtn" id="qmenu" aria-haspopup="true" aria-expanded="false" title="Menu"><span class="qlogo" aria-hidden="true">Q</span><span class="qtt"><b>Dyeing Planning Tool</b><small id="qview">Batch Wise List</small></span><span class="qcar">▾</span></button>
+    <div class="qdd" id="qdd" hidden role="menu">
+      <button class="qi" data-act="list"><span>☰</span>Batch Wise List</button>
+      <button class="qi" data-act="board"><span>▦</span>MC Board</button>
+      <div class="qsep"></div>
+      <button class="qi" data-act="load"><span>⤒</span>Load File<em>or drop the .xlsx anywhere</em></button>
+      <button class="qi" data-act="export"><span>⤓</span>Export File<em>Loading plan with your plan</em></button>
+      <div class="qsep"></div><a class="qi" href="index.html"><span>←</span>SQ Hues Tools</a>
+    </div>
+  </div>
+  <div class="hcol">
+  <div class="row1"><nav class="mcs" id="mcs" aria-label="Machine"></nav><span class="sp qsum" id="qsum"></span></div>
+  <div class="row2">
   <span class="hb">
+    <button class="hb2 home" id="home" title="Back to the top of the list">↑ Top</button>
     <button class="hb2" id="refresh" title="Move ticked combos up into the plan by priority">Refresh</button>
     <button class="hb2" id="auto" title="Sort every machine: FOC → Hanger → Line Plan (today, tomorrow, day after, backlog, later dates nearest first) → AOP → Urgent → other Plan Type → rest">Auto-order</button>
-    <span class="vseg" id="vseg"><button class="hb2 on" data-v="list">List</button><button class="hb2" data-v="board" title="Machine-wise day board: see the load and drag batches to re-sequence">MC Board</button></span>
-  </span>
-  <nav class="mcs" id="mcs" aria-label="Machine"></nav>
-  <span class="hb">
-    <button class="hb2 home" id="home" title="Back to the top of the list">⌂ Home</button>
     <button class="hb2" id="clrF" title="Remove all column filters">Clear filters</button>
   </span>
-  <span class="sp qsum" id="qsum"></span>
   <span class="file" id="fileLbl" hidden></span>
-  <span class="hb">
-    <button class="hb2 pri" id="xls" title="Save the loaded Loading plan file: planned batches move to the top of their M/C in SL order, with SL, Plan Date, Remarks and Hold remarks filled in">Export to Excel</button>
-  </span>
+  <span hidden><span class="vseg" id="vseg"><button class="hb2 on" data-v="list">List</button><button class="hb2" data-v="board">MC Board</button></span><button class="hb2 pri" id="xls">Export to Excel</button><label class="hbtn" for="fileIn" tabindex="0" id="loadBtn">Load file</label></span>
   <span id="selInfo" class="selinfo" hidden></span>
   <span id="busy"></span>
-  <label class="hbtn" for="fileIn" tabindex="0" id="loadBtn" title="Load a new day's Loading plan workbook — click, or drop the .xlsx here">Load file</label>
   <input type="file" id="fileIn" accept=".xlsx" hidden>
+  </div>
+  </div>
 </header>
 
 
@@ -409,6 +461,7 @@ header{gap:6px 6px!important}
 </div>
 <div id="toast" hidden></div>
 <div id="fp" hidden></div>
+<div id="dropov" hidden><div class="dbox"><b>Drop the Loading plan .xlsx</b><span>to load it</span></div></div>
 <div id="cm" hidden role="menu"></div>
 <div id="bpop" hidden></div>
 <div id="dlgW" hidden><div id="dlg" role="alertdialog" aria-modal="true"></div></div>
@@ -1008,7 +1061,9 @@ function drawChrome(){
     for(const k of ks){ const L=(S.plan[k]||[]).filter(id=>C.has(id)); const r=L.filter(id=>ready(C.get(id))).length; const {m,b}=capOf(k); const per=Math.max(0.5,m*b);
       n+=L.length; nr+=r; dMax=Math.max(dMax,L.length/per); drMax=Math.max(drMax,r/per); }
     const cp=cur==='ALL'?'':(()=>{const {m,b}=capOf(cur);return `${m} MC × ${b}/day`;})();
-    const dl=d=>Math.ceil(d-1e-9)+' d';
+    const wd=bDays(400).filter(x=>!x.off);
+    const endOf=d=>{ const n=Math.ceil(d-1e-9); return n>0&&wd[n-1]?dshort(wd[n-1].iso):''; };
+    const dl=d=>{ const n=Math.ceil(d-1e-9); const e=endOf(d); return n+' d'+(e?', '+e:''); };
     $('qsum').innerHTML=`<span class="qs" title="All planned combos on ${esc(NAME(cur))}${cp?' · '+cp:''}${cur==='ALL'?' · Q days = longest machine':''}">Planned B- <b>${n}</b>, Q Days- <b>${dl(dMax)}</b></span><span class="qs ok" title="Planned combos with H/S OK, LD given and no Hold remarks${cp?' · '+cp:''}${cur==='ALL'?' · Q days = longest machine':''}">Ready Planned B- <b>${nr}</b>, Q Days- <b>${dl(drMax)}</b></span>`; }
   const tot=MCS.reduce((a,k)=>a+(S.plan[k]||[]).length,0);
   const ae=document.activeElement; const keepIn=ae&&ae.closest&&ae.closest('#mcs')?[ae.dataset.k,ae.dataset.cap]:null;
@@ -1174,7 +1229,10 @@ $('list').addEventListener('click',e=>{ const t=e.target.closest('.gt,.gb'); if(
   if(t.classList.contains('gt')) GOPEN[t.dataset.g]=!GOPEN[t.dataset.g]; else for(const G of GRPS) GOPEN[G.id]=t.dataset.lv==='2';
   store.set('mclp-grp',GOPEN); applyCols(); draw(); },true);
 $('list').addEventListener('click',e=>{ if(e.target.closest('.sn,.hdl,.hd,.ed'))return; const cb=e.target.closest('.cb'); if(!cb) return;
-  if(e.ctrlKey||e.metaKey){ e.preventDefault(); const id=cb.dataset.id; SELSET.has(id)?SELSET.delete(id):SELSET.add(id); cb.classList.toggle('msel',SELSET.has(id)); updSel(); try{getSelection().removeAllRanges()}catch(_){} return; }
+  if(e.ctrlKey||e.metaKey){ e.preventDefault(); const id=cb.dataset.id; SELSET.has(id)?SELSET.delete(id):SELSET.add(id); cb.classList.toggle('msel',SELSET.has(id)); rowAnchor=id; updSel(); try{getSelection().removeAllRanges()}catch(_){} return; }
+  if(e.shiftKey&&rowAnchor){ e.preventDefault(); const rows=[...$('list').querySelectorAll('.cb[data-id]')]; const a=rows.findIndex(x=>x.dataset.id===rowAnchor), b=rows.findIndex(x=>x.dataset.id===cb.dataset.id);
+    if(a>=0&&b>=0){ for(let i=Math.min(a,b);i<=Math.max(a,b);i++){ SELSET.add(rows[i].dataset.id); rows[i].classList.add('msel'); } updSel(); }
+    try{getSelection().removeAllRanges()}catch(_){} return; }
   if(clearSel()) return;   // first plain click just clears a selection
   toggle(cb.dataset.id); });
 $('list').addEventListener('keydown',e=>{ if(e.target.classList.contains('ed')&&e.key==='Enter'){e.preventDefault();e.target.blur();} });
@@ -1183,9 +1241,9 @@ $('list').addEventListener('change',e=>{ const t=e.target;
   if(!t.classList.contains('sn'))return; const id=t.closest('.cb').dataset.id; const v=parseInt(t.value,10); if(v>=1) moveTo(id,v-1); else draw(); });
 let dragId=null, dragSet=[], dropAt=null;
 // Ctrl+click (Cmd on Mac) planned rows to select several; drag any selected row to move them together
-const SELSET=new Set();
+const SELSET=new Set(); let rowAnchor=null;
 function clearSel(){ if(!SELSET.size) return false; SELSET.clear(); document.querySelectorAll('#list .cb.msel').forEach(x=>x.classList.remove('msel')); updSel(); return true; }
-function updSel(){ $('selInfo').hidden=!SELSET.size; $('selInfo').textContent=SELSET.size?`${SELSET.size} selected · drag to move · right-click to delete or send · Esc to clear`:''; }
+function updSel(){ $('selInfo').hidden=!SELSET.size; $('selInfo').textContent=SELSET.size?`${SELSET.size} selected · Shift + click to add a range · drag to move · right-click to delete or send · Esc to clear`:''; }
 function moveMany(ids,targetId,after){
   const c0=C.get(ids[0]); const L=mlist(c0); const set=new Set(ids.filter(id=>L.includes(id)));
   if(set.has(targetId)) return;
@@ -1348,7 +1406,7 @@ $('board').addEventListener('mousemove',e=>{
   pop.style.left=Math.min(innerWidth-w-8,e.clientX+14)+'px'; pop.style.top=Math.min(innerHeight-h-8,e.clientY+14)+'px';
 });
 $('board').addEventListener('mouseleave',()=>{$('bpop').hidden=true;});
-function setMode(v){ VMODE=v; $('vseg').querySelectorAll('.hb2').forEach(b=>b.classList.toggle('on',b.dataset.v===v)); $('list').hidden=v!=='list'; $('board').hidden=v!=='board'; if(v==='board') drawBoard(); else draw(); }
+function setMode(v){ VMODE=v; $('qview').textContent=v==='board'?'MC Board':'Batch Wise List'; document.querySelectorAll('#qdd .qi[data-act="list"],#qdd .qi[data-act="board"]').forEach(b=>b.classList.toggle('on',b.dataset.act===v)); $('vseg').querySelectorAll('.hb2').forEach(b=>b.classList.toggle('on',b.dataset.v===v)); $('list').hidden=v!=='list'; $('board').hidden=v!=='board'; if(v==='board') drawBoard(); else draw(); }
 $('vseg').addEventListener('click',e=>{const b=e.target.closest('[data-v]'); if(b) setMode(b.dataset.v);});
 $('board').addEventListener('input',e=>{ if(e.target.id!=='bQ') return; BQ=e.target.value; clearTimeout(drawBoard._t); drawBoard._t=setTimeout(()=>{ const pos=e.target.selectionStart; drawBoard(); const el=$('bQ'); el.focus(); try{el.setSelectionRange(pos,pos);}catch(_){} HITI=0; goHit(); },250); });
 let HITI=0;
@@ -1477,13 +1535,16 @@ $('fileIn').addEventListener('change',e=>{ const f=e.target.files[0]; e.target.v
 // drop a workbook on "Load file" (it zooms in while a file is held over it)
 const isFileDrag=e=>e.dataTransfer&&[...(e.dataTransfer.types||[])].includes('Files');
 let fdT=0;
-window.addEventListener('dragenter',e=>{ if(isFileDrag(e)){ $('loadBtn').classList.add('fwait'); clearTimeout(fdT); } });
-window.addEventListener('dragover',e=>{ if(!isFileDrag(e)) return; e.preventDefault(); e.dataTransfer.dropEffect=e.target.closest&&e.target.closest('#loadBtn')?'copy':'none'; clearTimeout(fdT); fdT=setTimeout(()=>$('loadBtn').classList.remove('fwait','fover'),250);
-  $('loadBtn').classList.toggle('fover',!!(e.target.closest&&e.target.closest('#loadBtn'))); });
-window.addEventListener('drop',e=>{ if(!isFileDrag(e)) return; e.preventDefault(); $('loadBtn').classList.remove('fwait','fover');
-  if(!(e.target.closest&&e.target.closest('#loadBtn'))){ toast('Drop the file on “Load file”.'); return; }
-  const f=e.dataTransfer.files[0]; if(!f) return; if(!/\.xlsx$/i.test(f.name)){ toast('Please drop the Loading plan .xlsx file.'); return; }
-  $('loadBtn').classList.add('fdone'); setTimeout(()=>$('loadBtn').classList.remove('fdone'),500); loadFile(f); });
+window.addEventListener('dragover',e=>{ if(!isFileDrag(e)) return; e.preventDefault(); e.dataTransfer.dropEffect='copy'; const hb=document.querySelector('header'); hb.classList.add('fdrag'); hb.classList.toggle('fover',!!(e.target.closest&&e.target.closest('header'))); clearTimeout(fdT); fdT=setTimeout(()=>{hb.classList.remove('fdrag','fover');},300); });
+window.addEventListener('drop',e=>{ if(!isFileDrag(e)) return; e.preventDefault(); document.querySelector('header').classList.remove('fdrag','fover');
+  const f=e.dataTransfer.files[0]; if(!f) return; if(!/\.xlsx$/i.test(f.name)){ toast('Please drop the Loading plan .xlsx file.'); return; } loadFile(f); });
+// the Q menu
+function setQ(open){ $('qdd').hidden=!open; $('qmenu').setAttribute('aria-expanded',open?'true':'false'); }
+$('qmenu').addEventListener('click',e=>{ e.stopPropagation(); setQ($('qdd').hidden); });
+$('qdd').addEventListener('click',e=>{ const b=e.target.closest('[data-act]'); if(!b) return; setQ(false);
+  const a=b.dataset.act; if(a==='list'||a==='board') setMode(a); else if(a==='load') $('fileIn').click(); else if(a==='export') $('xls').click(); });
+document.addEventListener('pointerdown',e=>{ if(!$('qdd').hidden&&!e.target.closest('.qbrand')) setQ(false); });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') setQ(false); });
 async function loadFile(f){
   if(!window.JSZip){toast('The file reader library did not load. Check the internet connection and reload.');return;}
   $('busy').textContent='Reading '+f.name+'…';
