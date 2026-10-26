@@ -202,13 +202,17 @@ header h1{font-weight:600}
 #dlg .btn.go.amb{background:var(--s-amb-bg);border-color:var(--s-amb);color:var(--s-amb)}
 #dlgW{background:rgba(60,45,52,.12)}
 .hd{font-weight:700!important;color:var(--fg)!important;font-size:10.5px!important}.hd>span>b{font-weight:700}
-header{gap:6px 8px!important}.mc,.hb2,.hbtn{padding:3px 8px!important}
+header{gap:6px 6px!important}
+#busy:empty{display:none}
+.mc{padding:4px 6px!important}
+.mcs{gap:3px!important}
+.vseg .hb2{padding:3px 8px!important}.mc,.hb2,.hbtn{padding:3px 8px!important}
 #toast{background:var(--surface);color:var(--fg);border:1px solid var(--hdr-line);box-shadow:0 4px 14px rgba(0,0,0,.08)}
 .foot b{font-weight:600}
 
 /* machine chips with capacity */
-.mcs{gap:4px!important}
-.mc{display:inline-flex!important;flex-direction:column;align-items:flex-start;gap:2px;padding:4px 8px!important;min-width:84px;border-radius:6px!important;font-size:12.5px!important}
+.mcs{gap:3px!important}
+.mc{display:inline-flex!important;flex-direction:column;align-items:flex-start;gap:2px;padding:4px 6px!important;min-width:84px;border-radius:6px!important;font-size:12.5px!important}
 .mc .mh{font-weight:600;white-space:nowrap}
 .mc.mcall{justify-content:center;min-width:64px;align-self:stretch}
 .mc .mcap{display:none!important}.mc.on .mcap{display:inline-flex!important}
@@ -232,7 +236,7 @@ header{gap:6px 8px!important}.mc,.hb2,.hbtn{padding:3px 8px!important}
 .selinfo[hidden]{display:none}
 .dghost{position:fixed;top:-100px;left:-100px;background:#664356;color:#fff;font:600 12px var(--f-ui);padding:4px 10px;border-radius:6px}
 /* drop a file on Load file */
-#loadBtn{font-size:15px!important;font-weight:700!important;padding:11px 26px!important;border-radius:8px!important;border-width:1.5px!important}
+#loadBtn{font-size:14.5px!important;font-weight:700!important;padding:10px 18px!important;border-radius:8px!important;border-width:1.5px!important}
 #loadBtn{transition:transform .18s cubic-bezier(.3,1.6,.5,1),box-shadow .18s ease,background .18s ease}
 #loadBtn.fwait{border-style:dashed!important;border-color:var(--qp-line)!important;animation:fpulse 1s ease-in-out infinite}
 #loadBtn.fover{transform:scale(1.35);background:var(--s-pick)!important;box-shadow:0 8px 22px rgba(102,67,86,.25);animation:none;position:relative;z-index:5}
@@ -287,6 +291,18 @@ header{gap:6px 8px!important}.mc,.hb2,.hbtn{padding:3px 8px!important}
 .gt{margin:0 0 0 2px}
 .gb:hover,.gt:hover{background:#DDEBF7}
 .list .ln.hd>span.ingrp{background:#E8F1FA}
+/* close buttons + ready glow */
+#dlg .btn.dlgdel{color:#AF4F5A;border-color:#E7D1CE}
+#dlg .btn.dlgdel:hover{background:var(--s-red-bg)}
+.fpt{display:flex;justify-content:space-between;align-items:center}
+.fpx,.dlgx{border:0;background:transparent;font-size:20px;line-height:1;color:var(--muted);cursor:pointer;border-radius:5px;width:26px;height:26px}
+.fpx:hover,.dlgx:hover{background:var(--s-red-bg);color:#AF4F5A}
+.dlgt{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.cb.okp{background:#EEF7EF!important;box-shadow:inset 3px 0 0 #8CC79A}
+.cb.okp.alt{background:#E6F2E8!important}
+.cb.okp:hover{background:#DFF0E2!important}
+.cb.okp .tick{border-color:#5E9277;box-shadow:0 0 0 3px rgba(94,146,119,.18)}
+.cb.okp.msel,.cb.okp.msel.alt{background:#E2D3DC!important;box-shadow:inset 4px 0 0 #664356!important}
 /* MC board */
 .ldy{font-weight:600;color:var(--s-ac)}
 .cpy{border:1px solid var(--line);background:var(--surface);color:var(--s-ac);border-radius:4px;font-size:12px;line-height:1;padding:2px 5px;cursor:pointer;margin-left:4px;vertical-align:1px}.cpy:hover{border-color:var(--qp-line);background:var(--s-pick)}
@@ -361,7 +377,7 @@ header{gap:6px 8px!important}.mc,.hb2,.hbtn{padding:3px 8px!important}
   <nav class="mcs" id="mcs" aria-label="Machine"></nav>
   <span class="hb">
     <button class="hb2 home" id="home" title="Back to the top of the list">⌂ Home</button>
-    <button class="hb2" id="clrF" title="Remove all column filters">Clear all filters</button>
+    <button class="hb2" id="clrF" title="Remove all column filters">Clear filters</button>
   </span>
   <span class="sp"></span>
   <span class="file" id="fileLbl" hidden></span>
@@ -933,10 +949,11 @@ function cellText(L,x){
 // ---------- view ----------
 function refreshView(){
   const ids=plan();
+  const shownPl=ids.filter(id=>{const c=C.get(id);return c&&passes(c);});   // filters apply to planned rows too (SL stays the plan's own)
   let rest=[...C.values()].filter(c=>inView(c)&&!ids.includes(c.id));
   rest=rest.filter(passes);
   rest.sort((a,b)=>(cur==='ALL'?MCS.indexOf(a.mc)-MCS.indexOf(b.mc):0)||cmpAuto(a,b,true));  // All MC: machine order 750 → 10
-  VIEW=ids.concat(rest.map(c=>c.id)); VIEWPL=ids.length; pending=0;
+  VIEW=shownPl.concat(rest.map(c=>c.id)); VIEWPL=shownPl.length; pending=0;
   draw();
 }
 const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -971,7 +988,8 @@ function box(c,sl,alt,ns){
   const l=loadPct(c);
   const lead=sl?`<span class="hdl" title="Drag to reorder">⋮⋮</span><input class="sn" type="number" min="1" value="${sl}" aria-label="SL">`:`<span class="tick"></span><span class="ns" title="Suggested serial (Auto-order rules)">${ns||''}</span>`+(cur==='ALL'?`<span class="mct" title="M/C">${esc(c.mc)}</span>`:'');
   const tip=`${c.can?'Can dye':'Not ready: '+(c.body.rm||'')}${c.m.length===2?' · body + gusset':''}${c.outside?' · partner '+c.outside:''} · combo ${fmt(c.q)} kg${l!=null?' · load '+l.toFixed(0)+'%':''} · click to ${sl?'take out of':'add to'} the plan`;
-  return `<div class="cb${sl?' pl':''}${SELSET.has(c.id)?' msel':''}${c.can?' can':''}${alt?' alt':''}" data-id="${esc(c.id)}"${sl?' draggable="true"':''} title="${esc(tip)}"><div class="lead">${lead}<span class="dot${c.can?' on':''}"></span></div><div class="lines">${c.p.map(x=>line(x,c)).join('')}</div></div>`;
+  const okp=!sl&&c.p.every(x=>x.kn==='KOK'&&String(x.ld||'').trim()&&!String(x.hold||'').trim());
+  return `<div class="cb${sl?' pl':''}${okp?' okp':''}${SELSET.has(c.id)?' msel':''}${c.can?' can':''}${alt?' alt':''}" data-id="${esc(c.id)}"${sl?' draggable="true"':''} title="${esc(tip)}"><div class="lead">${lead}<span class="dot${c.can?' on':''}"></span></div><div class="lines">${c.p.map(x=>line(x,c)).join('')}</div></div>`;
 }
 function draw(){
   calcLoadDays();
@@ -993,14 +1011,14 @@ function draw(){
   const head=`<div class="hdw">${gl}<div class="ln hd"><span class="lh"><b data-f="s" class="${FILT.s?'f':''}" title="Filter: can dye / not ready">SL</b></span>${vc.map(c=>`<span data-col="${c.k}" class="${c.num?'n':''}${REDH.has(c.k)?' rh':''}${c.grp?' ingrp':''}${COLSEL.has(c.k)?' csel':''}"><b data-f="${c.k}" class="${FILT[c.k]?'f':''}" title="${esc(c.k)} · Filter ${esc(c.h)}">${esc(c.h)}</b><i class="rz" data-i="${c.k}" title="Drag to resize · double-click to reset"></i></span>`).join('')}</div></div>`;
   const a=VIEW.slice(0,VIEWPL).filter(id=>C.has(id)), b=VIEW.slice(VIEWPL).filter(id=>C.has(id));
   $('list').innerHTML=head
-    +`<div class="dv">Planned · ${ids.length}</div>`+(a.length?a.map((id,i)=>{const c=C.get(id);const hd=cur==='ALL'&&(i===0||C.get(a[i-1]).mc!==c.mc)?`<div class="dv mcg">${esc(NAME(c.mc))} · ${(S.plan[c.mc]||[]).length}</div>`:'';return hd+box(c,sl(id),i%2);}).join(''):'<div class="empty">Click a combo below to plan it. Press Refresh to move ticked combos up here.</div>')
+    +`<div class="dv">Planned · ${a.length<ids.length?a.length+' of '+ids.length+' shown (filtered)':ids.length}</div>`+(a.length?a.map((id,i)=>{const c=C.get(id);const hd=cur==='ALL'&&(i===0||C.get(a[i-1]).mc!==c.mc)?`<div class="dv mcg">${esc(NAME(c.mc))} · ${(S.plan[c.mc]||[]).length}</div>`:'';return hd+box(c,sl(id),i%2);}).join(''):'<div class="empty">Click a combo below to plan it. Press Refresh to move ticked combos up here.</div>')
     +`<div class="dv">Not planned · ${b.filter(id=>!ids.includes(id)).length}</div>`+(b.length?(()=>{const cnt={};let last=null;return b.map((id,i)=>{const c=C.get(id);const s0=sl(id);let ns='';if(!s0){cnt[c.mc]=(cnt[c.mc]||0)+1;ns=cnt[c.mc];}
       let hd=''; if(cur==='ALL'&&c.mc!==last){ last=c.mc; hd=`<div class="dv mcg">${esc(NAME(c.mc))} · ${b.filter(x=>C.get(x).mc===c.mc&&!sl(x)).length} not planned</div>`; }
       return hd+box(c,s0,i%2,ns);}).join('');})():'<div class="empty">No other combos match these filters.</div>');
   const cs=ids.map(id=>C.get(id)); const kg=cs.reduce((x,c)=>x+c.q,0); const nb=cs.reduce((x,c)=>x+c.m.length,0); const ls=cs.map(loadPct).filter(x=>x!=null);
   $('foot').innerHTML=`<span><b>${esc(NAME(cur))}</b></span><span>Planned <b>${cs.length}</b> SL · <b>${nb}</b> batches · <b>${fmt(Math.round(kg))}</b> kg</span><span>Avg load <b>${ls.length?(ls.reduce((x,y)=>x+y,0)/ls.length).toFixed(0)+'%':'–'}</b></span><span>Can dye <b>${cs.filter(c=>c.can).length}</b></span><span>${esc(LABEL)}</span>`;
   if(draw._anc){ const an=draw._anc; draw._anc=null; const fix=()=>{ const el=$('list').querySelector(`.cb[data-id="${CSS.escape(an[0])}"]`); if(el){ const d=el.getBoundingClientRect().top-an[1]; if(Math.abs(d)>0.5) $('list').scrollTop+=d; } }; fix(); requestAnimationFrame(()=>{fix(); requestAnimationFrame(fix);}); }
-  $('refresh').innerHTML='Refresh'+(pending?`<span class="badge">${pending}</span>`:''); $('refresh').classList.toggle('hot',!!pending); {const n=Object.keys(FILT).length;$('clrF').disabled=!n;$('clrF').innerHTML='Clear all filters'+(n?`<span class="badge">${n}</span>`:'');}
+  $('refresh').innerHTML='Refresh'+(pending?`<span class="badge">${pending}</span>`:''); $('refresh').classList.toggle('hot',!!pending); {const n=Object.keys(FILT).length;$('clrF').disabled=!n;$('clrF').innerHTML='Clear filters'+(n?`<span class="badge">${n}</span>`:'');}
 }
 
 // ---------- actions ----------
@@ -1024,11 +1042,12 @@ function toggle(id,ok){
 const f0=v=>fmt(Math.round(v));
 function plannedKg(ik,skip){ let t=0; for(const k in S.plan) for(const id of S.plan[k]||[]){ const c=C.get(id); if(!c) continue; for(const x of c.p) if(x.ik===ik&&!skip.has(x.b)) t+=x.q||0; } return t; }
 function checkPlan(c){
-  const notes=[];
+  const notes=[]; const kinds=new Set();
   for(const x of c.p){
     const tag=c.p.length>1?`<b>${x.t==='G'?'Gusset':'Body'}</b> `:'';
-    if(x.kn==='KBL') notes.push(`${tag}${esc(x.b)}: <b>knitting balance (KBL)</b> — knitting is not complete.`);
-    if(!String(x.ld||'').trim()) notes.push(`${tag}${esc(x.b)}: <b>LD pending</b> — no LD / matching reference.`);
+    if(x.kn==='KBL'){ kinds.add('KBL'); notes.push(`${tag}${esc(x.b)}: <b>knitting balance (KBL)</b> — knitting is not complete.`); }
+    if(!String(x.ld||'').trim()){ kinds.add('LD pending'); notes.push(`${tag}${esc(x.b)}: <b>LD pending</b> — no LD / matching reference.`); }
+    if(String(x.hold||'').trim()){ kinds.add('Hold'); notes.push(`${tag}${esc(x.b)}: <b>Hold remarks</b> — “${esc(x.hold)}”.`); }
   }
   if(!D.itemsKg&&!checkPlan.w){checkPlan.w=1;toast('Load the file again to turn on the 102% Req Qty Kg check.');}
   const rows=[]; const skip=new Set(c.m); const seen={};
@@ -1039,15 +1058,19 @@ function checkPlan(c){
   }
   if(!notes.length&&!rows.length) return false;
   const red=rows.length>0;
-  if(!red){ // KBL / LD pending: plan it, then show a message
-    setTimeout(()=>{const d=$('dlg'); d.className=''; d.innerHTML=`<h3>Planned — please note</h3>${notes.map(n=>`<div class="note">${n}</div>`).join('')}<div class="acts"><button class="btn go amb" id="dlgY">OK</button></div>`; $('dlgW').hidden=false; $('dlgY').focus(); $('dlgY').onclick=()=>{$('dlgW').hidden=true;};},0);
-    return false;
+  if(!red){ // KBL / LD pending / Hold: only OK adds it to the plan; × or Esc leaves it out
+    const d=$('dlg'); d.className='';
+    d.innerHTML=`<div class="dlgt"><h3>${[...kinds].join(' · ')}</h3><button class="dlgx" id="dlgX" title="Close — do not plan" aria-label="Close">×</button></div>${notes.map(n=>`<div class="note">${n}</div>`).join('')}<div class="mut" style="font-size:11.5px">Press OK to add it to the plan anyway, or × to leave it out.</div><div class="acts"><button class="btn dlgdel" id="dlgD" title="Delete this combo from the plan — its rows are removed from the sheet on export">🗑 Delete from plan</button><span style="flex:1"></span><button class="btn go amb" id="dlgY">OK — add to plan</button></div>`;
+    $('dlgW').hidden=false; $('dlgY').focus();
+    $('dlgX').onclick=()=>{$('dlgW').hidden=true;}; $('dlgD').onclick=()=>{$('dlgW').hidden=true; deleteCombos([c.id]);};
+    $('dlgY').onclick=()=>{$('dlgW').hidden=true; toggle(c.id,true); toast('Added to the plan.');};
+    return true;
   }
   const tbl=red?`<div class="over">Batch qty will go over the 102% Req Qty Kg. This batch is on hold.</div><table><tr><th>Batch</th><th>102% Req Qty Kg</th><th>In process</th><th>Already planned</th><th>This batch</th><th>Total</th><th>Over by</th></tr>${rows.map(r=>`<tr><td>${c.p.length>1?`<span class="bg ${r.x.t}">${r.x.t}</span> `:''}${esc(r.x.b)}</td><td>${f0(r.bal)}</td><td>${f0(r.wip)}</td><td>${f0(r.pl)}</td><td>${f0(r.x.q)}</td><td class="bad">${f0(r.tot)}</td><td class="bad">${f0(r.tot-r.bal)}</td></tr>`).join('')}</table><div class="mut" style="font-size:11px">All in kg, for the same order item; 102% Req Qty Kg is from the 280 sheet (${esc(rows[0].x.ik)}${rows.length>1?' …':''}). In process = dyed batches not yet RFD. Already planned = batches ticked in this planner.</div>`:'';
   const d=$('dlg'); d.className=red?'red':'';
-  d.innerHTML=`<h3>${red?'Hold — over 102% Req Qty Kg':'Check before planning'}</h3>${notes.map(n=>`<div class="note">${n}</div>`).join('')}${tbl}<div class="acts"><button class="btn" id="dlgN">Cancel</button><button class="btn go${red?'':' amb'}" id="dlgY">${red?'Proceed anyway':'Plan anyway'}</button></div>`;
+  d.innerHTML=`<div class="dlgt"><h3>${red?'Hold — over 102% Req Qty Kg'+(kinds.size?' · '+[...kinds].join(' · '):''):'Check before planning'}</h3><button class="dlgx" id="dlgX" title="Close — do not plan" aria-label="Close">×</button></div>${notes.map(n=>`<div class="note">${n}</div>`).join('')}${tbl}<div class="acts"><button class="btn dlgdel" id="dlgD" title="Delete this combo from the plan — its rows are removed from the sheet on export">🗑 Delete from plan</button><span style="flex:1"></span><button class="btn" id="dlgN">Cancel</button><button class="btn go${red?'':' amb'}" id="dlgY">${red?'Proceed anyway':'Plan anyway'}</button></div>`;
   $('dlgW').hidden=false; $('dlgN').focus();
-  $('dlgN').onclick=()=>{$('dlgW').hidden=true;};
+  $('dlgN').onclick=()=>{$('dlgW').hidden=true;}; $('dlgX').onclick=()=>{$('dlgW').hidden=true;}; $('dlgD').onclick=()=>{$('dlgW').hidden=true; deleteCombos([c.id]);};
   $('dlgY').onclick=()=>{$('dlgW').hidden=true; toggle(c.id,true); toast(red?'Planned over the 102% Req Qty Kg.':'Planned.');};
   return true;
 }
@@ -1068,19 +1091,21 @@ function openFilter(key,anchor){
   const was=FILT[key]?new Set(FILT[key]):null;
   const name=key==='s'?'SL · can dye':((COLS.find(cc=>cc.k===key)||{}).h||key);
   const fp=$('fp');
-  fp.innerHTML=`<div class="ttl">${esc(name)}</div><input type="search" id="fpq" placeholder="Search values"><div class="row"><button class="btn" id="fpAll">Select all</button><button class="btn" id="fpNone">Select none</button></div><div class="vals" id="fpv">${vals.map(v=>`<label title="${esc(v)}"><input type="checkbox" value="${esc(v)}" ${!was||was.has(v)?'checked':''}>${esc(v)} <span class="mut">(${counts.get(v)})</span></label>`).join('')}</div><div class="row"><button class="btn" id="fpClr">Clear filter</button><span><button class="btn" id="fpX">Cancel</button> <button class="btn pri" id="fpOk">OK</button></span></div>`;
+  fp.dataset.key=key;
+  fp.innerHTML=`<div class="ttl fpt"><span>${esc(name)}</span><button class="fpx" id="fpXx" title="Close" aria-label="Close">×</button></div><input type="search" id="fpq" placeholder="Search values"><div class="row"><button class="btn" id="fpAll">Select all</button><button class="btn" id="fpNone">Select none</button></div><div class="vals" id="fpv">${vals.map(v=>`<label title="${esc(v)}"><input type="checkbox" value="${esc(v)}" ${!was||was.has(v)?'checked':''}>${esc(v)} <span class="mut">(${counts.get(v)})</span></label>`).join('')}</div><div class="row"><button class="btn" id="fpClr">Clear filter</button><span><button class="btn" id="fpX">Cancel</button> <button class="btn pri" id="fpOk">OK</button></span></div>`;
   fp.hidden=false; const r=anchor.getBoundingClientRect();
   fp.style.top=Math.max(8,Math.min(r.bottom+4,innerHeight-fp.offsetHeight-8))+'px'; fp.style.left=Math.max(8,Math.min(r.left,innerWidth-fp.offsetWidth-8))+'px';
   const boxes=()=>[...fp.querySelectorAll('#fpv input')];
   $('fpq').oninput=e=>{const t=e.target.value.toLowerCase();fp.querySelectorAll('#fpv label').forEach(l=>{l.hidden=!l.textContent.toLowerCase().includes(t);});};
   $('fpAll').onclick=()=>boxes().forEach(b=>{if(!b.parentElement.hidden)b.checked=true;});
   $('fpNone').onclick=()=>boxes().forEach(b=>{if(!b.parentElement.hidden)b.checked=false;});
-  $('fpX').onclick=()=>{fp.hidden=true;};
+  $('fpX').onclick=()=>{fp.hidden=true;}; $('fpXx').onclick=()=>{fp.hidden=true;};
   $('fpClr').onclick=()=>{delete FILT[key];saveF();fp.hidden=true;refreshView();};
   $('fpOk').onclick=()=>{const on=boxes().filter(b=>b.checked).map(b=>b.value); if(on.length===vals.length) delete FILT[key]; else FILT[key]=on; saveF(); fp.hidden=true; refreshView();};
   $('fpq').focus();
 }
 $('list').addEventListener('click',e=>{const h=e.target.closest('.hd b[data-f]');if(!h)return;e.stopPropagation();
+  if(!$('fp').hidden&&$('fp').dataset.key===h.dataset.f&&!(e.shiftKey||e.ctrlKey||e.metaKey)){ $('fp').hidden=true; return; }   // click the same header again = close
   if((e.shiftKey||e.ctrlKey||e.metaKey)&&h.dataset.f!=='s'){ const L=h.dataset.f;
     if(e.shiftKey&&colAnchor){ const a=COLS.findIndex(c=>c.k===colAnchor), b=COLS.findIndex(c=>c.k===L); for(let i=Math.min(a,b);i<=Math.max(a,b);i++) COLSEL.add(COLS[i].k); }
     else { COLSEL.has(L)?COLSEL.delete(L):COLSEL.add(L); colAnchor=L; }
@@ -1372,7 +1397,7 @@ $('xls').addEventListener('click',async()=>{
   let n=0;
   const order=[]; order.del=[]; for(const c of D.combos) if(S.del[c.id]) for(const b of c.m){ const x=D.batches[b]; if(x&&x.row) order.del.push(x.row); }
   const lists={}; for(const k of MCS) lists[k]=(S.plan[k]||[]).filter(id=>C.has(id));
-  for(const k in lists){ const rows=[]; lists[k].forEach((id,i)=>{const c=C.get(id); n++; for(const b of c.m){const r=row(b); if(!r) continue; r.B=i+1; r.A=k; rows.push(D.batches[b].row);}});
+  for(const k in lists){ const rows=[]; lists[k].forEach((id,i)=>{const c=C.get(id); n++; const cpd=c.p.map(x=>x.pd).filter(Boolean).sort()[0]||''; for(const b of c.m){const r=row(b); if(!r) continue; r.B=i+1; r.A=k; if(!D.batches[b].pd&&cpd) r.N=cpd;   /* partner of a planned combo gets the same Plan Date */ rows.push(D.batches[b].row);}});
     // not-planned combos of this machine follow, in the Not planned order (FOC → Hanger → Line Plan old→new → AOP → Urgent → other → rest)
     const inPl=new Set(lists[k]); const rest=[...C.values()].filter(c=>c.mc===k&&!inPl.has(c.id)).sort((a,b)=>cmpAuto(a,b,true));
     const restRows=[]; for(const c of rest) for(const b of c.m){ const x=D.batches[b]; if(x&&x.row){ restRows.push(x.row); if(S.over[c.id]){ const r=row(b); if(r) r.A=k; } } }
