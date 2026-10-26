@@ -350,6 +350,7 @@ header.fover::after{background:rgba(239,230,235,.92)}
 .slw .sn{width:40px;padding-right:9px!important}
 .slw .ns{width:40px;padding-right:9px;box-sizing:border-box}
 .slw .dot{position:absolute;right:4px;top:50%;margin-top:-3px;width:6px;height:6px;pointer-events:none}
+#dlg .dlgt{cursor:move;user-select:none}#dlg.red{width:820px}#dlg.red td:first-child{white-space:nowrap}#dlg.red td:nth-child(3){max-width:170px}#dlg.red th{white-space:nowrap}#dlg.red td:nth-child(-n+3),#dlg.red th:nth-child(-n+3){text-align:left}#dlg.drg{box-shadow:0 18px 48px rgba(0,0,0,.3)}
 /* quick type chips */
 .qf{display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap;margin-left:10px}
 .qfc{font:600 12px var(--f-ui);border:1px solid var(--hdr-line);background:var(--surface);color:var(--fg);border-radius:14px;padding:3px 10px;cursor:pointer;white-space:nowrap;display:inline-flex;gap:5px;align-items:baseline}
@@ -1093,6 +1094,7 @@ const FLAB={rm:'Remarks (AZ)',pt:'Plan Type',n1:'Note'};
 function holdText(x){ let w=''; const chk=(k,v)=>{ if(!w&&typeof v==='string'&&/hold/i.test(v)) w=k+': '+v; };
   for(const k in x){ if(k==='raw'||k==='hold') continue; chk(FLAB[k]||k,x[k]); } for(const k in (x.raw||{})) chk(k,x.raw[k]);
   for(const k in (S.ed[x.b]||{})) chk(k==='rmk'?'Remarks':k,S.ed[x.b][k]); return w; }
+const OVTOL=5;   // excess up to 5 kg over the 102% Req Qty Kg is allowed (not a problem / no hold)
 function isHold(x){ return !!String(x.hold||'').trim()||!!holdText(x); }
 function box(c,sl,alt,ns){
   const l=loadPct(c);
@@ -1191,7 +1193,7 @@ function checkPlan(c){
   if(D.itemsKg) for(const x of c.p){
     const it=D.itemsKg[x.ik]; if(!it) continue;
     const [bal,wip]=it; const pl=plannedKg(x.ik,skip)+(seen[x.ik]||0); const tot=wip+pl+(x.q||0); seen[x.ik]=(seen[x.ik]||0)+(x.q||0);
-    if(tot>bal+0.5) rows.push({x,bal,wip,pl,tot});
+    if(tot>bal+OVTOL) rows.push({x,bal,wip,pl,tot});
   }
   if(!notes.length&&!rows.length) return false;
   const red=rows.length>0;
@@ -1203,7 +1205,7 @@ function checkPlan(c){
     $('dlgY').onclick=()=>{$('dlgW').hidden=true; toggle(c.id,true); toast('Added to the plan.');};
     return true;
   }
-  const tbl=red?`<div class="over">Batch qty will go over the 102% Req Qty Kg. This batch is on hold.</div><table><tr><th>Batch</th><th>102% Req Qty Kg</th><th>In process</th><th>Already planned</th><th>This batch</th><th>Total</th><th>Over by</th></tr>${rows.map(r=>`<tr><td>${c.p.length>1?`<span class="bg ${r.x.t}">${r.x.t}</span> `:''}${esc(r.x.b)}</td><td>${f0(r.bal)}</td><td>${f0(r.wip)}</td><td>${f0(r.pl)}</td><td>${f0(r.x.q)}</td><td class="bad">${f0(r.tot)}</td><td class="bad">${f0(r.tot-r.bal)}</td></tr>`).join('')}</table><div class="mut" style="font-size:11px">All in kg, for the same order item; 102% Req Qty Kg is from the 280 sheet (${esc(rows[0].x.ik)}${rows.length>1?' …':''}). In process = dyed batches not yet RFD. Already planned = batches ticked in this planner.</div>`:'';
+  const tbl=red?`<div class="over">Batch qty will go over the 102% Req Qty Kg. This batch is on hold.</div><table><tr><th>Batch</th><th>Part</th><th>Color</th><th>102% Req Qty Kg</th><th>In process</th><th>Already planned</th><th>This batch</th><th>Total</th><th>Over by</th></tr>${rows.map(r=>`<tr><td>${c.p.length>1?`<span class="bg ${r.x.t}">${r.x.t}</span> `:''}${esc(r.x.b)}</td><td>${r.x.t==='G'?'Gusset':'Body'}</td><td>${esc(r.x.sh||'')}</td><td>${f0(r.bal)}</td><td>${f0(r.wip)}</td><td>${f0(r.pl)}</td><td>${f0(r.x.q)}</td><td class="bad">${f0(r.tot)}</td><td class="bad">${f0(r.tot-r.bal)}</td></tr>`).join('')}</table><div class="mut" style="font-size:11px">All in kg, for the same order item; 102% Req Qty Kg is from the 280 sheet (${esc(rows[0].x.ik)}${rows.length>1?' …':''}). In process = dyed batches not yet RFD. Already planned = batches ticked in this planner. Up to 5 kg over is allowed.</div>`:'';
   const d=$('dlg'); d.className=red?'red':'';
   d.innerHTML=`<div class="dlgt"><h3>${red?'Hold — over 102% Req Qty Kg'+(kinds.size?' · '+[...kinds].join(' · '):''):'Check before planning'}</h3><button class="dlgx" id="dlgX" title="Close — do not plan" aria-label="Close">×</button></div>${notes.map(n=>`<div class="note">${n}</div>`).join('')}${tbl}<div class="acts"><button class="btn dlgdel" id="dlgD" title="Delete this combo from the plan — its rows are removed from the sheet on export">🗑 Delete from plan</button><span style="flex:1"></span><button class="btn" id="dlgN">Cancel</button><button class="btn go${red?'':' amb'}" id="dlgY">${red?'Proceed anyway':'Plan anyway'}</button></div>`;
   $('dlgW').hidden=false; $('dlgN').focus();
@@ -1396,7 +1398,7 @@ function bcard(c,sl,day){
   const k=autoKey(c)[0]; const col=GRP[Math.min(k,6)][1];
   const x=c.body; const short=x.b.replace(/^SQHUE-FY\d\d-\d\d-/,'');
   const warn=c.p.some(y=>y.kn==='KBL'||!String(y.ld||'').trim());
-  let over=false; if(D.itemsKg){ for(const y of c.p){ const it=D.itemsKg[y.ik]; if(!it) continue; let pl=0; for(const kk in S.plan) for(const id of S.plan[kk]||[]){ const cc=C.get(id); if(cc) for(const z of cc.p) if(z.ik===y.ik) pl+=z.q||0; } if(it[1]+pl>it[0]+0.5) over=true; } }
+  let over=false; if(D.itemsKg){ for(const y of c.p){ const it=D.itemsKg[y.ik]; if(!it) continue; let pl=0; for(const kk in S.plan) for(const id of S.plan[kk]||[]){ const cc=C.get(id); if(cc) for(const z of cc.p) if(z.ik===y.ik) pl+=z.q||0; } if(it[1]+pl>it[0]+OVTOL) over=true; } }
   const lp=c.p.map(y=>y.lp).filter(Boolean).sort()[0]||''; const back=!!(lp&&lp<addDays(0)); const late=!!(lp&&day&&day>lp&&!back);
   BINFO[c.id]={sl,day,lp,late,back,over,warn};
   const g=Math.min(k,6), q=BQ.trim().toLowerCase(); const hit=!!q&&(c.text.includes(q)||c.p.some(y=>String(y.po).toLowerCase().includes(q)));
@@ -1430,7 +1432,7 @@ function bDetail(c,full){
   if(i.warn) h+=`<div class="amb2">KBL / LD pending.</div>`;
   if(full){
     for(const y of c.p){ h+=`<div class="bb"><div class="bn2"><span class="bg ${y.t}">${y.t}</span> ${esc(y.b)} <button class="cpy" data-copy="${esc(y.b)}" title="Copy batch no">⧉</button></div>`+kv('Buyer',y.by)+kv('Shade',y.sh)+kv('Fabric',y.fb)+kv('LD/Matching',y.ld||'LD pending')+kv('Knit',y.kn)+kv('Batch qty',fmt(Math.round(y.q))+' kg')+kv('H/s',y.hs)+kv('Status',y.rm)+kv('Category',y.cat)+kv('Customer PO',y.po)+kv('Remarks',y.rmk)+kv('Hold remarks',y.hold);
-      if(D.itemsKg&&D.itemsKg[y.ik]){ const it=D.itemsKg[y.ik]; let pl=0; for(const kk in S.plan) for(const id of S.plan[kk]||[]){ const cc=C.get(id); if(cc) for(const z of cc.p) if(z.ik===y.ik) pl+=z.q||0; } h+=kv('102% Req Qty Kg',fmt(Math.round(it[0])))+kv('In process kg',fmt(Math.round(it[1])))+kv('Planned kg (item)',fmt(Math.round(pl)),it[1]+pl>it[0]+0.5?'bad':''); }
+      if(D.itemsKg&&D.itemsKg[y.ik]){ const it=D.itemsKg[y.ik]; let pl=0; for(const kk in S.plan) for(const id of S.plan[kk]||[]){ const cc=C.get(id); if(cc) for(const z of cc.p) if(z.ik===y.ik) pl+=z.q||0; } h+=kv('102% Req Qty Kg',fmt(Math.round(it[0])))+kv('In process kg',fmt(Math.round(it[1])))+kv('Planned kg (item)',fmt(Math.round(pl)),it[1]+pl>it[0]+OVTOL?'bad':''); }
       h+=`</div>`; }
     h+=`<div class="mut" style="font-size:11px;margin-top:6px">Click the card again or this panel to close.</div>`;
   } else h+=`<div class="pb">${c.m.map(esc).join('<br>')}</div><div class="pb">${esc(x.by)} · ${esc(x.sh)}</div>`;
@@ -1503,7 +1505,7 @@ document.addEventListener('keydown',e=>{
 // ---------- Auto plan: add every ready combo (KOK, LD given, no hold, within 102% Req Qty Kg) ----------
 const isReady=c=>c.p.every(x=>x.kn==='KOK'&&String(x.ld||'').trim()&&!isHold(x));
 function overReq(c,extra){ if(!D.itemsKg) return false; const skip=new Set(c.m); const seen={};
-  for(const x of c.p){ const it=D.itemsKg[x.ik]; if(!it) continue; const tot=it[1]+plannedKg(x.ik,skip)+((extra||{})[x.ik]||0)+(seen[x.ik]||0)+(x.q||0); seen[x.ik]=(seen[x.ik]||0)+(x.q||0); if(tot>it[0]+0.5) return true; } return false; }
+  for(const x of c.p){ const it=D.itemsKg[x.ik]; if(!it) continue; const tot=it[1]+plannedKg(x.ik,skip)+((extra||{})[x.ik]||0)+(seen[x.ik]||0)+(x.q||0); seen[x.ik]=(seen[x.ik]||0)+(x.q||0); if(tot>it[0]+OVTOL) return true; } return false; }
 $('autoPlan').addEventListener('click',()=>{
   const ks=MCS; const inPl=new Set(); for(const k in S.plan) for(const id of S.plan[k]||[]) inPl.add(id);
   const pool=[...C.values()].filter(c=>ks.includes(c.mc)&&!inPl.has(c.id)&&isReady(c)&&passes(c)).sort((a,b)=>cmpAuto(a,b,true));
@@ -1535,6 +1537,13 @@ $('autoPlan').addEventListener('click',()=>{
   };
 });
 $('qf').addEventListener('click',e=>{ const b=e.target.closest('[data-q]'); if(!b) return; const k=b.dataset.q; QF.has(k)?QF.delete(k):QF.add(k); store.set('mclp-qf',[...QF]); refreshView(); });
+// drag any popup box by its title bar
+(()=>{ const d=$('dlg'), w=$('dlgW'); let st=null;
+  new MutationObserver(()=>{ if(w.hidden){ d.style.transform=''; d._dx=d._dy=0; } }).observe(w,{attributes:true,attributeFilter:['hidden']});
+  d.addEventListener('mousedown',e=>{ const t=e.target.closest('.dlgt'); if(!t||e.target.closest('button')) return; e.preventDefault(); st={x:e.clientX-(d._dx||0),y:e.clientY-(d._dy||0)}; d.classList.add('drg'); });
+  addEventListener('mousemove',e=>{ if(!st) return; d._dx=e.clientX-st.x; d._dy=e.clientY-st.y; d.style.transform=`translate(${d._dx}px,${d._dy}px)`; });
+  addEventListener('mouseup',()=>{ if(st){ st=null; d.classList.remove('drg'); } });
+})();
 // ---------- right-click › Send to MC ----------
 function sendTo(id,k,quiet){
   const c=C.get(id); if(!c||c.mc===k) return;
