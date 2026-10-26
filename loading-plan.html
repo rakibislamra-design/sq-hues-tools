@@ -356,6 +356,7 @@ header.fover::after{background:rgba(239,230,235,.92)}
 .list .ln.sub>span{padding:0 5px;white-space:nowrap;overflow:hidden}
 .list .ln.sub .lh2{position:absolute;left:14px;top:2px;font-size:11px;color:#8A7440;padding:0}
 .ln.gr .gsum{font:700 11.5px var(--f-ui);font-style:normal;color:#1F1F1F;margin-left:auto;padding-right:5px;align-self:center;font-variant-numeric:tabular-nums}
+.ln.xl>span>.ced{width:100%;box-sizing:border-box;font:inherit;border:1.5px solid #664356;border-radius:2px;padding:0 3px;height:19px;background:#fff;color:#1F1F1F;outline:none;box-shadow:0 0 0 3px rgba(102,67,86,.15)}
 /* quick type chips */
 .qf{display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap;margin-left:10px}
 .qfc{font:600 12px var(--f-ui);border:1px solid var(--hdr-line);background:var(--surface);color:var(--fg);border-radius:14px;padding:3px 10px;cursor:pointer;white-space:nowrap;display:inline-flex;gap:5px;align-items:baseline}
@@ -946,7 +947,7 @@ const store={get(k){try{return JSON.parse(localStorage.getItem(k)||'null')}catch
 const SEED=JSON.parse($('seed').textContent);
 let D=SEED.data, LABEL=SEED.label;
 const saved=store.get('mclp-data'); if(saved&&saved.data&&saved.label){D=saved.data;LABEL=saved.label;}
-let S=Object.assign({plan:{},over:{},split:[],ed:{},del:{}},store.get('mclp-state')||{}); S.ed=S.ed||{}; S.del=S.del||{};
+let S=Object.assign({plan:{},over:{},split:[],ed:{},del:{}},store.get('mclp-state')||{}); S.ed=S.ed||{}; S.del=S.del||{}; S.cx=S.cx||{};
 let cur='750';
 // column filters: key -> allowed values (absent = no filter). Default: Knit = KOK
 let FILT=(()=>{try{const f=JSON.parse(localStorage.getItem('mclp-filt3')||'null');if(f&&typeof f==='object')return f;}catch(e){}return {I:['KOK']};})();
@@ -970,6 +971,7 @@ function mk(id,m,outside,from){
 }
 function build(){
   for(const b in S.ed){ const x=D.batches[b]; if(x) Object.assign(x,S.ed[b]); }
+  for(const b in S.cx){ const x=D.batches[b]; if(x) for(const L in S.cx[b]) setCell(x,L,S.cx[b][L]); }
   C=new Map(); const split=new Set(S.split);
   for(const c of D.combos){
     if(S.del[c.id]) continue;   // deleted from the sheet
@@ -1001,6 +1003,20 @@ const inView=c=>cur==='ALL'||c.mc===cur;
 const LET=(()=>{const o=[];for(let i=1;i<=60;i++){let n=i,s='';while(n){const r=(n-1)%26;s=String.fromCharCode(65+r)+s;n=Math.floor((n-1)/26);}o.push(s);}return o;})();
 const DEFH={A:'M/C No',C:'Plan Type',D:'Batch No',E:'Buyer Name',F:'Shade',G:'Fabrics Type',H:'LD/Matching',I:'Knitting status',J:'Batch Type',K:'Batch qty',L:'Knit Q',M:'Greige allowcation',N:'Plan Date',O:'Workorder Category',P:'Note 1',Q:'Remrks',R:'Hold remarks',S:'Total Batch',T:'Gsm',U:'Left batch',X:'H/s Status',AF:'Customer Po',AG:'Dye Batch',AH:'OTT Date',AI:'Dye Date',AJ:'Knit Q',AM:'Dye Q',AO:'And',AV:'Ageing',AY:'Batch Status',AZ:'Remarks',BA:'Plan Given',BC:'Lot',BD:'Knit Mill',BE:'H/s Plan',BF:'Line Plan',BG:'Lab Fabric Plan'};
 const DATEF={N:'pd',AH:'ott',BF:'lp',BG:'lab'};
+// ---- double-click to type in any cell (kept in S.cx, written into the same cell on Export) ----
+const NOEDIT={A:'M/C — use right-click › Send to MC',B:'SL — type it in the SL box',D:'Batch No is the key of the row',K:'Batch qty drives the 102% check',N:'Plan Date — tick / untick the row',BH:'Load Day is worked out by the planner'};
+const MONI={jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+function toIso(v){ v=String(v||'').trim(); if(!v) return ''; let m;
+  if((m=/^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(v))) return `${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;
+  if((m=/^(\d{1,2})[-\/ .]([A-Za-z]{3})[A-Za-z]*(?:[-\/ .](\d{2,4}))?$/.exec(v))&&MONI[m[2].toLowerCase()]){ let y=m[3]?+m[3]:new Date().getFullYear(); if(y<100) y+=2000; return `${y}-${String(MONI[m[2].toLowerCase()]).padStart(2,'0')}-${m[1].padStart(2,'0')}`; }
+  if((m=/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})$/.exec(v))){ let y=+m[3]; if(y<100) y+=2000; return `${y}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`; }
+  return null; }
+const isNumTxt=v=>/^-?\d+(\.\d+)?$/.test(String(v).replace(/,/g,'').trim());
+function setCell(x,L,v){ const col=COLS.find(c=>c.k===L)||{};
+  if(DATEF[L]){ const d=toIso(v); x[DATEF[L]]=d==null?v:d; return; }
+  const val=v!==''&&col.num&&isNumTxt(v)?+String(v).replace(/,/g,''):v;
+  if(FIELD[L]) x[FIELD[L]]=val; else { x.raw=x.raw||{}; if(v==='') delete x.raw[L]; else x.raw[L]=val; } }
+function cellOut(L,v){ if(v==='') return ''; if(DATEF[L]){ const d=toIso(v); if(d){ const [y,m,dd]=d.split('-').map(Number); return (Date.UTC(y,m-1,dd)-Date.UTC(1899,11,30))/864e5; } return v; } return isNumTxt(v)?+String(v).replace(/,/g,''):v; }
 const FIELD={C:'pt',D:'b',E:'by',F:'sh',G:'fb',H:'ld',I:'kn',J:'t',L:'kq',M:'ga',O:'cat',P:'n1',Q:'rmk',R:'hold',S:'tb',T:'gsm',U:'lb',X:'hs',AF:'po',AG:'db',AI:'dd',AJ:'kq2',AM:'dq',AO:'and',AV:'age',AY:'st',AZ:'rm',BA:'pg',BC:'lot',BD:'mill',BE:'hsp'};
 const REDH=new Set(['H','K','L']);
 let COLS=[], GRPS=[];            // visible-capable columns and outline groups
@@ -1083,7 +1099,7 @@ function calcLoadDays(){
 function wrongMc(c){ if(!c) return null; const a=c.auto; if(a&&a!=='NBP') return a!==c.mc?a:null; return CAP[c.mc]&&c.q>CAP[c.mc]*1.02?'over':null; }
 function line(x,c){ const wm=wrongMc(c);
   const qtip=wm?(wm==='over'?'Combo '+fmt(Math.round(c.q))+' kg is over the '+c.mc+' kg machine':'Combo '+fmt(Math.round(c.q))+' kg suits the '+wm+' kg MC, not '+c.mc+' kg — right-click › Send to MC'):'';
-  let h='<div class="ln xl">';
+  let h=`<div class="ln xl" data-b="${esc(x.b)}">`;
   for(const col of visCols()){ const L=col.k; const v=cellText(L,x);
     if(L==='Q'||L==='R'){ const k=L==='Q'?'rmk':'hold'; h+=`<span><input class="ed" data-b="${esc(x.b)}" data-k="${k}" value="${esc(x[k])}" title="${esc(x[k])}" aria-label="${esc(col.h)}"></span>`; continue; }
     if(L==='BH'){ h+=LDAY[x.b]?`<span class="ldy" title="Load ${dshort(LDAY[x.b].d)} · ${LDAY[x.b].k} kg MC · ${capOf(LDAY[x.b].k).m} MC × ${capOf(LDAY[x.b].k).b}/day">${v}</span>`:'<span></span>'; continue; }
@@ -1294,8 +1310,22 @@ $('list').addEventListener('click',e=>{ if(e.target.closest('.sn,.hdl,.hd,.ed'))
   if(e.shiftKey&&rowAnchor){ e.preventDefault(); const rows=[...$('list').querySelectorAll('.cb[data-id]')]; const a=rows.findIndex(x=>x.dataset.id===rowAnchor), b=rows.findIndex(x=>x.dataset.id===cb.dataset.id);
     if(a>=0&&b>=0){ for(let i=Math.min(a,b);i<=Math.max(a,b);i++){ SELSET.add(rows[i].dataset.id); rows[i].classList.add('msel'); } updSel(); }
     try{getSelection().removeAllRanges()}catch(_){} return; }
+  if(e.target.closest('.ced')) return;
+  if(e.detail>1){ clearTimeout(clickT); clickT=null; startEdit(e.target); return; }   // double-click = type in the cell
   if(clearSel()) return;   // first plain click just clears a selection
-  toggle(cb.dataset.id); });
+  const id=cb.dataset.id; clearTimeout(clickT); clickT=setTimeout(()=>{ clickT=null; toggle(id); },220); });
+let clickT=null;
+function startEdit(t){ const sp=t.closest('.ln.xl>span'); if(!sp||sp.querySelector('input')) return; const ln=sp.parentElement, b=ln.dataset.b, x=D.batches[b]; if(!x) return;
+  const col=visCols()[[...ln.children].indexOf(sp)]; if(!col) return;
+  if(NOEDIT[col.k]){ toast(`${col.h}: can't type here — ${NOEDIT[col.k].split(' — ')[1]||NOEDIT[col.k]}.`); return; }
+  const old=(S.cx[b]&&col.k in S.cx[b])?S.cx[b][col.k]:cellText(col.k,x);
+  sp.innerHTML=`<input class="ced" value="${esc(old)}" aria-label="${esc(col.h)}">`; const inp=sp.firstChild; inp.focus(); inp.select();
+  let done=false; const fin=save1=>{ if(done) return; done=true; const id=ln.closest('.cb').dataset.id; const v=inp.value.trim();
+    if(save1&&v!==String(old)){ if(DATEF[col.k]&&v&&toIso(v)==null){ toast(`“${v}” is not a date — use e.g. 27-Oct or 27/10/2026.`); quickRow(id); return; }
+      (S.cx[b]=S.cx[b]||{})[col.k]=v; setCell(x,col.k,v); save(); toast(`${col.h} saved for ${b.replace(/^SQHUE-FY\d\d-\d\d-/,'')}.`); }
+    quickRow(id); };
+  inp.addEventListener('keydown',e=>{ e.stopPropagation(); if(e.key==='Enter'){ e.preventDefault(); fin(true); } else if(e.key==='Escape'){ e.preventDefault(); fin(false); } });
+  inp.addEventListener('blur',()=>fin(true)); }
 $('list').addEventListener('keydown',e=>{ if(e.target.classList.contains('ed')&&e.key==='Enter'){e.preventDefault();e.target.blur();} });
 $('list').addEventListener('change',e=>{ const t=e.target;
   if(t.classList.contains('ed')){ const b=t.dataset.b,k=t.dataset.k,v=t.value.trim(); (S.ed[b]=S.ed[b]||{})[k]=v; if(D.batches[b]) D.batches[b][k]=v; t.title=v; save(); toast('Saved.'); return; }
@@ -1622,6 +1652,7 @@ $('xls').addEventListener('click',async()=>{
     const inPl=new Set(lists[k]); const rest=[...C.values()].filter(c=>c.mc===k&&!inPl.has(c.id)).sort((a,b)=>cmpAuto(a,b,true));
     const restRows=[]; for(const c of rest) for(const b of c.m){ const x=D.batches[b]; if(x&&x.row){ restRows.push(x.row); if(S.over[c.id]){ const r=row(b); if(r) r.A=k; } } }
     order.push({mc:k,rows,rest:restRows}); }
+  for(const b in S.cx){const r=row(b); if(!r) continue; for(const L in S.cx[b]) if(!NOEDIT[L]) r[L]=cellOut(L,S.cx[b][L]);}
   for(const b in S.ed){const e=S.ed[b], r=row(b); if(!r) continue; if('pd' in e) r.N=e.pd||''; if('rmk' in e) r.Q=e.rmk; if('hold' in e) r.R=e.hold;}
   calcLoadDays(); for(const b in D.batches){ const r=D.batches[b].row; if(!r) continue; const v=LDAY[b]?'Day '+LDAY[b].n:''; if(v||(ed[r]&&ed[r].A)){ (ed[r]=ed[r]||{}).BH=v; } }
   ed[3]=Object.assign(ed[3]||{},{BH:'Load Day'});
@@ -1663,13 +1694,13 @@ async function loadFile(f){
     const d=await LPEngine.parseLoadingPlan(JSZip,buf.slice(0),m=>{$('busy').textContent=m;});
     FILE={label:f.name,buf}; IDB.put(FILE);
     const before=MCS.reduce((a,k)=>a+(S.plan[k]||[]).length,0);
-    D=d; LABEL=f.name; store.set('mclp-data',{label:LABEL,data:D}); S.plan={}; S.ed={}; S.over={}; S.del={}; build(); const nf=MCS.reduce((a,k)=>a+(S.plan[k]||[]).length,0); S.seeded=LABEL;
+    D=d; LABEL=f.name; store.set('mclp-data',{label:LABEL,data:D}); S.plan={}; S.ed={}; S.cx={}; S.over={}; S.del={}; build(); const nf=MCS.reduce((a,k)=>a+(S.plan[k]||[]).length,0); S.seeded=LABEL;
     save(); refreshView(); $('busy').textContent='';
     toast(`Loaded ${f.name}. ${nf} SL with a Plan Date are planned, in the file's M/C and SL order.`);
   }catch(err){ console.error(err); $('busy').textContent=''; toast('Could not read this file: '+(err.message||err)); }
 }
 
-build(); if(S.seeded!==LABEL){ S.plan={}; S.ed={}; S.seeded=LABEL; build(); } save(); refreshView();
+build(); if(S.seeded!==LABEL){ S.plan={}; S.ed={}; S.cx={}; S.seeded=LABEL; build(); } save(); refreshView();
 })();
 </script>
 
