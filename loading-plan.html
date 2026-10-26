@@ -345,6 +345,9 @@ header.fdrag{box-shadow:0 0 0 2px #B29EA6,0 8px 24px rgba(102,67,86,.18);transfo
 header.fover{transform:scale(1.015);box-shadow:0 0 0 3px #664356,0 12px 30px rgba(102,67,86,.28)}
 header.fdrag::after{content:"Drop the Loading plan .xlsx to load it";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(246,242,244,.86);border:2px dashed #957B87;border-radius:8px;font:700 15px var(--f-ui);color:#664356;animation:dzoom .25s cubic-bezier(.3,1.6,.5,1);pointer-events:none}
 header.fover::after{background:rgba(239,230,235,.92)}
+/* Auto plan button */
+.autop{font:700 13.5px var(--f-ui);color:#3c7a5a;background:#EEF7EF;border:1.5px solid #8CC79A;border-radius:8px;padding:8px 16px;cursor:pointer;white-space:nowrap;align-self:stretch;transition:transform .15s,box-shadow .15s}
+.autop:hover{background:#DFF0E2;box-shadow:0 3px 10px rgba(60,122,90,.18);transform:translateY(-1px)}
 /* close buttons + ready glow */
 #dlg .btn.dlgdel{color:#AF4F5A;border-color:#E7D1CE}
 #dlg .btn.dlgdel:hover{background:var(--s-red-bg)}
@@ -434,10 +437,10 @@ header.fover::after{background:rgba(239,230,235,.92)}
     </div>
   </div>
   <div class="hcol">
-  <div class="row1"><nav class="mcs" id="mcs" aria-label="Machine"></nav><span class="sp qsum" id="qsum"></span></div>
+  <div class="row1"><nav class="mcs" id="mcs" aria-label="Machine"></nav><button class="autop" id="autoPlan" title="Add every ready combo on all machines to the plan: knit done (no KBL), LD given, no Hold remarks, and not over 102% Req Qty Kg">⚡ Auto plan</button><span class="sp qsum" id="qsum"></span></div>
   <div class="row2">
   <span class="hb">
-    <button class="hb2 home" id="home" title="Back to the top of the list">↑ Top</button>
+    <button class="hb2 home" id="home" title="Back to the top of the list (Ctrl + Home)">↑ Top</button>
     <button class="hb2" id="refresh" title="Move ticked combos up into the plan by priority">Refresh</button>
     <button class="hb2" id="auto" title="Sort every machine: FOC → Hanger → Line Plan (today, tomorrow, day after, backlog, later dates nearest first) → AOP → Urgent → other Plan Type → rest">Auto-order</button>
     <button class="hb2" id="clrF" title="Remove all column filters">Clear filters</button>
@@ -1441,12 +1444,39 @@ document.addEventListener('keydown',e=>{
   if(!$('dlgW').hidden){ if(e.key==='Enter'){ e.preventDefault(); const y=$('dlgY'); if(y) y.click(); } return; }
   if(!$('cm').hidden||!$('fp').hidden) return;
   const t=e.target; if(t&&(t.tagName==='INPUT'||t.tagName==='SELECT'||t.tagName==='TEXTAREA'||t.isContentEditable)) return;
+  if(e.ctrlKey&&(e.key==='Home'||e.key==='End')){ e.preventDefault(); const el=VMODE==='board'?$('bwrap'):$('list'); if(el){ if(e.key==='Home'){ el.scrollTo({top:0,left:0,behavior:'smooth'}); } else el.scrollTo({top:el.scrollHeight,behavior:'smooth'}); }
+    if(VMODE==='list'){ const r=[...$('list').querySelectorAll('.cb[data-id]')]; if(r.length) setKF((e.key==='Home'?r[0]:r[r.length-1]).dataset.id,false); } return; }
   if(VMODE!=='list') return;
   const rows=[...$('list').querySelectorAll('.cb[data-id]')]; if(!rows.length) return;
   let i=rows.findIndex(x=>x.dataset.id===KF);
   const step={ArrowDown:1,ArrowUp:-1,PageDown:10,PageUp:-10}[e.key];
   if(step){ e.preventDefault(); document.body.classList.add('kbd'); if(i<0){ const L=$('list'),top=L.getBoundingClientRect().top+60; i=Math.max(0,rows.findIndex(x=>x.getBoundingClientRect().bottom>top)); } else i=Math.max(0,Math.min(rows.length-1,i+step)); setKF(rows[i].dataset.id,true); return; }
   if(e.key===' '||e.code==='Space'){ if(!KF||i<0) return; e.preventDefault(); toggle(KF); setTimeout(()=>setKF(KF,true),0); return; }
+});
+// ---------- Auto plan: add every ready combo (KOK, LD given, no hold, within 102% Req Qty Kg) ----------
+const isReady=c=>c.p.every(x=>x.kn==='KOK'&&String(x.ld||'').trim()&&!String(x.hold||'').trim());
+function overReq(c){ if(!D.itemsKg) return false; const skip=new Set(c.m); const seen={};
+  for(const x of c.p){ const it=D.itemsKg[x.ik]; if(!it) continue; const tot=it[1]+plannedKg(x.ik,skip)+(seen[x.ik]||0)+(x.q||0); seen[x.ik]=(seen[x.ik]||0)+(x.q||0); if(tot>it[0]+0.5) return true; } return false; }
+$('autoPlan').addEventListener('click',()=>{
+  const ks=MCS; const inPl=new Set(); for(const k in S.plan) for(const id of S.plan[k]||[]) inPl.add(id);
+  const isExcess=c=>c.p.some(x=>/additi?onal/i.test(x.cat||'')||/additi?onal/i.test(x.n1||''));   // excess / additional-creation batches
+  const pool=[...C.values()].filter(c=>ks.includes(c.mc)&&!inPl.has(c.id)&&isReady(c)&&passes(c));
+  const nExcess=pool.filter(isExcess).length, nOver=pool.filter(c=>!isExcess(c)&&overReq(c)).length;
+  const cand=pool.filter(c=>!isExcess(c)).sort((a,b)=>cmpAuto(a,b,true));
+  const notReady=[...C.values()].filter(c=>ks.includes(c.mc)&&!inPl.has(c.id)&&!isReady(c)).length;
+  if(!cand.length){ toast('No ready combos to add'+(Object.keys(FILT).length?' with these filters':'')+'.'); return; }
+  const d=$('dlg'); d.className='';
+  d.innerHTML=`<div class="dlgt"><h3 style="color:#3c7a5a">⚡ Auto plan · all machines</h3><button class="dlgx" id="dlgX" aria-label="Close">×</button></div>
+    <div class="note" style="background:#EEF7EF">Add <b style="color:#3c7a5a">${cand.length}</b> ready combo${cand.length>1?'s':''} — knit done, LD given, no Hold remarks${Object.keys(FILT).length?' (only those matching your filters)':''}.</div>
+    <div class="mut" style="font-size:12px;margin:2px 0 4px">${MCS.map(k=>{const n=cand.filter(c=>c.mc===k).length;return n?`${k} kg: <b>${n}</b>`:'';}).filter(Boolean).join(' · ')}</div><div class="mut" style="font-size:11.5px">Each goes into its own machine's plan in Auto-order sequence with today's date. Left out: <b>${nExcess}</b> additional / excess-creation combo${nExcess===1?'':'s'}, and any that would go over the 102% Req Qty Kg (about <b>${nOver}</b>). ${notReady} not-ready combo${notReady===1?'':'s'} (KBL, LD pending or hold) are left out.</div>
+    <div class="acts"><span style="flex:1"></span><button class="btn" id="dlgN">Cancel</button><button class="btn go" id="dlgY" style="background:#EEF7EF;border-color:#5E9277;color:#3c7a5a">OK — add ${cand.length}</button></div>`;
+  $('dlgW').hidden=false; $('dlgY').focus();
+  $('dlgX').onclick=$('dlgN').onclick=()=>{$('dlgW').hidden=true;};
+  $('dlgY').onclick=()=>{ $('dlgW').hidden=true; const added=[]; let skipped=0;
+    for(const c of cand){ if(overReq(c)){ skipped++; continue; } const L=mlist(c); let pos=L.findIndex(x=>C.has(x)&&cmpAuto(C.get(x),c)>0); if(pos<0) pos=L.length; L.splice(pos,0,c.id); setPlanDate(c,true); added.push(c.id); }
+    save(); refreshView();
+    toast(`Auto plan added ${added.length} combo${added.length===1?'':'s'}${skipped?` · ${skipped} skipped (over 102% Req Qty Kg)`:''}.`,'Undo',()=>{ for(const id of added){ const c=C.get(id); if(!c) continue; S.plan[c.mc]=(S.plan[c.mc]||[]).filter(x=>x!==id); setPlanDate(c,false); } save(); refreshView(); toast('Auto plan undone.'); });
+  };
 });
 // ---------- right-click › Send to MC ----------
 function sendTo(id,k,quiet){
