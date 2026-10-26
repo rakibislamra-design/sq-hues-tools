@@ -63,9 +63,9 @@ button:focus-visible,input:focus-visible,.hbtn:focus-visible{outline:2px solid v
 .cb,.hd{min-width:max-content}
 .ln{display:grid;grid-template-columns:var(--cols);gap:7px;align-items:center;min-height:24px}
 .ln>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
-.hd{position:sticky;top:0;z-index:2;background:var(--surface);border-bottom:1px solid var(--line);font:600 10px var(--f-ui);text-transform:uppercase;letter-spacing:.35px;color:var(--muted);padding:7px 12px 6px 104px}
+.hd{position:sticky;top:0;z-index:2;background:var(--surface);border-bottom:1px solid var(--line);font:600 10px var(--f-ui);text-transform:uppercase;letter-spacing:.35px;color:var(--muted);padding:7px 12px 6px var(--lw,78px)}
 .hd .lh{position:absolute;left:14px;z-index:3}
-.cb{display:grid;grid-template-columns:104px minmax(0,1fr);border-bottom:1px solid var(--line);background:var(--surface);cursor:pointer}
+.cb{display:grid;grid-template-columns:var(--lw,78px) minmax(0,1fr);border-bottom:1px solid var(--line);background:var(--surface);cursor:pointer}
 .cb:hover{background:var(--raise)}
 .cb.pl{background:var(--sel)}
 .cb.pl:hover{background:var(--sel)}
@@ -280,7 +280,7 @@ header{gap:6px 6px!important}
 .list .ln.hd>span.csel{background:#BDD7EE!important;box-shadow:inset 0 -2px 0 #2F75B5}
 .hdw{position:sticky;top:0;z-index:3;min-width:max-content}
 .hdw .hd{position:relative!important;top:auto!important}
-.ln.gr{background:#F3F3F3;padding-left:104px;min-height:16px;border-bottom:1px solid #D9D9D9;position:relative}
+.ln.gr{background:#F3F3F3;padding-left:var(--lw,78px);min-height:16px;border-bottom:1px solid #D9D9D9;position:relative}
 .ln.gr>span{align-self:stretch;position:relative;display:flex;align-items:flex-start}
 .ln.gr>span.gin{border-top:2px solid #7F7F7F;margin-top:6px}
 .ln.gr>span.gend{border-right:2px solid #7F7F7F}
@@ -345,7 +345,38 @@ header.fdrag{box-shadow:0 0 0 2px #B29EA6,0 8px 24px rgba(102,67,86,.18);transfo
 header.fover{transform:scale(1.015);box-shadow:0 0 0 3px #664356,0 12px 30px rgba(102,67,86,.28)}
 header.fdrag::after{content:"Drop the Loading plan .xlsx to load it";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(246,242,244,.86);border:2px dashed #957B87;border-radius:8px;font:700 15px var(--f-ui);color:#664356;animation:dzoom .25s cubic-bezier(.3,1.6,.5,1);pointer-events:none}
 header.fover::after{background:rgba(239,230,235,.92)}
-/* Auto plan button */
+/* SL box carries the status dot inside it */
+.slw{position:relative;display:inline-flex;align-items:center;flex:none}
+.slw .sn{width:40px;padding-right:9px!important}
+.slw .ns{width:40px;padding-right:9px;box-sizing:border-box}
+.slw .dot{position:absolute;right:4px;top:50%;margin-top:-3px;width:6px;height:6px;pointer-events:none}
+/* quick type chips */
+.qf{display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap;margin-left:10px}
+.qfc{font:600 12px var(--f-ui);border:1px solid var(--hdr-line);background:var(--surface);color:var(--fg);border-radius:14px;padding:3px 10px;cursor:pointer;white-space:nowrap;display:inline-flex;gap:5px;align-items:baseline}
+.qfc small{font-weight:500;color:var(--muted);font-size:10.5px}
+.qfc:hover{border-color:var(--qp-line)}
+.qfc.on{background:#664356;border-color:#664356;color:#fff}.qfc.on small{color:#E6DFE1}
+.qfc.prob{color:#AF4F5A;border-color:#E7D1CE}
+.qfc.prob.on{background:#AF4F5A;border-color:#AF4F5A;color:#fff}
+.qgap{width:14px;display:inline-block}
+/* Auto plan button + list */
+#dlg.wide{width:980px}
+.aprow{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.aptw{max-height:46vh;overflow:auto;border:1px solid var(--line);border-radius:6px}
+.apt{border-collapse:collapse;width:100%;font-size:12px}
+.apt th{position:sticky;top:0;background:#DDEBF7;color:#1F1F1F;font-weight:700;font-size:11px;text-align:left;padding:4px 6px;border-bottom:1px solid #9BC2E6;white-space:nowrap}
+.apt td{padding:3px 6px;border-bottom:1px solid #EDEDED;vertical-align:top;text-align:left!important;white-space:normal!important}
+.apt td.num,.apt th.num{text-align:right!important}
+.apt td.mcx{font-weight:700;color:#3c7a5a}
+.apt td.bnx{white-space:nowrap!important}
+#dlg .apt th{text-align:left;padding:4px 6px}
+#dlg .apt td{text-align:left;padding:3px 6px;white-space:normal}
+#dlg .apt th.num,#dlg .apt td.num{text-align:right}
+#dlg .apt td.bnx{white-space:nowrap}
+.apt tbody tr{cursor:pointer}
+.apt tbody tr:hover{background:#F3FAF4}
+.apt tbody tr.off{opacity:.45;text-decoration:line-through}
+.apt tbody tr.off td.mcx{color:var(--muted)}
 .autop{font:700 13.5px var(--f-ui);color:#3c7a5a;background:#EEF7EF;border:1.5px solid #8CC79A;border-radius:8px;padding:8px 16px;cursor:pointer;white-space:nowrap;align-self:stretch;transition:transform .15s,box-shadow .15s}
 .autop:hover{background:#DFF0E2;box-shadow:0 3px 10px rgba(60,122,90,.18);transform:translateY(-1px)}
 /* close buttons + ready glow */
@@ -437,7 +468,7 @@ header.fover::after{background:rgba(239,230,235,.92)}
     </div>
   </div>
   <div class="hcol">
-  <div class="row1"><nav class="mcs" id="mcs" aria-label="Machine"></nav><button class="autop" id="autoPlan" title="Add every ready combo on all machines to the plan: knit done (no KBL), LD given, no Hold remarks, and not over 102% Req Qty Kg">⚡ Auto plan</button><span class="sp qsum" id="qsum"></span></div>
+  <div class="row1"><nav class="mcs" id="mcs" aria-label="Machine"></nav><button class="autop" id="autoPlan" title="Add every ready combo on all machines to the plan: knit done (no KBL), LD given, no “hold” written anywhere, and not over 102% Req Qty Kg">⚡ Auto plan</button><span class="sp qsum" id="qsum"></span></div>
   <div class="row2">
   <span class="hb">
     <button class="hb2 home" id="home" title="Back to the top of the list (Ctrl + Home)">↑ Top</button>
@@ -445,6 +476,7 @@ header.fover::after{background:rgba(239,230,235,.92)}
     <button class="hb2" id="auto" title="Sort every machine: FOC → Hanger → Line Plan (today, tomorrow, day after, backlog, later dates nearest first) → AOP → Urgent → other Plan Type → rest">Auto-order</button>
     <button class="hb2" id="clrF" title="Remove all column filters">Clear filters</button>
   </span>
+  <span class="qf" id="qf"></span>
   <span class="file" id="fileLbl" hidden></span>
   <span hidden><span class="vseg" id="vseg"><button class="hb2 on" data-v="list">List</button><button class="hb2" data-v="board">MC Board</button></span><button class="hb2 pri" id="xls">Export to Excel</button><label class="hbtn" for="fileIn" tabindex="0" id="loadBtn">Load file</label></span>
   <span id="selInfo" class="selinfo" hidden></span>
@@ -1025,7 +1057,13 @@ const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','De
 const dshort=d=>d?(+d.slice(8,10))+'-'+MON[+d.slice(5,7)-1]:'';
 let BMC={};
 const cval=(c,k)=>k==='s'?[c.can?'Can dye':'Not ready']:c.p.map(x=>String(cellText(k,x)||'(blank)'));
-function passes(c){ for(const k in FILT){ const set=FILT[k]; if(!set) continue; if(!(k==='s'||COLS.some(cc=>cc.k===k))) continue; if(!cval(c,k).some(v=>set.includes(v))) return false; } return true; }
+// quick type filters (any of the chosen types)
+let QF=new Set(store.get('mclp-qf')||[]);
+const QFDEF=[['FOC','FOC',c=>c.p.some(x=>/FOC/i.test((x.pt||'')+' '+(x.cat||'')))],['HANGER','Hanger',c=>c.p.some(x=>/HANGER/i.test((x.pt||'')+' '+(x.cat||'')))],['AOP','AOP',c=>c.p.some(x=>/AOP/i.test((x.sh||'')+' '+(x.pt||'')))],['LP','Line Plan',c=>c.p.some(x=>x.lp||/LINE\s*PLAN/i.test(x.pt||''))],['URG','Urgent',c=>c.p.some(x=>/URGENT/i.test(x.pt||''))],['PROB','Problematic Batch',c=>overReq(c)]];
+function qfPass(c){ if(!QF.size) return true; for(const [k,,f] of QFDEF) if(QF.has(k)&&f(c)) return true; return false; }
+function drawQF(){ const pool=[...C.values()].filter(c=>cur==='ALL'||c.mc===cur);
+  $('qf').innerHTML=QFDEF.map(([k,n,f])=>{ const cnt=pool.filter(f).length; return `${k==='PROB'?'<span class="qgap"></span>':''}<button class="qfc${QF.has(k)?' on':''}${k==='PROB'?' prob':''}" data-q="${k}" title="${k==='PROB'?'Combos that take their order item above the 102% Req Qty Kg (planned ones already over, not planned ones if added)':'Show only '+n+' combos'} — click again to clear">${n}<small>${cnt}</small></button>`; }).join(''); }
+function passes(c){ if(!qfPass(c)) return false; for(const k in FILT){ const set=FILT[k]; if(!set) continue; if(!(k==='s'||COLS.some(cc=>cc.k===k))) continue; if(!cval(c,k).some(v=>set.includes(v))) return false; } return true; }
 const sp=(v,cls)=>`<span${cls?' class="'+cls+'"':''} title="${esc(v)}">${esc(v)}</span>`;
 // Load Day for planned batches: SL order ÷ (MCs × batches per MC per day), working days from the plan start; only Day 1–3 shown
 let LDAY={};
@@ -1049,37 +1087,45 @@ function line(x,c){ const wm=wrongMc(c);
     h+=`<span${cls?` class="${cls}"`:''} title="${esc(v)}">${esc(v)}</span>`; }
   return h+'</div>';
 }
+// Hold = anything in R (Hold remarks) or HOLD written in AZ (Remarks)
+// Hold = anything in R (Hold remarks), or the word "hold" written in any cell of the batch row
+const FLAB={rm:'Remarks (AZ)',pt:'Plan Type',n1:'Note'};
+function holdText(x){ let w=''; const chk=(k,v)=>{ if(!w&&typeof v==='string'&&/hold/i.test(v)) w=k+': '+v; };
+  for(const k in x){ if(k==='raw'||k==='hold') continue; chk(FLAB[k]||k,x[k]); } for(const k in (x.raw||{})) chk(k,x.raw[k]);
+  for(const k in (S.ed[x.b]||{})) chk(k==='rmk'?'Remarks':k,S.ed[x.b][k]); return w; }
+function isHold(x){ return !!String(x.hold||'').trim()||!!holdText(x); }
 function box(c,sl,alt,ns){
   const l=loadPct(c);
-  const lead=sl?`<span class="hdl" title="Drag to reorder">⋮⋮</span><input class="sn" type="number" min="1" value="${sl}" aria-label="SL">`:`<span class="tick"></span><span class="ns" title="Suggested serial (Auto-order rules)">${ns||''}</span>`+(cur==='ALL'?`<span class="mct" title="M/C">${esc(c.mc)}</span>`:'');
+  const lead=sl?`<span class="hdl" title="Drag to reorder">⋮⋮</span><span class="slw"><input class="sn" type="number" min="1" value="${sl}" aria-label="SL"><span class="dot${c.can?' on':''}"></span></span>`:`<span class="tick"></span><span class="slw"><span class="ns" title="Suggested serial (Auto-order rules)">${ns||''}</span><span class="dot${c.can?' on':''}"></span></span>`;
   const tip=`${c.can?'Can dye':'Not ready: '+(c.body.rm||'')}${c.m.length===2?' · body + gusset':''}${c.outside?' · partner '+c.outside:''} · combo ${fmt(c.q)} kg${l!=null?' · load '+l.toFixed(0)+'%':''} · click to ${sl?'take out of':'add to'} the plan`;
-  const okp=!sl&&c.p.every(x=>x.kn==='KOK'&&String(x.ld||'').trim()&&!String(x.hold||'').trim());
-  return `<div class="cb${c.id===KF?' kf':''}${sl?' pl':''}${okp?' okp':''}${SELSET.has(c.id)?' msel':''}${c.can?' can':''}${alt?' alt':''}" data-id="${esc(c.id)}"${sl?' draggable="true"':''} title="${esc(tip)}"><div class="lead">${lead}<span class="dot${c.can?' on':''}"></span></div><div class="lines">${c.p.map(x=>line(x,c)).join('')}</div></div>`;
+  const okp=!sl&&c.p.every(x=>x.kn==='KOK'&&String(x.ld||'').trim()&&!isHold(x));
+  return `<div class="cb${c.id===KF?' kf':''}${sl?' pl':''}${okp?' okp':''}${SELSET.has(c.id)?' msel':''}${c.can?' can':''}${alt?' alt':''}" data-id="${esc(c.id)}"${sl?' draggable="true"':''} title="${esc(tip)}"><div class="lead">${lead}</div><div class="lines">${c.p.map(x=>line(x,c)).join('')}</div></div>`;
 }
 function drawChrome(){
   const ids=plan();
+  drawQF();
   // queue summary for the machine on screen: planned SL and days, and the part that is ready (H/S OK, LD given, no hold)
   { const ks=cur==='ALL'?MCS:[cur]; let n=0,nr=0,dMax=0,drMax=0;
-    const ready=c=>c.p.every(x=>/OK/i.test(x.hs||'')&&String(x.ld||'').trim()&&!String(x.hold||'').trim());
+    const ready=c=>c.p.every(x=>/OK/i.test(x.hs||'')&&String(x.ld||'').trim()&&!isHold(x));
     for(const k of ks){ const L=(S.plan[k]||[]).filter(id=>C.has(id)); const r=L.filter(id=>ready(C.get(id))).length; const {m,b}=capOf(k); const per=Math.max(0.5,m*b);
       n+=L.length; nr+=r; dMax=Math.max(dMax,L.length/per); drMax=Math.max(drMax,r/per); }
     const cp=cur==='ALL'?'':(()=>{const {m,b}=capOf(cur);return `${m} MC × ${b}/day`;})();
     const wd=bDays(400).filter(x=>!x.off);
     const endOf=d=>{ const n=Math.ceil(d-1e-9); return n>0&&wd[n-1]?dshort(wd[n-1].iso):''; };
     const dl=d=>{ const n=Math.ceil(d-1e-9); const e=endOf(d); return n+' d'+(e?', '+e:''); };
-    $('qsum').innerHTML=`<span class="qs" title="All planned combos on ${esc(NAME(cur))}${cp?' · '+cp:''}${cur==='ALL'?' · Q days = longest machine':''}">Planned B- <b>${n}</b>, Q Days- <b>${dl(dMax)}</b></span><span class="qs ok" title="Planned combos with H/S OK, LD given and no Hold remarks${cp?' · '+cp:''}${cur==='ALL'?' · Q days = longest machine':''}">Ready Planned B- <b>${nr}</b>, Q Days- <b>${dl(drMax)}</b></span>`; }
+    $('qsum').innerHTML=`<span class="qs" title="All planned combos on ${esc(NAME(cur))}${cp?' · '+cp:''}${cur==='ALL'?' · Q days = longest machine':''}">Planned B- <b>${n}</b>, Q Days- <b>${dl(dMax)}</b></span><span class="qs ok" title="Planned combos with H/S OK, LD given and no “hold” written anywhere${cp?' · '+cp:''}${cur==='ALL'?' · Q days = longest machine':''}">Ready Planned B- <b>${nr}</b>, Q Days- <b>${dl(drMax)}</b></span>`; }
   const tot=MCS.reduce((a,k)=>a+(S.plan[k]||[]).length,0);
   const ae=document.activeElement; const keepIn=ae&&ae.closest&&ae.closest('#mcs')?[ae.dataset.k,ae.dataset.cap]:null;
   $('mcs').innerHTML=`<div class="mc mcall${cur==='ALL'?' on':''}" data-k="ALL" role="button" tabindex="0"><span class="mh">All MC${tot?`<small>${tot}</small>`:''}</span></div>`+MCS.map(k=>{const n=(S.plan[k]||[]).length;const cp=capOf(k);return `<div class="mc${k===cur?' on':''}" data-k="${k}" role="button" tabindex="0"><span class="mh">${SHORT(k)} kg${n?`<small>${n}</small>`:''}</span><span class="mcap" title="No. of machines × target batches per machine per day"><input type="number" min="1" step="1" data-cap="m" data-k="${k}" value="${cp.m}" aria-label="${k} kg no. of MC">MC×<input type="number" min="0.5" step="0.5" data-cap="b" data-k="${k}" value="${cp.b}" aria-label="${k} kg batches per MC per day">/d</span></div>`;}).join('');
   if(keepIn){const el=$('mcs').querySelector(`input[data-k="${keepIn[0]}"][data-cap="${keepIn[1]}"]`); if(el) el.focus();}
   const cs=ids.map(id=>C.get(id)); const kg=cs.reduce((x,c)=>x+c.q,0); const nb=cs.reduce((x,c)=>x+c.m.length,0); const ls=cs.map(loadPct).filter(x=>x!=null);
   $('foot').innerHTML=`<span><b>${esc(NAME(cur))}</b></span><span>Planned <b>${cs.length}</b> SL · <b>${nb}</b> batches · <b>${fmt(Math.round(kg))}</b> kg</span><span>Avg load <b>${ls.length?(ls.reduce((x,y)=>x+y,0)/ls.length).toFixed(0)+'%':'–'}</b></span><span>Can dye <b>${cs.filter(c=>c.can).length}</b></span><span>${esc(LABEL)}</span>`;
-  $('refresh').innerHTML='Refresh'+(pending?`<span class="badge">${pending}</span>`:''); $('refresh').classList.toggle('hot',!!pending); {const n=Object.keys(FILT).length;$('clrF').disabled=!n;$('clrF').innerHTML='Clear filters'+(n?`<span class="badge">${n}</span>`:'');}
+  $('refresh').innerHTML='Refresh'+(pending?`<span class="badge">${pending}</span>`:''); $('refresh').classList.toggle('hot',!!pending); {const n=Object.keys(FILT).length+QF.size;$('clrF').disabled=!n;$('clrF').innerHTML='Clear filters'+(n?`<span class="badge">${n}</span>`:'');}
 }
 function draw(){
   calcLoadDays();
   // remember the first row on screen so the list stays put after redraw
-  const LST=$('list'); let anc=null;
+  const LST=$('list'); let anc=null; 
   if(LST&&!LST.hidden&&LST.scrollTop>0){ const hw=LST.querySelector('.hdw'); const top=LST.getBoundingClientRect().top+(hw?hw.offsetHeight:30)+4; for(const el of LST.querySelectorAll('.cb')){ const r=el.getBoundingClientRect(); if(r.bottom>top){ anc=[el.dataset.id,r.top]; break; } } }
   draw._anc=anc;
   if(typeof VMODE!=='undefined'&&VMODE==='board') setTimeout(drawBoard,0);
@@ -1138,6 +1184,7 @@ function checkPlan(c){
     if(x.kn==='KBL'){ kinds.add('KBL'); notes.push(`${tag}${esc(x.b)}: <b>knitting balance (KBL)</b> — knitting is not complete.`); }
     if(!String(x.ld||'').trim()){ kinds.add('LD pending'); notes.push(`${tag}${esc(x.b)}: <b>LD pending</b> — no LD / matching reference.`); }
     if(String(x.hold||'').trim()){ kinds.add('Hold'); notes.push(`${tag}${esc(x.b)}: <b>Hold remarks</b> — “${esc(x.hold)}”.`); }
+    else if(isHold(x)){ kinds.add('Hold'); notes.push(`${tag}${esc(x.b)}: <b>Hold written</b> — “${esc(holdText(x))}”.`); }
   }
   if(!D.itemsKg&&!checkPlan.w){checkPlan.w=1;toast('Load the file again to turn on the 102% Req Qty Kg check.');}
   const rows=[]; const skip=new Set(c.m); const seen={};
@@ -1173,7 +1220,7 @@ $('mcs').addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.tar
 $('mcs').addEventListener('change',e=>{const t=e.target; if(!t.dataset.cap) return; const k=t.dataset.k, v=parseFloat(t.value); if(!(v>0)){draw();return;} S.cap[k]=Object.assign(capOf(k),{[t.dataset.cap]:v}); save(); draw(); toast(`${k} kg: ${capOf(k).m} MC × ${capOf(k).b} batches/day = ${Math.round(capOf(k).m*capOf(k).b)} loads/day.`);});
 $('refresh').addEventListener('click',()=>{refreshView();});
 $('home').addEventListener('click',()=>{$('fp').hidden=true;$('list').scrollTo({top:0,behavior:'smooth'});});
-$('clrF').addEventListener('click',()=>{FILT={};saveF();refreshView();toast('All filters removed.');});
+$('clrF').addEventListener('click',()=>{FILT={};saveF();QF.clear();store.set('mclp-qf',[]);refreshView();toast('All filters removed.');});
 function openFilter(key,anchor){
   const pool=[...C.values()].filter(inView);
   const counts=new Map(); for(const c of pool) for(const v of new Set(cval(c,key))) counts.set(v,(counts.get(v)||0)+1);
@@ -1454,30 +1501,40 @@ document.addEventListener('keydown',e=>{
   if(e.key===' '||e.code==='Space'){ if(!KF||i<0) return; e.preventDefault(); toggle(KF); setTimeout(()=>setKF(KF,true),0); return; }
 });
 // ---------- Auto plan: add every ready combo (KOK, LD given, no hold, within 102% Req Qty Kg) ----------
-const isReady=c=>c.p.every(x=>x.kn==='KOK'&&String(x.ld||'').trim()&&!String(x.hold||'').trim());
-function overReq(c){ if(!D.itemsKg) return false; const skip=new Set(c.m); const seen={};
-  for(const x of c.p){ const it=D.itemsKg[x.ik]; if(!it) continue; const tot=it[1]+plannedKg(x.ik,skip)+(seen[x.ik]||0)+(x.q||0); seen[x.ik]=(seen[x.ik]||0)+(x.q||0); if(tot>it[0]+0.5) return true; } return false; }
+const isReady=c=>c.p.every(x=>x.kn==='KOK'&&String(x.ld||'').trim()&&!isHold(x));
+function overReq(c,extra){ if(!D.itemsKg) return false; const skip=new Set(c.m); const seen={};
+  for(const x of c.p){ const it=D.itemsKg[x.ik]; if(!it) continue; const tot=it[1]+plannedKg(x.ik,skip)+((extra||{})[x.ik]||0)+(seen[x.ik]||0)+(x.q||0); seen[x.ik]=(seen[x.ik]||0)+(x.q||0); if(tot>it[0]+0.5) return true; } return false; }
 $('autoPlan').addEventListener('click',()=>{
   const ks=MCS; const inPl=new Set(); for(const k in S.plan) for(const id of S.plan[k]||[]) inPl.add(id);
-  const isExcess=c=>c.p.some(x=>/additi?onal/i.test(x.cat||'')||/additi?onal/i.test(x.n1||''));   // excess / additional-creation batches
-  const pool=[...C.values()].filter(c=>ks.includes(c.mc)&&!inPl.has(c.id)&&isReady(c)&&passes(c));
-  const nExcess=pool.filter(isExcess).length, nOver=pool.filter(c=>!isExcess(c)&&overReq(c)).length;
-  const cand=pool.filter(c=>!isExcess(c)).sort((a,b)=>cmpAuto(a,b,true));
+  const pool=[...C.values()].filter(c=>ks.includes(c.mc)&&!inPl.has(c.id)&&isReady(c)&&passes(c)).sort((a,b)=>cmpAuto(a,b,true));
+  // keep only combos that do not take their order item above 102% Req Qty Kg (checked in plan order, counting the ones before)
+  const extra={}, cand=[]; let nOver=0;
+  for(const c of pool){ if(overReq(c,extra)){ nOver++; continue; } cand.push(c); for(const x of c.p) extra[x.ik]=(extra[x.ik]||0)+(x.q||0); }
   const notReady=[...C.values()].filter(c=>ks.includes(c.mc)&&!inPl.has(c.id)&&!isReady(c)).length;
   if(!cand.length){ toast('No ready combos to add'+(Object.keys(FILT).length?' with these filters':'')+'.'); return; }
-  const d=$('dlg'); d.className='';
+  const OFF=new Set();
+  const d=$('dlg'); d.className='wide';
+  const rowH=c=>{ const x=c.body; const tg=tagsOf(c); return `<tr data-id="${esc(c.id)}"><td><input type="checkbox" checked aria-label="Include"></td><td class="mcx">${esc(c.mc)}</td><td class="bnx">${c.m.map(b=>esc(b.replace(/^SQHUE-FY\d\d-\d\d-/,''))).join('<br>')}</td><td>${esc(x.by)}</td><td>${esc(x.sh)}</td><td class="num">${fmt(Math.round(c.q))}</td><td>${tg.length?esc(tg.join(' / ')):''}</td><td>${esc(x.ld)}</td><td>${dshort(x.lp)}</td></tr>`; };
+  const sum=()=>{ const n=cand.length-OFF.size; const ok=$('dlgY')||$('apOk'); ok.textContent=`OK — add ${n}`; ok.disabled=!n; $('apCnt').textContent=n; };
   d.innerHTML=`<div class="dlgt"><h3 style="color:#3c7a5a">⚡ Auto plan · all machines</h3><button class="dlgx" id="dlgX" aria-label="Close">×</button></div>
-    <div class="note" style="background:#EEF7EF">Add <b style="color:#3c7a5a">${cand.length}</b> ready combo${cand.length>1?'s':''} — knit done, LD given, no Hold remarks${Object.keys(FILT).length?' (only those matching your filters)':''}.</div>
-    <div class="mut" style="font-size:12px;margin:2px 0 4px">${MCS.map(k=>{const n=cand.filter(c=>c.mc===k).length;return n?`${k} kg: <b>${n}</b>`:'';}).filter(Boolean).join(' · ')}</div><div class="mut" style="font-size:11.5px">Each goes into its own machine's plan in Auto-order sequence with today's date. Left out: <b>${nExcess}</b> additional / excess-creation combo${nExcess===1?'':'s'}, and any that would go over the 102% Req Qty Kg (about <b>${nOver}</b>). ${notReady} not-ready combo${notReady===1?'':'s'} (KBL, LD pending or hold) are left out.</div>
-    <div class="acts"><span style="flex:1"></span><button class="btn" id="dlgN">Cancel</button><button class="btn go" id="dlgY" style="background:#EEF7EF;border-color:#5E9277;color:#3c7a5a">OK — add ${cand.length}</button></div>`;
-  $('dlgW').hidden=false; $('dlgY').focus();
+    <div class="note" style="background:#EEF7EF">Add <b style="color:#3c7a5a" id="apCnt">${cand.length}</b> ready combos — knit done, LD given, no “hold” written anywhere${Object.keys(FILT).length?' (only those matching your filters)':''}. Untick any you don't want.</div>
+    <div class="aprow"><span class="mut" style="font-size:12px">${MCS.map(k=>{const n=cand.filter(c=>c.mc===k).length;return n?`${k} kg: <b>${n}</b>`:'';}).filter(Boolean).join(' · ')}</span><span><button class="btn" id="apAll">Select all</button> <button class="btn" id="apNone">Select none</button></span></div>
+    <div class="aptw"><table class="apt"><thead><tr><th></th><th>M/C</th><th>Batch No</th><th>Buyer</th><th>Shade</th><th class="num">Kg</th><th>Type</th><th>LD/Matching</th><th>Line Plan</th></tr></thead><tbody>${cand.map(rowH).join('')}</tbody></table></div>
+    <div class="mut" style="font-size:11.5px">Each goes into its own machine's plan in Auto-order sequence with today's date. Left out: <b>${nOver}</b> problematic combo${nOver===1?'':'s'} that would take the order above the 102% Req Qty Kg, and ${notReady} not-ready combo${notReady===1?'':'s'} (KBL, LD pending or hold).</div>
+    <div class="acts"><span style="flex:1"></span><button class="btn" id="dlgN">Cancel</button><button class="btn go" id="apOk" style="background:#EEF7EF;border-color:#5E9277;color:#3c7a5a">OK — add ${cand.length}</button></div>`;
+  $('dlgW').hidden=false; $('apOk').focus();
+  d.querySelector('.apt tbody').addEventListener('click',e=>{ const tr=e.target.closest('tr[data-id]'); if(!tr) return; const cb=tr.querySelector('input'); if(e.target!==cb) cb.checked=!cb.checked; const id=tr.dataset.id; if(cb.checked){ OFF.delete(id); tr.classList.remove('off'); } else { OFF.add(id); tr.classList.add('off'); } sum(); });
+  $('apAll').onclick=()=>{ OFF.clear(); d.querySelectorAll('.apt tr[data-id]').forEach(tr=>{tr.classList.remove('off');tr.querySelector('input').checked=true;}); sum(); };
+  $('apNone').onclick=()=>{ d.querySelectorAll('.apt tr[data-id]').forEach(tr=>{OFF.add(tr.dataset.id);tr.classList.add('off');tr.querySelector('input').checked=false;}); sum(); };
   $('dlgX').onclick=$('dlgN').onclick=()=>{$('dlgW').hidden=true;};
+  $('apOk').id='dlgY';   // Enter = OK
   $('dlgY').onclick=()=>{ $('dlgW').hidden=true; const added=[]; let skipped=0;
-    for(const c of cand){ if(overReq(c)){ skipped++; continue; } const L=mlist(c); let pos=L.findIndex(x=>C.has(x)&&cmpAuto(C.get(x),c)>0); if(pos<0) pos=L.length; L.splice(pos,0,c.id); setPlanDate(c,true); added.push(c.id); }
+    for(const c of cand){ if(OFF.has(c.id)) continue; if(overReq(c)){ skipped++; continue; } const L=mlist(c); let pos=L.findIndex(x=>C.has(x)&&cmpAuto(C.get(x),c)>0); if(pos<0) pos=L.length; L.splice(pos,0,c.id); setPlanDate(c,true); added.push(c.id); }
     save(); refreshView();
     toast(`Auto plan added ${added.length} combo${added.length===1?'':'s'}${skipped?` · ${skipped} skipped (over 102% Req Qty Kg)`:''}.`,'Undo',()=>{ for(const id of added){ const c=C.get(id); if(!c) continue; S.plan[c.mc]=(S.plan[c.mc]||[]).filter(x=>x!==id); setPlanDate(c,false); } save(); refreshView(); toast('Auto plan undone.'); });
   };
 });
+$('qf').addEventListener('click',e=>{ const b=e.target.closest('[data-q]'); if(!b) return; const k=b.dataset.q; QF.has(k)?QF.delete(k):QF.add(k); store.set('mclp-qf',[...QF]); refreshView(); });
 // ---------- right-click › Send to MC ----------
 function sendTo(id,k,quiet){
   const c=C.get(id); if(!c||c.mc===k) return;
