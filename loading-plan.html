@@ -351,6 +351,11 @@ header.fover::after{background:rgba(239,230,235,.92)}
 .slw .ns{width:40px;padding-right:9px;box-sizing:border-box}
 .slw .dot{position:absolute;right:4px;top:50%;margin-top:-3px;width:6px;height:6px;pointer-events:none}
 #dlg .dlgt{cursor:move;user-select:none}#dlg.red{width:820px}#dlg.red td:first-child{white-space:nowrap}#dlg.red td:nth-child(3){max-width:170px}#dlg.red th{white-space:nowrap}#dlg.red td:nth-child(-n+3),#dlg.red th:nth-child(-n+3){text-align:left}#dlg.drg{box-shadow:0 18px 48px rgba(0,0,0,.3)}
+/* subtotal row under the headers */
+.list .ln.sub{position:relative;padding:0 12px 0 var(--lw,78px);min-height:20px;background:#FFF6E0;border-bottom:1px solid #E8D9B0;font:700 11.5px var(--f-ui);color:#5A4A1E}
+.list .ln.sub>span{padding:0 5px;white-space:nowrap;overflow:hidden}
+.list .ln.sub .lh2{position:absolute;left:14px;top:2px;font-size:11px;color:#8A7440;padding:0}
+.ln.gr .gsum{font:700 11.5px var(--f-ui);font-style:normal;color:#1F1F1F;margin-left:auto;padding-right:5px;align-self:center;font-variant-numeric:tabular-nums}
 /* quick type chips */
 .qf{display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap;margin-left:10px}
 .qfc{font:600 12px var(--f-ui);border:1px solid var(--hdr-line);background:var(--surface);color:var(--fg);border-radius:14px;padding:3px 10px;cursor:pointer;white-space:nowrap;display:inline-flex;gap:5px;align-items:baseline}
@@ -361,7 +366,7 @@ header.fover::after{background:rgba(239,230,235,.92)}
 .qfc.prob.on{background:#AF4F5A;border-color:#AF4F5A;color:#fff}
 .qgap{width:14px;display:inline-block}
 /* Auto plan button + list */
-#dlg.wide{width:980px}
+#dlg.wide{width:1180px}
 .aprow{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
 .aptw{max-height:46vh;overflow:auto;border:1px solid var(--line);border-radius:6px}
 .apt{border-collapse:collapse;width:100%;font-size:12px}
@@ -373,7 +378,7 @@ header.fover::after{background:rgba(239,230,235,.92)}
 #dlg .apt th{text-align:left;padding:4px 6px}
 #dlg .apt td{text-align:left;padding:3px 6px;white-space:normal}
 #dlg .apt th.num,#dlg .apt td.num{text-align:right}
-#dlg .apt td.bnx{white-space:nowrap}
+#dlg .apt td.bnx,#dlg .apt td:nth-child(5){white-space:nowrap}
 .apt tbody tr{cursor:pointer}
 .apt tbody tr:hover{background:#F3FAF4}
 .apt tbody tr.off{opacity:.45;text-decoration:line-through}
@@ -1063,7 +1068,7 @@ let QF=new Set(store.get('mclp-qf')||[]);
 const QFDEF=[['FOC','FOC',c=>c.p.some(x=>/FOC/i.test((x.pt||'')+' '+(x.cat||'')))],['HANGER','Hanger',c=>c.p.some(x=>/HANGER/i.test((x.pt||'')+' '+(x.cat||'')))],['AOP','AOP',c=>c.p.some(x=>/AOP/i.test((x.sh||'')+' '+(x.pt||'')))],['LP','Line Plan',c=>c.p.some(x=>x.lp||/LINE\s*PLAN/i.test(x.pt||''))],['URG','Urgent',c=>c.p.some(x=>/URGENT/i.test(x.pt||''))],['PROB','Problematic Batch',c=>overReq(c)]];
 function qfPass(c){ if(!QF.size) return true; for(const [k,,f] of QFDEF) if(QF.has(k)&&f(c)) return true; return false; }
 function drawQF(){ const pool=[...C.values()].filter(c=>cur==='ALL'||c.mc===cur);
-  $('qf').innerHTML=QFDEF.map(([k,n,f])=>{ const cnt=pool.filter(f).length; return `${k==='PROB'?'<span class="qgap"></span>':''}<button class="qfc${QF.has(k)?' on':''}${k==='PROB'?' prob':''}" data-q="${k}" title="${k==='PROB'?'Combos that take their order item above the 102% Req Qty Kg (planned ones already over, not planned ones if added)':'Show only '+n+' combos'} — click again to clear">${n}<small>${cnt}</small></button>`; }).join(''); }
+  $('qf').innerHTML=QFDEF.map(([k,n,f])=>{ const cnt=pool.filter(f).length; return `${k==='PROB'?'<span class="qgap"></span>':''}<button class="qfc${QF.has(k)?' on':''}${k==='PROB'?' prob':''}" data-q="${k}" title="${k==='PROB'?'Combos that take their order item above the 102% Req Qty Kg (planned ones already over, not planned ones if added)':'Show only '+n+' combos'} — click again to clear · Ctrl+click to add more">${n}<small>${cnt}</small></button>`; }).join(''); }
 function passes(c){ if(!qfPass(c)) return false; for(const k in FILT){ const set=FILT[k]; if(!set) continue; if(!(k==='s'||COLS.some(cc=>cc.k===k))) continue; if(!cval(c,k).some(v=>set.includes(v))) return false; } return true; }
 const sp=(v,cls)=>`<span${cls?' class="'+cls+'"':''} title="${esc(v)}">${esc(v)}</span>`;
 // Load Day for planned batches: SL order ÷ (MCs × batches per MC per day), working days from the plan start; only Day 1–3 shown
@@ -1137,11 +1142,15 @@ function draw(){
   const vc=visCols();
   const gl=true?`<div class="ln gr"><span class="glv"><button class="gb" data-lv="1" title="Collapse all groups">1</button><button class="gb" data-lv="2" title="Expand all groups">2</button>${!D.colInfo?'<em class="gnote">Load file again to get your Excel column groups</em>':''}</span>${vc.map((c,i)=>{ const nx=vc[i+1]; const inG=c.grp&&GOPEN[c.grp];
       const endG=GRPS.find(G=>{ const last=G.cols[G.cols.length-1]; const after=COLS[COLS.findIndex(cc=>cc.k===last)+1]; return after&&after.k===c.k; });
-      return `<span class="${inG?'gin':''}${inG&&(!nx||nx.grp!==c.grp)?' gend':''}">${endG?`<button class="gt" data-g="${endG.id}" title="${GOPEN[endG.id]?'Hide':'Show'} ${endG.cols.map(k=>(D.hdr||{})[k]||k).join(', ')}">${GOPEN[endG.id]?'−':'+'}</button>`:''}</span>`; }).join('')}</div>`:'';
+      return `<span class="${inG?'gin':''}${inG&&(!nx||nx.grp!==c.grp)?' gend':''}">${c.k==='K'?'<!--S:K-->':''}${endG?`<button class="gt" data-g="${endG.id}" title="${GOPEN[endG.id]?'Hide':'Show'} ${endG.cols.map(k=>(D.hdr||{})[k]||k).join(', ')}">${GOPEN[endG.id]?'−':'+'}</button>`:''}</span>`; }).join('')}</div>`:'';
   const head=`<div class="hdw">${gl}<div class="ln hd"><span class="lh"><b data-f="s" class="${FILT.s?'f':''}" title="Filter: can dye / not ready">SL</b></span>${vc.map(c=>`<span data-col="${c.k}" class="${c.num?'n':''}${REDH.has(c.k)?' rh':''}${c.grp?' ingrp':''}${COLSEL.has(c.k)?' csel':''}"><b data-f="${c.k}" class="${FILT[c.k]?'f':''}" title="${esc(c.k)} · Filter ${esc(c.h)}">${esc(c.h)}</b><i class="rz" data-i="${c.k}" title="Drag to resize · double-click to reset"></i></span>`).join('')}</div></div>`;
   const a=VIEW.slice(0,VIEWPL).filter(id=>C.has(id)), b=VIEW.slice(VIEWPL).filter(id=>C.has(id));
-  $('list').innerHTML=head
-    +`<div class="dv">Planned · ${a.length<ids.length?a.length+' of '+ids.length+' shown (filtered)':ids.length}</div>`+(a.length?a.map((id,i)=>{const c=C.get(id);const hd=cur==='ALL'&&(i===0||C.get(a[i-1]).mc!==c.mc)?`<div class="dv mcg">${esc(NAME(c.mc))} · ${(S.plan[c.mc]||[]).length}</div>`:'';return hd+box(c,sl(id),i%2);}).join(''):'<div class="empty">Click a combo below to plan it. Press Refresh to move ticked combos up here.</div>')
+  // subtotal of the number columns over the rows shown (like Excel SUBTOTAL on a filtered list)
+  const sums={}; const shownIds=[...new Set([...a,...b])];
+  for(const id of shownIds){ const c=C.get(id); for(const x of c.p) for(const col of vc){ if(col.k!=='K') continue; const v=parseFloat(String(cellText(col.k,x)).replace(/,/g,'')); if(isFinite(v)) sums[col.k]=(sums[col.k]||0)+v; } }
+  // subtotals sit in the outline row above the headers
+  $('list').innerHTML=head.replace(/<!--S:(\w+)-->/g,(m,k)=>sums[k]!=null?`<em class="gsum" title="Subtotal of the rows shown">${fmt(Math.round(sums[k]))}</em>`:'')
+    +(a.length?a.map((id,i)=>box(C.get(id),sl(id),i%2)).join(''):'<div class="empty">Click a combo below to plan it. Press Refresh to move ticked combos up here.</div>')
     +`<div class="dv">Not planned · ${b.filter(id=>!ids.includes(id)).length}</div>`+(b.length?(()=>{const cnt={};let last=null;return b.map((id,i)=>{const c=C.get(id);const s0=sl(id);let ns='';if(!s0){cnt[c.mc]=(cnt[c.mc]||0)+1;ns=cnt[c.mc];}
       let hd=''; if(cur==='ALL'&&c.mc!==last){ last=c.mc; hd=`<div class="dv mcg">${esc(NAME(c.mc))} · ${b.filter(x=>C.get(x).mc===c.mc&&!sl(x)).length} not planned</div>`; }
       return hd+box(c,s0,i%2,ns);}).join('');})():'<div class="empty">No other combos match these filters.</div>');
@@ -1516,12 +1525,14 @@ $('autoPlan').addEventListener('click',()=>{
   if(!cand.length){ toast('No ready combos to add'+(Object.keys(FILT).length?' with these filters':'')+'.'); return; }
   const OFF=new Set();
   const d=$('dlg'); d.className='wide';
-  const rowH=c=>{ const x=c.body; const tg=tagsOf(c); return `<tr data-id="${esc(c.id)}"><td><input type="checkbox" checked aria-label="Include"></td><td class="mcx">${esc(c.mc)}</td><td class="bnx">${c.m.map(b=>esc(b.replace(/^SQHUE-FY\d\d-\d\d-/,''))).join('<br>')}</td><td>${esc(x.by)}</td><td>${esc(x.sh)}</td><td class="num">${fmt(Math.round(c.q))}</td><td>${tg.length?esc(tg.join(' / ')):''}</td><td>${esc(x.ld)}</td><td>${dshort(x.lp)}</td></tr>`; };
-  const sum=()=>{ const n=cand.length-OFF.size; const ok=$('dlgY')||$('apOk'); ok.textContent=`OK — add ${n}`; ok.disabled=!n; $('apCnt').textContent=n; };
+  cand.sort((a,b)=>MCS.indexOf(a.mc)-MCS.indexOf(b.mc));   // machine by machine (750 → 10), Auto-order kept inside each machine (stable sort)
+  const rowH=c=>{ const x=c.body; const tg=tagsOf(c); return `<tr data-id="${esc(c.id)}"><td><input type="checkbox" checked aria-label="Include"></td><td class="mcx">${esc(c.mc)}</td><td class="num sln"></td><td class="bnx">${c.m.map(b=>esc(b)).join('<br>')}</td><td>${esc(x.by)}</td><td>${esc(x.sh)}</td><td class="num">${fmt(Math.round(c.q))}</td><td>${tg.length?esc(tg.join(' / ')):''}</td><td>${esc(x.ld)}</td><td>${dshort(x.lp)}</td></tr>`; };
+  const sum=()=>{ const n=cand.length-OFF.size;
+    const k={}; d.querySelectorAll('.apt tr[data-id]').forEach(tr=>{ const c=C.get(tr.dataset.id); const td=tr.querySelector('.sln'); if(OFF.has(tr.dataset.id)){ td.textContent=''; return; } k[c.mc]=(k[c.mc]||(S.plan[c.mc]||[]).length)+1; td.textContent=k[c.mc]; }); const ok=$('dlgY')||$('apOk'); ok.textContent=`OK — add ${n}`; ok.disabled=!n; $('apCnt').textContent=n; };
   d.innerHTML=`<div class="dlgt"><h3 style="color:#3c7a5a">⚡ Auto plan · all machines</h3><button class="dlgx" id="dlgX" aria-label="Close">×</button></div>
     <div class="note" style="background:#EEF7EF">Add <b style="color:#3c7a5a" id="apCnt">${cand.length}</b> ready combos — knit done, LD given, no “hold” written anywhere${Object.keys(FILT).length?' (only those matching your filters)':''}. Untick any you don't want.</div>
     <div class="aprow"><span class="mut" style="font-size:12px">${MCS.map(k=>{const n=cand.filter(c=>c.mc===k).length;return n?`${k} kg: <b>${n}</b>`:'';}).filter(Boolean).join(' · ')}</span><span><button class="btn" id="apAll">Select all</button> <button class="btn" id="apNone">Select none</button></span></div>
-    <div class="aptw"><table class="apt"><thead><tr><th></th><th>M/C</th><th>Batch No</th><th>Buyer</th><th>Shade</th><th class="num">Kg</th><th>Type</th><th>LD/Matching</th><th>Line Plan</th></tr></thead><tbody>${cand.map(rowH).join('')}</tbody></table></div>
+    <div class="aptw"><table class="apt"><thead><tr><th></th><th>M/C</th><th class="num" title="Serial it gets on that machine (after the combos already planned there)">SL</th><th>Batch No</th><th>Buyer</th><th>Shade</th><th class="num">Kg</th><th>Type</th><th>LD/Matching</th><th>Line Plan</th></tr></thead><tbody>${cand.map(rowH).join('')}</tbody></table></div>
     <div class="mut" style="font-size:11.5px">Each goes into its own machine's plan in Auto-order sequence with today's date. Left out: <b>${nOver}</b> problematic combo${nOver===1?'':'s'} that would take the order above the 102% Req Qty Kg, and ${notReady} not-ready combo${notReady===1?'':'s'} (KBL, LD pending or hold).</div>
     <div class="acts"><span style="flex:1"></span><button class="btn" id="dlgN">Cancel</button><button class="btn go" id="apOk" style="background:#EEF7EF;border-color:#5E9277;color:#3c7a5a">OK — add ${cand.length}</button></div>`;
   $('dlgW').hidden=false; $('apOk').focus();
@@ -1536,7 +1547,10 @@ $('autoPlan').addEventListener('click',()=>{
     toast(`Auto plan added ${added.length} combo${added.length===1?'':'s'}${skipped?` · ${skipped} skipped (over 102% Req Qty Kg)`:''}.`,'Undo',()=>{ for(const id of added){ const c=C.get(id); if(!c) continue; S.plan[c.mc]=(S.plan[c.mc]||[]).filter(x=>x!==id); setPlanDate(c,false); } save(); refreshView(); toast('Auto plan undone.'); });
   };
 });
-$('qf').addEventListener('click',e=>{ const b=e.target.closest('[data-q]'); if(!b) return; const k=b.dataset.q; QF.has(k)?QF.delete(k):QF.add(k); store.set('mclp-qf',[...QF]); refreshView(); });
+$('qf').addEventListener('click',e=>{ const b=e.target.closest('[data-q]'); if(!b) return; const k=b.dataset.q;
+  if(e.ctrlKey||e.metaKey){ QF.has(k)?QF.delete(k):QF.add(k); }        // Ctrl+click: pick several
+  else { const only=QF.size===1&&QF.has(k); QF.clear(); if(!only) QF.add(k); }
+  store.set('mclp-qf',[...QF]); refreshView(); });
 // drag any popup box by its title bar
 (()=>{ const d=$('dlg'), w=$('dlgW'); let st=null;
   new MutationObserver(()=>{ if(w.hidden){ d.style.transform=''; d._dx=d._dy=0; } }).observe(w,{attributes:true,attributeFilter:['hidden']});
