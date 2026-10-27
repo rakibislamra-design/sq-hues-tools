@@ -811,6 +811,9 @@ header.fover::after{background:rgba(239,230,235,.92)}
     const s = sAttr ? ` s="${sAttr}"` : '';
     if (v === null || v === undefined || v === '') return `<c r="${ref}"${s}/>`;
     if (typeof v === 'number') return `<c r="${ref}"${s}><v>${v}</v></c>`;
+    if (typeof v === 'object' && v.f) { const row = ref.replace(/^[A-Z]+/, ''); const f = xesc(v.f.replace(/#ROW#/g, row)); const val = v.v;
+      if (typeof val === 'number') return `<c r="${ref}"${s}><f>${f}</f><v>${val}</v></c>`;
+      return `<c r="${ref}"${s} t="str"><f>${f}</f><v>${xesc(String(val == null ? '' : val))}</v></c>`; }
     return `<c r="${ref}"${s} t="inlineStr"><is><t xml:space="preserve">${xesc(v)}</t></is></c>`;
   }
   function patchRow(inner, r, cells) {
@@ -1020,7 +1023,31 @@ function toIso(v){ v=String(v||'').trim(); if(!v) return ''; let m;
   if((m=/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})$/.exec(v))){ let y=+m[3]; if(y<100) y+=2000; return `${y}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`; }
   return null; }
 const isNumTxt=v=>/^-?\d+(\.\d+)?$/.test(String(v).replace(/,/g,'').trim());
-function setCell(x,L,v){ const col=COLS.find(c=>c.k===L)||{};
+// ---- Excel-style formulas in a typed cell: =D (Batch No of this row), =E&" / "&F, =LEFT(D,13), =K*2, =IF(I="KOK","ok","wait") ----
+// a column letter means the cell of the SAME row (a row number after it is ignored, like =D215)
+const FX={LEFT:(t,n=1)=>String(t).slice(0,n),RIGHT:(t,n=1)=>{t=String(t);return n?t.slice(-n):'';},MID:(t,a,n)=>String(t).substr(a-1,n),LEN:t=>String(t).length,TRIM:t=>String(t).trim().replace(/\s+/g,' '),
+  UPPER:t=>String(t).toUpperCase(),LOWER:t=>String(t).toLowerCase(),PROPER:t=>String(t).toLowerCase().replace(/\b\w/g,c=>c.toUpperCase()),CONCAT:(...a)=>a.join(''),CONCATENATE:(...a)=>a.join(''),
+  ROUND:(n,d=0)=>Math.round(n*10**d)/10**d,ROUNDUP:(n,d=0)=>Math.ceil(n*10**d)/10**d,ROUNDDOWN:(n,d=0)=>Math.floor(n*10**d)/10**d,SUM:(...a)=>a.reduce((p,q)=>p+(+q||0),0),
+  MAX:(...a)=>Math.max(...a.map(Number)),MIN:(...a)=>Math.min(...a.map(Number)),ABS:n=>Math.abs(n),IF:(c,a='',b=false)=>c?a:b,AND:(...a)=>a.every(Boolean),OR:(...a)=>a.some(Boolean),NOT:a=>!a,
+  ISBLANK:a=>a===''||a==null,IFERROR:(a,b)=>(a==null||(typeof a==='number'&&!isFinite(a)))?b:a,TEXT:(a)=>String(a),VALUE:a=>+String(a).replace(/,/g,''),
+  SEARCH:(f,t)=>{const i=String(t).toLowerCase().indexOf(String(f).toLowerCase());return i<0?NaN:i+1;},FIND:(f,t)=>{const i=String(t).indexOf(String(f));return i<0?NaN:i+1;},
+  SUBSTITUTE:(t,a,b)=>String(t).split(String(a)).join(String(b)),ISNUMBER:a=>typeof a==='number'&&isFinite(a),TODAY:()=>dshort(new Date().toISOString().slice(0,10))};
+function fxTokens(f){ const out=[]; const re=/\s*(?:("(?:[^"]|"")*")|(\d+(?:\.\d+)?)|([A-Za-z]+)(\d*)\s*(\()?|(<>|<=|>=|[-+*\/&=<>(),^%]))/y; let m; re.lastIndex=0;
+  while(re.lastIndex<f.length){ const at=re.lastIndex; m=re.exec(f); if(!m||m.index!==at){ if(/^\s*$/.test(f.slice(at))) break; throw new Error('Can\'t read “'+f.slice(at)+'”'); }
+    if(m[1]) out.push({t:'s',v:m[1].slice(1,-1).replace(/""/g,'"')}); else if(m[2]) out.push({t:'n',v:m[2]});
+    else if(m[3]){ const nm=m[3].toUpperCase(); if(m[5]){ if(!FX[nm]) throw new Error('Unknown function '+nm); out.push({t:'f',v:nm}); } else if(nm==='TRUE'||nm==='FALSE') out.push({t:'n',v:nm.toLowerCase()}); else { if(!/^[A-Z]{1,3}$/.test(nm)) throw new Error('Unknown name '+m[3]); out.push({t:'r',v:nm}); } }
+    else out.push({t:'o',v:m[6]}); }
+  return out; }
+function fxEval(f,x){ const tk=fxTokens(f.replace(/^=/,'')); let js='';
+  for(const t of tk){ if(t.t==='s') js+=JSON.stringify(t.v); else if(t.t==='n') js+=t.v; else if(t.t==='f') js+=`F.${t.v}(`; else if(t.t==='r') js+=`V(${JSON.stringify(t.v)})`;
+    else js+=({'&':'+""+','=':'==','<>':'!=','^':'**','%':'/100'})[t.v]||t.v; }
+  const V=L=>{ if(FXBUSY.has(x.b+'|'+L)) return ''; const v=cellText(L,x); return isNumTxt(v)?+String(v).replace(/,/g,''):v; };
+  const r=Function('F','V','"use strict";return ('+js+');')(FX,V);
+  return typeof r==='number'?(isFinite(r)?Math.round(r*1e6)/1e6:'#VALUE!'):typeof r==='boolean'?(r?'TRUE':'FALSE'):r==null?'':r; }
+const FXBUSY=new Set();
+function fxExcel(f){ return f.replace(/^=/,'').replace(/("(?:[^"]|"")*")|\b([A-Za-z]{1,3})(\d*)\b(?!\s*\()/g,(m,str,c)=>str?str:(/^(TRUE|FALSE)$/i.test(c)?c:c.toUpperCase()+'#ROW#')); }
+function setCell(x,L,v){
+  if(typeof v==='string'&&v.startsWith('=')){ let val; FXBUSY.add(x.b+'|'+L); try{ val=fxEval(v,x); }catch(e){ val='#ERR'; } FXBUSY.delete(x.b+'|'+L); v=String(val); } const col=COLS.find(c=>c.k===L)||{};
   if(DATEF[L]){ const d=toIso(v); x[DATEF[L]]=d==null?v:d; return; }
   const val=v!==''&&col.num&&isNumTxt(v)?+String(v).replace(/,/g,''):v;
   if(FIELD[L]) x[FIELD[L]]=val; else { x.raw=x.raw||{}; if(v==='') delete x.raw[L]; else x.raw[L]=val; } }
@@ -1318,18 +1345,23 @@ $('list').addEventListener('click',e=>{ if(e.target.closest('.sn,.hdl,.hd,.ed'))
   if(e.shiftKey&&rowAnchor){ e.preventDefault(); const rows=[...$('list').querySelectorAll('.cb[data-id]')]; const a=rows.findIndex(x=>x.dataset.id===rowAnchor), b=rows.findIndex(x=>x.dataset.id===cb.dataset.id);
     if(a>=0&&b>=0){ for(let i=Math.min(a,b);i<=Math.max(a,b);i++){ SELSET.add(rows[i].dataset.id); rows[i].classList.add('msel'); } updSel(); }
     try{getSelection().removeAllRanges()}catch(_){} return; }
-  if(e.target.closest('.ced')) return;
+  if(e.target.closest('.ced')||Date.now()-PICKT<500) return;
   if(e.detail>1){ clearTimeout(clickT); clickT=null; startEdit(e.target); return; }   // double-click = type in the cell
   if(clearSel()) return;   // first plain click just clears a selection
   const id=cb.dataset.id; clearTimeout(clickT); clickT=setTimeout(()=>{ clickT=null; toggle(id); },220); });
-let clickT=null;
+let clickT=null, PICKT=0;
 function startEdit(t){ const sp=t.closest('.ln.xl>span'); if(!sp||sp.querySelector('input')) return; const ln=sp.parentElement, b=ln.dataset.b, x=D.batches[b]; if(!x) return;
   const col=visCols()[[...ln.children].indexOf(sp)]; if(!col) return;
   if(NOEDIT[col.k]){ toast(`${col.h}: can't type here — ${NOEDIT[col.k].split(' — ')[1]||NOEDIT[col.k]}.`); return; }
   const old=(S.cx[b]&&col.k in S.cx[b])?S.cx[b][col.k]:cellText(col.k,x);
   sp.innerHTML=`<input class="ced" value="${esc(old)}" aria-label="${esc(col.h)}">`; const inp=sp.firstChild; inp.focus(); inp.select();
-  let done=false; const fin=save1=>{ if(done) return; done=true; const id=ln.closest('.cb').dataset.id; const v=inp.value.trim();
-    if(save1&&v!==String(old)){ if(DATEF[col.k]&&v&&toIso(v)==null){ toast(`“${v}” is not a date — use e.g. 27-Oct or 27/10/2026.`); quickRow(id); return; }
+  // while typing a formula, clicking another cell adds its column (like Excel)
+  const pick=e=>{ if(!inp.value.startsWith('=')) return; const s2=e.target.closest('.ln.xl>span'); if(!s2||s2===sp) return; const c2=visCols()[[...s2.parentElement.children].indexOf(s2)]; if(!c2) return;
+    e.preventDefault(); e.stopPropagation(); PICKT=Date.now(); const a=inp.selectionStart??inp.value.length, z=inp.selectionEnd??a; inp.value=inp.value.slice(0,a)+c2.k+inp.value.slice(z); inp.setSelectionRange(a+c2.k.length,a+c2.k.length); inp.focus(); };
+  $('list').addEventListener('mousedown',pick,true);
+  let done=false; const fin=save1=>{ if(done) return; done=true; $('list').removeEventListener('mousedown',pick,true); const id=ln.closest('.cb').dataset.id; const v=inp.value.trim();
+    if(save1&&v!==String(old)&&v.startsWith('=')){ try{ fxEval(v,x); }catch(err){ toast('Formula: '+err.message); quickRow(id); return; } }
+    if(save1&&v!==String(old)){ if(DATEF[col.k]&&v&&!v.startsWith('=')&&toIso(v)==null){ toast(`“${v}” is not a date — use e.g. 27-Oct or 27/10/2026.`); quickRow(id); return; }
       (S.cx[b]=S.cx[b]||{})[col.k]=v; setCell(x,col.k,v); save(); toast(`${col.h} saved for ${b.replace(/^SQHUE-FY\d\d-\d\d-/,'')}.`); }
     quickRow(id); };
   inp.addEventListener('keydown',e=>{ e.stopPropagation(); if(e.key==='Enter'){ e.preventDefault(); fin(true); } else if(e.key==='Escape'){ e.preventDefault(); fin(false); } });
@@ -1661,7 +1693,7 @@ $('xls').addEventListener('click',async()=>{
     const restRows=[]; for(const c of rest) for(const b of c.m){ const x=D.batches[b]; if(x&&x.row){ restRows.push(x.row); if(S.over[c.id]||String(x.mc0||'').trim()!==k){ const r=row(b); if(r) r.A=k; } } }   // M/C cell = the machine it is listed under
     order.push({mc:k,rows,rest:restRows}); }
   for(const b in D.batches){ const f=D.batches[b].fix280; if(!f) continue; const r=row(b); if(r) Object.assign(r,f); }   // Buyer / Shade / Fabric as in the 280 sheet
-  for(const b in S.cx){const r=row(b); if(!r) continue; for(const L in S.cx[b]) if(!NOEDIT[L]) r[L]=cellOut(L,S.cx[b][L]);}
+  for(const b in S.cx){const r=row(b); if(!r) continue; for(const L in S.cx[b]) if(!NOEDIT[L]){ const fv=S.cx[b][L]; r[L]=String(fv).startsWith('=')?{f:fxExcel(fv),v:(()=>{const t=cellText(L,D.batches[b]);return isNumTxt(t)?+String(t).replace(/,/g,''):t;})()}:cellOut(L,fv); } }
   for(const b in S.ed){const e=S.ed[b], r=row(b); if(!r) continue; if('pd' in e) r.N=e.pd||''; if('rmk' in e) r.Q=e.rmk; if('hold' in e) r.R=e.hold;}
   calcLoadDays(); for(const b in D.batches){ const r=D.batches[b].row; if(!r) continue; const v=LDAY[b]?'Day '+LDAY[b].n:''; if(v||(ed[r]&&ed[r].A)){ (ed[r]=ed[r]||{}).BH=v; } }
   ed[3]=Object.assign(ed[3]||{},{BH:'Load Day'});
