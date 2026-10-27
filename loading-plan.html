@@ -866,13 +866,16 @@ header.fover::after{background:rgba(239,230,235,.92)}
     const mcOrder = ['750', '500', '250', '200', '120', '60', '30', '10'];
     for (const p of plan) if (!mcOrder.includes(p.mc)) mcOrder.push(p.mc);
     for (const R of data) { const a = aVal(R); if (a && !mcOrder.includes(a) && /^\d+$/.test(a)) mcOrder.push(a); }
+    // the M/C a row ends with: the planner's A when it sets one, otherwise the file's A — every row goes under that machine's block
+    const fA = R => { const e = E[R.r]; return e && e.A !== undefined && e.A !== null && e.A !== '' ? String(e.A).trim() : aVal(R); };
+    for (const R of data) { const a = fA(R); if (a && !mcOrder.includes(a) && /^\d+$/.test(a)) mcOrder.push(a); }
     const planned = new Map(); for (const p of plan) planned.set(p.mc, (planned.get(p.mc) || []).concat(p.rows.filter(r => byRow.has(r))));
     const allPlanned = new Set([].concat(...[...planned.values()]));
     for (const mc of mcOrder) {
       for (const [r, k] of sepOf) if (k === mc && !used.has(r)) { used.add(r); order.push(r); }
       for (const r of planned.get(mc) || []) if (!used.has(r)) { used.add(r); order.push(r); }
-      for (const p of plan) if (p.mc === mc) for (const r of p.rest || []) if (byRow.has(r) && !used.has(r) && !allPlanned.has(r) && !sepOf.has(r)) { used.add(r); order.push(r); }
-      for (const R of data) if (!used.has(R.r) && !allPlanned.has(R.r) && !sepOf.has(R.r) && aVal(R) === mc) { used.add(R.r); order.push(R.r); }
+      for (const p of plan) if (p.mc === mc) for (const r of p.rest || []) if (byRow.has(r) && !used.has(r) && !allPlanned.has(r) && !sepOf.has(r) && fA(byRow.get(r)) === mc) { used.add(r); order.push(r); }
+      for (const R of data) if (!used.has(R.r) && !allPlanned.has(R.r) && !sepOf.has(R.r) && fA(R) === mc) { used.add(R.r); order.push(R.r); }
     }
     for (const R of data) if (!used.has(R.r)) { used.add(R.r); order.push(R.r); }
     // M/C column colour: the file's own green style for rows with a plan date, plain style otherwise
@@ -1650,7 +1653,7 @@ $('xls').addEventListener('click',async()=>{
   for(const k in lists){ const rows=[]; lists[k].forEach((id,i)=>{const c=C.get(id); n++; const cpd=c.p.map(x=>x.pd).filter(Boolean).sort()[0]||''; for(const b of c.m){const r=row(b); if(!r) continue; r.B=i+1; r.A=k; if(!D.batches[b].pd&&cpd) r.N=cpd;   /* partner of a planned combo gets the same Plan Date */ rows.push(D.batches[b].row);}});
     // not-planned combos of this machine follow, in the Not planned order (FOC → Hanger → Line Plan old→new → AOP → Urgent → other → rest)
     const inPl=new Set(lists[k]); const rest=[...C.values()].filter(c=>c.mc===k&&!inPl.has(c.id)).sort((a,b)=>cmpAuto(a,b,true));
-    const restRows=[]; for(const c of rest) for(const b of c.m){ const x=D.batches[b]; if(x&&x.row){ restRows.push(x.row); if(S.over[c.id]){ const r=row(b); if(r) r.A=k; } } }
+    const restRows=[]; for(const c of rest) for(const b of c.m){ const x=D.batches[b]; if(x&&x.row){ restRows.push(x.row); if(S.over[c.id]||String(x.mc0||'').trim()!==k){ const r=row(b); if(r) r.A=k; } } }   // M/C cell = the machine it is listed under
     order.push({mc:k,rows,rest:restRows}); }
   for(const b in S.cx){const r=row(b); if(!r) continue; for(const L in S.cx[b]) if(!NOEDIT[L]) r[L]=cellOut(L,S.cx[b][L]);}
   for(const b in S.ed){const e=S.ed[b], r=row(b); if(!r) continue; if('pd' in e) r.N=e.pd||''; if('rmk' in e) r.Q=e.rmk; if('hold' in e) r.R=e.hold;}
