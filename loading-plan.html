@@ -357,6 +357,17 @@ header.fover::after{background:rgba(239,230,235,.92)}
 .list .ln.sub .lh2{position:absolute;left:14px;top:2px;font-size:11px;color:#8A7440;padding:0}
 .ln.gr .gsum{font:700 11.5px var(--f-ui);font-style:normal;color:#1F1F1F;margin-left:auto;padding-right:5px;align-self:center;font-variant-numeric:tabular-nums}
 .ln.xl>span>.ced{width:100%;box-sizing:border-box;font:inherit;border:1.5px solid #664356;border-radius:2px;padding:0 3px;height:19px;background:#fff;color:#1F1F1F;outline:none;box-shadow:0 0 0 3px rgba(102,67,86,.15)}
+/* Update File box */
+.upd{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:12px 0 8px}
+.us{position:relative;display:flex;flex-direction:column;gap:3px;border:1.5px dashed #CDBBC4;border-radius:8px;padding:12px 12px 10px;cursor:pointer;background:#FBF9FA;min-height:84px}
+.us:hover{border-color:#664356;background:#F6F0F3}.us.ok{border-style:solid;border-color:#5E9277;background:#F1F8F3}
+.us b{font:700 12.5px var(--f-ui);color:#664356}.us span{font-size:12px;color:#1F1F1F;word-break:break-word}.us em{font-style:normal;font-size:11px;color:var(--muted)}
+.us .ux{position:absolute;top:4px;right:6px;border:0;background:none;font-size:16px;color:var(--muted);cursor:pointer}
+.ulog{min-height:22px;font-size:12.5px;color:#3A2A33;margin-bottom:8px}.ulog .spin{display:inline-block;width:11px;height:11px;border:2px solid #CDBBC4;border-top-color:#664356;border-radius:50%;margin-right:7px;vertical-align:-1px;animation:usp .8s linear infinite}
+@keyframes usp{to{transform:rotate(360deg)}}
+.urep .uh{font-weight:600;color:#3c7a5a;margin-bottom:4px}.urep ul{margin:0 0 8px;padding-left:18px;columns:2;column-gap:24px;font-size:12px}.urep li{margin:1px 0}.uw{color:#AF4F5A}
+#dlg .okb{background:#664356;color:#fff;border:0;border-radius:6px;padding:6px 16px;font:600 13px var(--f-ui);cursor:pointer}#dlg .okb:disabled{opacity:.4;cursor:default}
+#dlg .dlgb{display:flex;justify-content:space-between;align-items:center;gap:10px}
 /* quick type chips */
 .qf{display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap;margin-left:10px}
 .qfc{font:600 12px var(--f-ui);border:1px solid var(--hdr-line);background:var(--surface);color:var(--fg);border-radius:14px;padding:3px 10px;cursor:pointer;white-space:nowrap;display:inline-flex;gap:5px;align-items:baseline}
@@ -471,6 +482,7 @@ header.fover::after{background:rgba(239,230,235,.92)}
       <div class="qsep"></div>
       <button class="qi" data-act="load"><span>⤒</span>Load File<em>or drop the .xlsx anywhere</em></button>
       <button class="qi" data-act="export"><span>⤓</span>Export File<em>Loading plan with your plan</em></button>
+      <button class="qi" data-act="update"><span>⟳</span>Update File<em>Loading plan + DOC 280+217 + Line Plan</em></button>
       <div class="qsep"></div><a class="qi" href="index.html"><span>←</span>SQ Hues Tools</a>
     </div>
   </div>
@@ -760,7 +772,7 @@ header.fover::after{background:rgba(239,230,235,.92)}
       const b = str(o.D).trim(); if (!b || !parseB(b) || batches[b]) continue;
       let t = M.finalType(b);
       if (!t) t = M.classify(parseB(b).o, o.G, o.E);
-      batches[b] = { b, row: r, mc0: str(o.A), sl: str(o.B), kq: typeof o.L === 'number' ? o.L : str(o.L), ga: str(o.M), n1: str(o.P), tb: str(o.S), lb: str(o.U), pt: str(o.C).trim(), by: str(o.E), sh: str(o.F), fb: str(o.G), ld: str(o.H), kn: str(o.I).trim().toUpperCase(), bt: str(o.J), t: t === 'Gusset' ? 'G' : 'B', q: typeof o.K === 'number' ? o.K : (parseFloat(o.K) || 0), pd: xlDate(o.N), cat: str(o.O), rmk: str(o.Q), hold: str(o.R), gsm: str(o.T), hs: str(o.X), po: str(o.AF), ott: xlDate(o.AH), age: typeof o.AV === 'number' ? Math.round(o.AV) : null, st: str(o.AY), rm: str(o.AZ), pg: str(o.BA), mill: str(o.BD), lp: xlDate(o.BF), lab: xlDate(o.BG), db: str(o.AG), dd: xlDate(o.AI) || str(o.AI), kq2: typeof o.AJ === 'number' ? Math.round(o.AJ) : str(o.AJ), dq: typeof o.AM === 'number' ? Math.round(o.AM) : str(o.AM), and: str(o.AO), lot: str(o.BC), hsp: xlDate(o.BE) || str(o.BE) };
+      batches[b] = { b, row: r, mc0: str(o.A), sl: str(o.B), kq: typeof o.L === 'number' ? o.L : str(o.L), ga: str(o.M), n1: str(o.P), tb: str(o.S), lb: str(o.U), pt: str(o.C).trim(), by: str(o.E), sh: str(o.F), fb: str(o.G), ld: str(o.H), kn: str(o.I).trim().toUpperCase(), bt: str(o.J), t: t === 'Gusset' ? 'G' : 'B', q: typeof o.K === 'number' ? o.K : (parseFloat(o.K) || 0), pd: xlDate(o.N), cat: str(o.O), rmk: str(o.Q), hold: str(o.R), gsm: str(o.T), hs: str(o.X), po: str(o.AF), ott: xlDate(o.AH), age: typeof o.AV === 'number' ? Math.round(o.AV) : null, st: str(o.AY), rm: str(o.AZ), pg: str(o.BA), mill: str(o.BD), lp: xlDate(o.BF), lpt: typeof o.BF === 'string' ? o.BF.trim() : '', lab: xlDate(o.BG), db: str(o.AG), dd: xlDate(o.AI) || str(o.AI), kq2: typeof o.AJ === 'number' ? Math.round(o.AJ) : str(o.AJ), dq: typeof o.AM === 'number' ? Math.round(o.AM) : str(o.AM), and: str(o.AO), lot: str(o.BC), hsp: xlDate(o.BE) || str(o.BE) };
       const raw = {}; for (const k of ALLC) { if (MAPPED.has(k)) continue; const v = o[k]; if (v === null || v === undefined || v === '') continue; raw[k] = typeof v === 'number' ? Math.round(v * 100) / 100 : str(v); } if (Object.keys(raw).length) batches[b].raw = raw;
       queue.push(b);
     }
@@ -942,6 +954,401 @@ header.fover::after{background:rgba(239,230,235,.92)}
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.LPEngine = api;
 })(typeof window !== 'undefined' ? window : globalThis);
 
+/* Loading plan daily update: rebuild the Master Sheet from the DOC 280+217 file and the Line Plan file.
+   Steps (same as the manual routine):
+   1  Add Plan  – Dye Q rows marked "add" go in as not-planned rows under their MC (Dye Q › MC No)
+   2  280       – the Loading plan's 280 sheet is replaced by the DOC file's 280 sheet (values)
+   3  S:BD      – the row-2 formulas are worked out for every row and kept as values
+   4  H K L O P – formulas =AK =AD =AE =AL =AC down the whole data range
+   5  delete    – rows already dyed (AI has a date) and rows not in Dye Q any more (AM not a number); MC rows stay
+   6  knitting  – AJ = KOK and P has "Greige from"  → I = KOK, M = =P
+                  AJ = KOK and Knit Q (L) > 0       → I = KOK, M = =D
+                  AJ = KOK, no Greige from, no Knit Q → I = KBL, Q (Remarks) = …/Not in KQ (taken off again once it is KOK)
+                  AJ = knit balance                  → I = KBL
+   7  tags in C – FOC (O says FOC), Urgent (280 BQ says urgent), AOP (Shade says AOP)
+   8  Line plan – Batch Wise Line Plan › Dyeing Date into BF; matched but no date → O = Line Plan-TBC/…
+*/
+(function (root) {
+  'use strict';
+  const unesc = s => s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&#(\d+);/g, (m, d) => String.fromCharCode(+d)).replace(/&#x([0-9a-f]+);/gi, (m, h) => String.fromCharCode(parseInt(h, 16))).replace(/&amp;/g, '&');
+  const xesc = v => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '');
+  const cn = c => { let n = 0; for (const ch of c) n = n * 26 + ch.charCodeAt(0) - 64; return n; };
+  const cl = n => { let s = ''; while (n) { const r = (n - 1) % 26; s = String.fromCharCode(65 + r) + s; n = Math.floor((n - 1) / 26); } return s; };
+  const lc = v => String(v).toLowerCase();
+
+  function parseSST(xml) {
+    const out = []; if (!xml) return out;
+    const re = /<si>([\s\S]*?)<\/si>/g; let m;
+    while ((m = re.exec(xml))) { const body = m[1].replace(/<rPh\b[\s\S]*?<\/rPh>/g, ''); let t = ''; const tr = /<t(?:\s[^>]*)?>([\s\S]*?)<\/t>/g; let k; while ((k = tr.exec(body))) t += k[1]; out.push(unesc(t)); }
+    return out;
+  }
+  async function sheetPaths(zip) {
+    const wb = await zip.file('xl/workbook.xml').async('string');
+    const rels = await zip.file('xl/_rels/workbook.xml.rels').async('string');
+    const relMap = {}; let m; const rr = /<Relationship\b([^>]*)\/>/g;
+    while ((m = rr.exec(rels))) { const id = /Id="([^"]+)"/.exec(m[1]), t = /Target="([^"]+)"/.exec(m[1]); if (id && t) relMap[id[1]] = t[1]; }
+    const out = {}; const sr = /<sheet\b([^>]*)\/>/g; let idx = 0;
+    while ((m = sr.exec(wb))) { const name = unesc(/name="([^"]+)"/.exec(m[1])[1]); const rid = /r:id="([^"]+)"/.exec(m[1])[1]; let t = relMap[rid]; t = t.startsWith('/') ? t.slice(1) : 'xl/' + t.replace(/^\.\//, ''); out[name] = { path: t, index: idx++ }; }
+    return out;
+  }
+  const findSheet = (sp, re) => Object.keys(sp).find(n => re.test(n.trim()));
+
+  // ---------- Excel values ----------
+  const ERR = e => ({ e }); const NA = ERR('#N/A'), VALUE = ERR('#VALUE!');
+  const isE = v => !!v && typeof v === 'object' && 'e' in v;
+  const chk = v => { if (isE(v)) throw v; return v; };
+  const X = fn => { try { return fn(); } catch (x) { if (isE(x)) return x; throw x; } };
+  function cellValue(attrs, inner, sst) {
+    const tm = /\bt="(\w+)"/.exec(attrs || ''); const t = tm ? tm[1] : 'n';
+    if (t === 'inlineStr') { let s = ''; const tr = /<t(?:\s[^>]*)?>([\s\S]*?)<\/t>/g; let k; while ((k = tr.exec(inner || ''))) s += k[1]; return unesc(s); }
+    const vm = /<v>([\s\S]*?)<\/v>/.exec(inner || '');
+    if (!vm) return (t === 'str' && /<v\s*\/>/.test(inner || '')) ? '' : undefined;
+    if (t === 's') return sst[+vm[1]];
+    if (t === 'str') return unesc(vm[1]);
+    if (t === 'e') return ERR(unesc(vm[1]));
+    if (t === 'b') return vm[1] === '1';
+    const f = parseFloat(vm[1]); return isNaN(f) ? unesc(vm[1]) : f;
+  }
+  const xtrim = s => String(s).replace(/ +/g, ' ').trim();
+  const txt = v => { chk(v); if (v === undefined || v === null) return ''; if (typeof v === 'boolean') return v ? 'TRUE' : 'FALSE'; if (typeof v === 'number') return Number.isInteger(v) ? String(v) : String(parseFloat(v.toPrecision(15))); return String(v); };
+  const num = v => { chk(v); if (v === undefined || v === null) return 0; if (typeof v === 'number') return v; if (typeof v === 'boolean') return v ? 1 : 0; const s = String(v).trim(); if (s !== '' && !isNaN(+s)) return +s; throw VALUE; };
+  const rank = v => typeof v === 'number' ? 0 : typeof v === 'string' ? 1 : 2;
+  function cmp(a, b) {   // Excel ordering: numbers < text < logicals; blanks act as 0 / "" / FALSE
+    chk(a); chk(b);
+    if (a === undefined || a === null) a = typeof b === 'string' ? '' : typeof b === 'boolean' ? false : 0;
+    if (b === undefined || b === null) b = typeof a === 'string' ? '' : typeof a === 'boolean' ? false : 0;
+    const ra = rank(a), rb = rank(b); if (ra !== rb) return ra < rb ? -1 : 1;
+    if (ra === 1) { const x = lc(a), y = lc(b); return x < y ? -1 : x > y ? 1 : 0; }
+    return a < b ? -1 : a > b ? 1 : 0;
+  }
+  const EQ = (a, b) => cmp(a, b) === 0, GT = (a, b) => cmp(a, b) > 0, LE = (a, b) => cmp(a, b) <= 0;
+  const r9 = n => Math.round(n * 1e9) / 1e9;
+
+  // ---------- formula helpers ----------
+  // shift every relative A1 reference in a formula by dRow rows and dCol columns (text in quotes untouched)
+  function shiftF(f, dRow, dCol) {
+    if (!dRow && !dCol) return f;
+    let out = '', i = 0;
+    while (i < f.length) {
+      const ch = f[i];
+      if (ch === '"') { const j = f.indexOf('"', i + 1); const e = j < 0 ? f.length : j + 1; out += f.slice(i, e); i = e; continue; }
+      if (ch === "'") { const j = f.indexOf("'", i + 1); const e = j < 0 ? f.length : j + 1; out += f.slice(i, e); i = e; continue; }
+      const m = /^(\$?)([A-Z]{1,3})(\$?)(\d+)/.exec(f.slice(i));
+      const prev = i ? f[i - 1] : '';
+      if (m && !/[A-Za-z0-9_.$]/.test(prev)) {
+        const nx = f[i + m[0].length] || '';
+        if (!/[A-Za-z0-9_(]/.test(nx)) {
+          const col = m[1] ? m[2] : cl(cn(m[2]) + dCol), row = m[3] ? m[4] : String(+m[4] + dRow);
+          out += m[1] + col + m[3] + row; i += m[0].length; continue;
+        }
+      }
+      // whole-column refs like H:H stay as they are
+      const w = /^[A-Za-z_][A-Za-z0-9_.]*/.exec(f.slice(i)); if (w) { out += w[0]; i += w[0].length; continue; }
+      out += ch; i++;
+    }
+    return out;
+  }
+  function cellXml(ref, s, v, f) {
+    const sa = s != null ? ` s="${s}"` : '';
+    if (f != null) {
+      const fx = `<f>${xesc(f)}</f>`;
+      if (isE(v)) return `<c r="${ref}"${sa} t="e">${fx}<v>${xesc(v.e)}</v></c>`;
+      if (typeof v === 'number') return `<c r="${ref}"${sa}>${fx}<v>${v}</v></c>`;
+      if (typeof v === 'boolean') return `<c r="${ref}"${sa} t="b">${fx}<v>${v ? 1 : 0}</v></c>`;
+      return `<c r="${ref}"${sa} t="str">${fx}<v>${xesc(v == null ? '' : v)}</v></c>`;
+    }
+    if (v === undefined || v === null || v === '') return `<c r="${ref}"${sa}/>`;
+    if (isE(v)) return `<c r="${ref}"${sa} t="e"><v>${xesc(v.e)}</v></c>`;
+    if (typeof v === 'number') return `<c r="${ref}"${sa}><v>${v}</v></c>`;
+    if (typeof v === 'boolean') return `<c r="${ref}"${sa} t="b"><v>${v ? 1 : 0}</v></c>`;
+    return `<c r="${ref}"${sa} t="inlineStr"><is><t xml:space="preserve">${xesc(v)}</t></is></c>`;
+  }
+  const ROW_RE = /<row\b([^>]*?)(?:\/>|>([\s\S]*?)<\/row>)/g;
+  const CELL_RE = /<c r="([A-Z]{1,3})(\d+)"([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g;
+  function splitCells(inner) { const out = []; CELL_RE.lastIndex = 0; let m; while ((m = CELL_RE.exec(inner || ''))) out.push({ col: m[1], row: +m[2], attrs: m[3], inner: m[4] }); return out; }
+  const styleOf = a => { const m = /\bs="(\d+)"/.exec(a || ''); return m ? m[1] : null; };
+
+  // ---------- main ----------
+  async function updateLoadingPlan(JSZip, lpBuf, docBuf, lineBuf, opts = {}) {
+    const log = opts.log || (() => {});
+    const now = opts.today ? new Date(opts.today + 'T00:00:00') : new Date();
+    const TODAY = Math.round((Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) - Date.UTC(1899, 11, 30)) / 864e5);
+    const rep = { added: [], addSkipped: [], delDyed: 0, delNotQ: 0, kokGreige: 0, kokKnit: 0, notInKQ: 0, kbl: 0, foc: 0, urgent: 0, aop: 0, lpDate: 0, lpTBC: 0, lpCleared: 0, rows: 0 };
+
+    // --- DOC file: 280 and Dye Q
+    log('Opening the DOC 280+217 file…');
+    const dz = await JSZip.loadAsync(docBuf); const dsp = await sheetPaths(dz);
+    const d280n = findSheet(dsp, /^280$/), dqn = findSheet(dsp, /^dye\s*q$/i);
+    if (!d280n) throw new Error('The DOC file has no "280" sheet.');
+    const dsst = parseSST(dz.file('xl/sharedStrings.xml') ? await dz.file('xl/sharedStrings.xml').async('string') : '');
+    log('Reading the DOC 280 sheet…');
+    let d280 = await dz.file(dsp[d280n].path).async('string');
+
+    // --- Loading plan file
+    log('Opening the Loading plan file…');
+    const lz = await JSZip.loadAsync(lpBuf); const lsp = await sheetPaths(lz);
+    if (!lsp['Master Sheet'] || !lsp['280']) throw new Error('The Loading plan file needs a "Master Sheet" and a "280" sheet.');
+    const lsst = parseSST(lz.file('xl/sharedStrings.xml') ? await lz.file('xl/sharedStrings.xml').async('string') : '');
+
+    // styles of the old 280 sheet (per column: rows 1, 2 and data) + its head / tail
+    const old280 = await lz.file(lsp['280'].path).async('uint8array');
+    const dec = new TextDecoder();
+    const headTxt = dec.decode(old280.subarray(0, Math.min(old280.length, 3000000)));
+    const tailTxt = dec.decode(old280.subarray(Math.max(0, old280.length - 400000)));
+    const sdA = headTxt.indexOf('<sheetData>'), sdB = tailTxt.lastIndexOf('</sheetData>');
+    if (sdA < 0 || sdB < 0) throw new Error('Unexpected 280 sheet layout in the Loading plan file.');
+    const st280 = { 1: {}, 2: {}, d: {} }, cnt = {};
+    { ROW_RE.lastIndex = 0; let m, n = 0; const body = headTxt.slice(sdA);
+      while ((m = ROW_RE.exec(body)) && n < 60) { const r = +(/\br="(\d+)"/.exec(m[1]) || [])[1]; n++; for (const c of splitCells(m[2])) { const s = styleOf(c.attrs); if (s == null) continue; if (r <= 2) st280[r][c.col] = s; else { const k = c.col + '|' + s; cnt[k] = (cnt[k] || 0) + 1; } } }
+      const best = {}; for (const k in cnt) { const [c, s] = k.split('|'); if (!best[c] || cnt[k] > best[c][1]) best[c] = [s, cnt[k]]; } for (const c in best) st280.d[c] = best[c][0]; }
+
+    // --- one pass over the DOC 280: new sheet XML + lookups
+    log('Copying the 280 sheet and building lookups…');
+    const NEED = new Set(['A', 'D', 'E', 'F', 'H', 'K', 'L', 'N', 'P', 'R', 'W', 'X', 'AF', 'AG', 'AO', 'AS', 'BC', 'BF', 'BL', 'BM', 'BN', 'BP', 'BQ', 'CR', 'CU', 'DB', 'DC']);
+    const byH = new Map(), byBC = new Map(), blSum = new Map(), blCnt = new Map();
+    const parts = []; let last280 = 0;
+    { const a = d280.indexOf('<sheetData>'), b = d280.lastIndexOf('</sheetData>'); const body = d280.slice(a + 11, b);
+      ROW_RE.lastIndex = 0; let m;
+      while ((m = ROW_RE.exec(body))) {
+        const r = +(/\br="(\d+)"/.exec(m[1]) || [])[1]; last280 = Math.max(last280, r);
+        const rattrs = m[1].replace(/\s(s|customFormat)="[^"]*"/g, '');
+        let cells = ''; const vals = {};
+        for (const c of splitCells(m[2])) {
+          const v = cellValue(c.attrs, c.inner, dsst);
+          if (NEED.has(c.col) && v !== undefined) vals[c.col] = v;
+          if (v === undefined) continue;
+          const s = r <= 2 ? (st280[r][c.col] ?? null) : (st280.d[c.col] ?? null);
+          cells += cellXml(c.col + r, s, v);
+        }
+        parts.push(`<row${rattrs}>${cells}</row>`);
+        if (r < 3) continue;
+        const h = vals.H; if (typeof h === 'string' && h.trim()) { const k = lc(h); if (!byH.has(k)) byH.set(k, vals); }
+        if (vals.BC !== undefined && !isE(vals.BC)) { const k = lc(txt(vals.BC)); if (!byBC.has(k)) byBC.set(k, vals.BF); }
+        if (vals.BL !== undefined && !isE(vals.BL)) { const k = lc(txt(vals.BL)); blCnt.set(k, (blCnt.get(k) || 0) + 1); if (typeof vals.BN === 'number') blSum.set(k, (blSum.get(k) || 0) + vals.BN); }
+      }
+    }
+    d280 = null;
+    let head280 = headTxt.slice(0, sdA).replace(/<dimension ref="[^"]*"\/>/, `<dimension ref="A1:${cl(108)}${last280}"/>`);
+    let tail280 = tailTxt.slice(sdB).replace(/(<autoFilter ref="[A-Z]+\d+:[A-Z]+)\d+"/, `$1${last280}"`);
+    const new280 = head280 + '<sheetData>' + parts.join('') + tail280;
+    parts.length = 0;
+
+    // --- Dye Q: rows marked "add"
+    const addList = [];
+    if (dqn) {
+      log('Reading Dye Q (Add Plan)…');
+      const dq = await dz.file(dsp[dqn].path).async('string');
+      ROW_RE.lastIndex = 0; let m; const rowsQ = [];
+      while ((m = ROW_RE.exec(dq))) { const r = +(/\br="(\d+)"/.exec(m[1]) || [])[1]; const o = {}; for (const c of splitCells(m[2])) { const v = cellValue(c.attrs, c.inner, dsst); if (v !== undefined) o[c.col] = v; } rowsQ.push([r, o]); }
+      // header row: the one holding "MC No" and "Batch No"; Add Plan column by its header (else BC)
+      let hdr = null; for (const [r, o] of rowsQ) { if (r > 6) break; if (Object.values(o).some(v => typeof v === 'string' && /^\s*mc\s*no\s*$/i.test(v))) { hdr = [r, o]; break; } }
+      const H = hdr ? hdr[1] : {}; const cols = Object.keys(H).sort((p, q) => cn(p) - cn(q));
+      const colOf = (re, dflt, lastOne) => { const hit = cols.filter(k => typeof H[k] === 'string' && re.test(H[k].replace(/\s+/g, ' ').trim())); return hit.length ? (lastOne ? hit[hit.length - 1] : hit[0]) : dflt; };
+      let addC = null; for (const [r, o] of rowsQ) { if (r > 6) break; for (const k in o) if (typeof o[k] === 'string' && /^\s*add\s*plan\s*$/i.test(o[k])) addC = k; }
+      addC = addC || 'BC';
+      const mcC = colOf(/^mc\s*no$/i, 'AQ', true), bC = colOf(/^batch\s*no$/i, 'AR', true), tC = colOf(/^batch\s*type$/i, 'AX', true);
+      const hr = hdr ? hdr[0] : 2;
+      for (const [r, o] of rowsQ) { if (r <= hr) continue; const a = o[addC]; if (typeof a === 'string' && /\badd\b/i.test(a) && typeof o[bC] === 'string') addList.push({ b: o[bC].trim(), mc: String(txt(o[mcC] ?? '')).trim(), t: String(o[tC] ?? '').trim() }); }
+      rep.addCol = addC;
+    }
+
+    // --- Line plan: Batch No → Dyeing Date
+    const lineMap = new Map();
+    if (lineBuf) {
+      log('Reading the Line Plan file…');
+      const pz = await JSZip.loadAsync(lineBuf); const psp = await sheetPaths(pz);
+      const pn = findSheet(psp, /batch\s*wise\s*line\s*plan/i);
+      if (!pn) throw new Error('The Line Plan file has no "Batch Wise Line Plan" sheet.');
+      const psst = parseSST(pz.file('xl/sharedStrings.xml') ? await pz.file('xl/sharedStrings.xml').async('string') : '');
+      const px = await pz.file(psp[pn].path).async('string');
+      ROW_RE.lastIndex = 0; let m, bC = null, dC = null, hr = 0;
+      while ((m = ROW_RE.exec(px))) {
+        const r = +(/\br="(\d+)"/.exec(m[1]) || [])[1]; const o = {}; for (const c of splitCells(m[2])) { const v = cellValue(c.attrs, c.inner, psst); if (v !== undefined) o[c.col] = v; }
+        if (!bC) { const ks = Object.keys(o).sort((p, q) => cn(p) - cn(q)); const nm = k => typeof o[k] === 'string' ? o[k].replace(/\s+/g, ' ').trim().toLowerCase() : '';
+          const b = ks.find(k => nm(k) === 'batch no'), d = ks.find(k => nm(k) === 'dyeing date'); if (b && d) { bC = b; dC = d; hr = r; } continue; }
+        const b = o[bC]; if (typeof b !== 'string' || !b.trim()) continue; const k = lc(b.trim());
+        const d = o[dC]; const prev = lineMap.get(k);
+        if (prev === undefined || (typeof prev !== 'number' && typeof d === 'number')) lineMap.set(k, typeof d === 'number' ? d : null);
+      }
+      if (!bC) throw new Error('Could not find "Batch No" and "Dyeing Date" headers in Batch Wise Line Plan.');
+    }
+
+    // --- Master Sheet rows
+    log('Reading the Master Sheet…');
+    const mPath = lsp['Master Sheet'].path; const xm = await lz.file(mPath).async('string');
+    const mA = xm.indexOf('<sheetData>'), mB = xm.lastIndexOf('</sheetData>');
+    const mHead = xm.slice(0, mA), mBody = xm.slice(mA + 11, mB), mTail = xm.slice(mB);
+    const R = []; { ROW_RE.lastIndex = 0; let m; while ((m = ROW_RE.exec(mBody))) R.push({ r: +(/\br="(\d+)"/.exec(m[1]) || [])[1], attrs: m[1], cells: splitCells(m[2]) }); }
+    // shared formula masters
+    const shared = {}; for (const row of R) for (const c of row.cells) { const fm = /<f\b([^>]*)>([^<]*)<\/f>/.exec(c.inner || ''); if (fm && /t="shared"/.test(fm[1])) { const si = /si="(\d+)"/.exec(fm[1]); if (si) shared[si[1]] = { f: unesc(fm[2]), row: row.r, col: cn(c.col) }; } }
+    const formulaOf = (c, rowNo) => { const fm = /<f\b([^>]*?)(?:\/>|>([^<]*)<\/f>)/.exec(c.inner || ''); if (!fm) return null; if (/t="array"/.test(fm[1])) return null; const si = /si="(\d+)"/.exec(fm[1]);
+      if (/t="shared"/.test(fm[1]) && si && shared[si[1]]) { const M = shared[si[1]]; return shiftF(M.f, rowNo - M.row, cn(c.col) - M.col); } return fm[2] != null ? unesc(fm[2]) : null; };
+    const vals = row => { const o = {}; for (const c of row.cells) { const v = cellValue(c.attrs, c.inner, lsst); if (v !== undefined) o[c.col] = v; } return o; };
+    const isSep = o => typeof o.D === 'string' && /^\s*MC\s*NO\s*#/i.test(o.D);
+    const data = R.filter(x => x.r >= 4).map(x => { const o = vals(x); return { src: x, v: o, sep: isSep(o), batch: typeof o.D === 'string' && /\|/.test(o.D) && !isSep(o) }; });
+    const have = new Set(data.filter(d => d.batch).map(d => lc(d.v.D.trim())));
+
+    // --- 1 Add Plan rows
+    for (const a of addList) {
+      const k = lc(a.b); if (have.has(k)) { rep.addSkipped.push(a.b + ' (already in the sheet)'); continue; }
+      const L = byH.get(k); if (!L) { rep.addSkipped.push(a.b + ' (not in 280)'); continue; }
+      let mc = a.mc.replace(/\D/g, ''); if (!mc && L.DC !== undefined) mc = String(txt(L.DC)).replace(/\D/g, ''); if (!mc) { rep.addSkipped.push(a.b + ' (no MC)'); continue; }
+      // place: after the last row of that MC (else after its MC NO row, else at the end)
+      let at = -1; for (let i = 0; i < data.length; i++) { const d = data[i]; if ((d.batch && String(d.v.A) === mc) || (d.sep && new RegExp('#\\s*' + mc + '\\b').test(d.v.D))) at = i; }
+      const tpl = data.filter(d => d.batch && String(d.v.A) === mc && !d.v.N)[0] || data.filter(d => d.batch && !d.v.N)[0] || data.find(d => d.batch);
+      const nrow = { src: { r: null, attrs: tpl ? tpl.src.attrs.replace(/\shidden="1"/, '') : '', cells: tpl ? tpl.src.cells.map(c => ({ col: c.col, attrs: c.attrs.replace(/\st="\w+"/, ''), inner: '' })) : [] },
+        v: { A: +mc, D: a.b, J: a.t || txt(L.DB ?? '') }, sep: false, batch: true, isNew: true };
+      if (at < 0) data.push(nrow); else data.splice(at + 1, 0, nrow);
+      have.add(k); rep.added.push(a.b + ' → ' + mc);
+    }
+
+    // --- 3 work out S:BD (+ H K L O P) for every batch row
+    log('Working out the row formulas…');
+    const vl = (D, col) => { if (isE(D)) return D; const row = byH.get(lc(txt(D))); if (!row) return NA; return row[col]; };
+    const ifnaBlank = (v, b, na) => isE(v) ? (v.e === '#N/A' ? na : v) : (v === undefined ? b : v);
+    const gt0 = v => X(() => GT(v, 0));
+    const V_TAB = { 10: [8, 8, 7, 7], 30: [27, 24, 21, 21], 60: [54, 48, 42, 42], 120: [102, 96, 102, 84], 200: [200, 160, 170, 140], 250: [250, 200, 213, 175], 500: [500, 400, 425, 350], 750: [750, 600, 638, 525] };
+    for (const d of data) {
+      if (!d.batch) continue; const o = d.v; const D = o.D; const L = byH.get(lc(D.trim())) || byH.get(lc(D));
+      // Buyer / Shade / Fabric as in the 280
+      if (L) { if (typeof L.E === 'string') o.E = L.E; if (typeof L.L === 'string') o.F = L.L; if (typeof L.N === 'string') o.G = L.N; }
+      const c = {};
+      c.AC = ifnaBlank(vl(D, 'AF'), '', '-'); c.AD = ifnaBlank(vl(D, 'W'), 0, '-'); c.AE = ifnaBlank(vl(D, 'X'), 0, '-');
+      c.AF = ifnaBlank(vl(D, 'F'), 0, '-'); c.AG = ifnaBlank(vl(D, 'AS'), '', '-'); { const v = vl(D, 'A'); c.AH = v === undefined ? 0 : v; }
+      c.AI = ifnaBlank(vl(D, 'R'), '', '-');
+      { const v = vl(D, 'BM'); c.AJ = isE(v) ? v : (gt0(v) === true ? v : 'KOK'); }
+      c.AK = ifnaBlank(vl(D, 'AG'), '', '-'); c.AL = ifnaBlank(vl(D, 'D'), '', '-');
+      { const v = vl(D, 'CU'); c.AM = isE(v) ? v : (gt0(v) === true ? v : 'DOK'); }
+      { const v = vl(D, 'AO'); c.AN = v === undefined ? 0 : v; }
+      c.AO = X(() => txt(c.AF) + txt(o.G) + txt(o.F));
+      c.Y = X(() => { const s = txt(D); const i = s.indexOf('|'); const j = i < 0 ? -1 : s.indexOf('|', i + 1); return xtrim(j < 0 ? '-' : s.slice(0, j)); });
+      c.AP = X(() => { const k = lc(txt(c.Y)); if (!byBC.has(k)) return ''; const v = byBC.get(k); return v === undefined ? 0 : (isE(v) ? '' : v); });
+      c.AQ = X(() => { chk(c.AO); return r9(blSum.get(lc(c.AO)) || 0); }); c.AR = X(() => { chk(c.AO); return blCnt.get(lc(c.AO)) || 0; });
+      { const v = vl(D, 'K'); c.AS = v === undefined ? 0 : v; } { const v = vl(D, 'BP'); c.AT = v === undefined ? 0 : v; }
+      c.T = X(() => { const g = txt(o.G); const i = g.indexOf('-'); if (i < 0) throw VALUE; const j = g.indexOf('-', i + 1); if (j < 0) throw VALUE; return num(xtrim(g.slice(i + 1, j))); });
+      c.S = c.AR; c.U = c.AQ;
+      c.V = X(() => { const a = num(o.A); const tab = V_TAB[a]; if (!tab) return 'MC'; const t = chk(c.T); if (LE(t, 170)) return tab[0]; if (LE(t, 190)) return tab[1]; if (LE(t, 210)) return tab[2]; if (LE(t, 245)) return tab[3]; return '.'; });
+      c.W = X(() => r9(num(o.A) * 0.7)); c.X = c.AT; c.Z = c.AS;
+      c.K = c.AD; c.H = c.AK; c.L = c.AE; c.O = c.AL; c.P = c.AC;
+      c.AA = X(() => r9(num(c.V) - num(c.K))); c.AB = X(() => r9(num(c.K) - num(c.W)));
+      c.AU = X(() => txt(c.AF) + txt(c.T) + txt(o.F));
+      c.AV = X(() => r9(TODAY - num(c.AN)));
+      c.BB = X(() => { const s = txt(D); const i = s.lastIndexOf('|'); if (i < 0) throw VALUE; return xtrim(s.slice(i + 1)); });
+      { const v = vl(D, 'CR'); c.BC = isE(v) ? v : (gt0(v) === true ? v : ''); }
+      { const v = vl(D, 'P'); c.BD = v === undefined ? 0 : v; }
+      c.BQ280 = L ? L.BQ : undefined;
+      d.c = c;
+    }
+
+    // --- 5 delete: dyed (AI date) and not in Dye Q (AM not a number); MC rows stay
+    const keep = [];
+    for (const d of data) {
+      if (!d.batch) { keep.push(d); continue; }
+      if (typeof d.c.AI === 'number') { rep.delDyed++; continue; }
+      if (typeof d.c.AM !== 'number') { rep.delNotQ++; continue; }
+      keep.push(d);
+    }
+
+    // --- 6 knitting status, 7 tags, 8 line plan
+    for (const d of keep) {
+      if (!d.batch) continue; const o = d.v, c = d.c; const set = d.set = {};
+      let O = c.O; const add = (cur, tag, front) => { const s = cur == null || isE(cur) ? '' : String(cur).trim(); if (new RegExp('\\b' + tag.replace(/[-/]/g, '.') + '\\b', 'i').test(s)) return s; return s ? (front ? tag + '/' + s : s + '/' + tag) : tag; };
+      // Remarks (Q): drop an old "Not in KQ" note first; it is put back below only if it still applies
+      const q0 = o.Q == null || isE(o.Q) ? '' : String(o.Q); let Q = q0.replace(/\s*\/?\s*\(?\s*not\s*in\s*kq\s*\)?\s*/ig, m0 => m0.trim().startsWith('/') ? '' : ' ').replace(/^\s*\/\s*|\s*\/\s*$/g, '').trim();
+      if (c.AJ === 'KOK') {
+        if (/greige\s*from/i.test(txt(isE(c.P) ? '' : c.P))) { set.I = 'KOK'; set.M = { f: 'P', v: c.P }; rep.kokGreige++; }
+        else if (typeof c.L === 'number' && c.L > 0) { set.I = 'KOK'; set.M = { f: 'D', v: o.D }; rep.kokKnit++; }
+        else { set.I = 'KBL'; Q = add(Q, 'Not in KQ', false); rep.notInKQ++; }
+      } else { set.I = 'KBL'; rep.kbl++; }
+      if (Q !== q0) set.Q = Q;
+      // tags in Plan Type (C)
+      let C = o.C == null ? '' : String(o.C);
+      if (/foc/i.test(txt(isE(c.O) ? '' : c.O))) { const n = add(C, 'FOC', true); if (n !== C.trim()) rep.foc++; C = n; }
+      if (/urgent/i.test(txt(isE(c.BQ280) || c.BQ280 == null ? '' : c.BQ280))) { const n = add(C, 'Urgent', false); if (n !== C.trim()) rep.urgent++; C = n; }
+      if (/aop/i.test(txt(isE(o.F) ? '' : o.F))) { const n = add(C, 'AOP', false); if (n !== C.trim()) rep.aop++; C = n; }
+      if (C !== (o.C == null ? '' : String(o.C))) set.C = C;
+      // line plan
+      if (lineBuf) {
+        const k = lc(o.D.trim());
+        if (lineMap.has(k)) { const dt = lineMap.get(k); if (typeof dt === 'number') { set.BF = Math.floor(dt); rep.lpDate++; } else { set.BF = 'Line Plan-TBC'; rep.lpTBC++; } }
+        else if (o.BF !== undefined && o.BF !== '') { set.BF = ''; rep.lpCleared++; }
+      }
+      d.O = O;   // O written as a value only when it carries a note, else =AL
+    }
+    // AW (Total Q per order+fabric+shade), AX, AY, AZ, BA — on the rows that stay
+    const kSum = new Map(); for (const d of keep) if (d.batch && !isE(d.c.AO) && typeof d.c.K === 'number') { const k = lc(d.c.AO); kSum.set(k, (kSum.get(k) || 0) + d.c.K); }
+    for (const d of keep) {
+      if (!d.batch) continue; const o = d.v, c = d.c; const I = d.set.I ?? o.I; const N = o.N, Rr = o.R;
+      c.AW = X(() => { chk(c.AO); return r9(kSum.get(lc(c.AO)) || 0); });
+      c.AX = X(() => r9(num(c.AP) - num(c.AW))); if (isE(c.AX)) c.AX = '';
+      c.AY = X(() => { const last = EQ(c.O, 'Last Batch'); const hs = EQ(c.AT, 'H/S OK');
+        if (last) { if (GT(N, 0) && hs) return 'CAN DYE'; return (EQ(I, 'KOK') && hs && GT(c.H, 0) && LE(Rr, 0) && LE(c.U, 1)) ? 'CAN DYE' : 'CAN NOT DYE'; }
+        return (EQ(I, 'KOK') && hs && GT(c.H, 0) && LE(Rr, 0)) ? 'CAN DYE' : 'CAN NOT DYE'; });
+      c.AZ = X(() => { if (!EQ(c.AY, 'CAN NOT DYE')) return 'Ready for dye'; if (EQ(I, 'KBL')) return 'KBL'; if (LE(c.H, 0)) return 'LD PENDING'; if (GT(Rr, 0)) return Rr;
+        if (EQ(c.X, 'Under Operation') || EQ(c.X, 'Under Greige Store')) return 'H/S PENDING'; if (EQ(c.O, 'Last Batch')) return 'Last Batch'; return Rr === undefined ? 0 : Rr; });
+      c.BA = X(() => GT(N, 0) ? 'Plan Given' : '');
+    }
+
+    // --- write the Master Sheet
+    log('Writing the Master Sheet…');
+    const VALCOLS = ['S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'AA', 'AB', 'AC', 'AD', 'AE', 'AF', 'AG', 'AH', 'AI', 'AJ', 'AK', 'AL', 'AM', 'AN', 'AO', 'AP', 'AQ', 'AR', 'AS', 'AT', 'AU', 'AV', 'AW', 'AX', 'AY', 'AZ', 'BA', 'BB', 'BC', 'BD'];
+    const FCOL = { H: 'AK', K: 'AD', L: 'AE', O: 'AL', P: 'AC' };
+    let next = 4; const out = []; const head3 = R.filter(x => x.r < 4);
+    const rowsXml = [];
+    for (const d of keep) {
+      const nr = next++; d.nr = nr;
+      const want = {};   // col → {v, f}
+      if (d.isNew) for (const k of ['A', 'D', 'J']) want[k] = { v: d.v[k] };
+      if (d.batch) {
+        const c = d.c, o = d.v;
+        for (const k of ['E', 'F', 'G']) if (o[k] !== undefined) want[k] = { v: o[k] };
+        for (const k of VALCOLS) want[k] = { v: c[k] };
+        for (const k in FCOL) want[k] = { v: c[k], f: FCOL[k] + nr };
+        if (d.O !== c.O) want.O = { v: d.O };
+        for (const k in d.set) { const s = d.set[k]; want[k] = (s && typeof s === 'object' && 'f' in s) ? { v: s.v, f: s.f + nr } : { v: s }; }
+      }
+      const cells = []; const done = new Set();
+      for (const c of d.src.cells) {
+        const ref = c.col + nr, s = styleOf(c.attrs);
+        if (want[c.col]) { cells.push(cellXml(ref, s, want[c.col].v, want[c.col].f)); done.add(c.col); continue; }
+        if (d.isNew) { cells.push(`<c r="${ref}"${s != null ? ` s="${s}"` : ''}/>`); continue; }
+        const f = formulaOf(c, d.src.r);
+        if (f != null) { const nf = shiftF(f, nr - d.src.r, 0); const inner = (c.inner || '').replace(/<f\b[^>]*?(?:\/>|>[^<]*<\/f>)/, `<f>${xesc(nf)}</f>`); cells.push(`<c r="${ref}"${c.attrs}>${inner}</c>`); }
+        else cells.push(c.inner == null ? `<c r="${ref}"${c.attrs}/>` : `<c r="${ref}"${c.attrs}>${c.inner}</c>`);
+      }
+      for (const k of Object.keys(want).filter(k => !done.has(k) && !d.src.cells.some(c => c.col === k))) cells.push(cellXml(k + nr, null, want[k].v, want[k].f));
+      cells.sort((p, q) => cn(/r="([A-Z]+)/.exec(p)[1]) - cn(/r="([A-Z]+)/.exec(q)[1]));
+      const attrs = d.src.attrs.replace(/\br="\d+"/, `r="${nr}"`).replace(/\sspans="[^"]*"/, '');
+      rowsXml.push(`<row${attrs}>${cells.join('')}</row>`);
+    }
+    const lastRow = next - 1; rep.rows = keep.filter(d => d.batch).length;
+    // rows 1–3 as they are (K2 subtotal range follows the data)
+    const topXml = head3.map(x => { const cells = x.cells.map(c => { let inner = c.inner; if (inner && /<f>/.test(inner)) inner = inner.replace(/<f>([^<]*)<\/f>/, (m0, f) => '<f>' + f.replace(/(SUBTOTAL\(\d+,\s*[A-Z]+\$?\d+:[A-Z]+\$?)\d+/g, `$1${lastRow}`) + '</f>');
+      return inner == null ? `<c r="${c.col}${x.r}"${c.attrs}/>` : `<c r="${c.col}${x.r}"${c.attrs}>${inner}</c>`; }).join(''); return `<row${x.attrs}>${cells}</row>`; });
+    let newHead = mHead.replace(/<dimension ref="([A-Z]+\d+):([A-Z]+)\d+"\/>/, `<dimension ref="$1:$2${lastRow}"/>`);
+    let newTail = mTail.replace(/(<autoFilter ref="[A-Z]+\d+:[A-Z]+)\d+"/, `$1${lastRow}"`);
+    const newMaster = newHead + '<sheetData>' + topXml.join('') + rowsXml.join('') + newTail;
+
+    // --- assemble the workbook
+    log('Saving the updated workbook…');
+    lz.file(mPath, newMaster); lz.file(lsp['280'].path, new280);
+    if (lz.file('xl/calcChain.xml')) {
+      lz.remove('xl/calcChain.xml');
+      const rel = 'xl/_rels/workbook.xml.rels'; lz.file(rel, (await lz.file(rel).async('string')).replace(/<Relationship\b[^>]*calcChain[^>]*\/>/g, ''));
+      const ct = '[Content_Types].xml'; lz.file(ct, (await lz.file(ct).async('string')).replace(/<Override\b[^>]*calcChain[^>]*\/>/g, ''));
+    }
+    let wb = await lz.file('xl/workbook.xml').async('string');
+    const mi = lsp['Master Sheet'].index, ti = lsp['280'].index;
+    wb = wb.replace(/(<definedName name="_xlnm\._FilterDatabase" localSheetId="(\d+)"[^>]*>[^<]*?\$[A-Z]+\$)(\d+)(<\/definedName>)/g, (m0, a, sid, n, z) => +sid === mi ? a + lastRow + z : +sid === ti ? a + last280 + z : m0);
+    if (/<calcPr\b/.test(wb)) wb = wb.replace(/<calcPr\b([^>]*?)\s*(\/?)>/, (mm, a2, sl) => `<calcPr${a2.replace(/\sfullCalcOnLoad="[^"]*"/, '')} fullCalcOnLoad="1"${sl ? '/' : ''}>`);
+    lz.file('xl/workbook.xml', wb);
+    const outBuf = await lz.generateAsync({ type: opts.type || (typeof window === 'undefined' ? 'nodebuffer' : 'uint8array'), compression: 'DEFLATE', compressionOptions: { level: 6 }, mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    return { out: outBuf, report: rep, lastRow };
+  }
+  const api = { updateLoadingPlan, _t: { shiftF, cmp, cellValue } };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.LPUpdate = api;
+})(typeof window !== 'undefined' ? window : globalThis);
+
 </script>
 <script>
 (function(){
@@ -1093,7 +1500,7 @@ function cellText(L,x){
   if(L==='A') return BMC[x.b]||x.mc0||'';
   if(L==='BH') return LDAY[x.b]?'Day '+LDAY[x.b].n:'';
   if(L==='K') return fmt(x.q);
-  if(DATEF[L]) return dshort(x[DATEF[L]]);
+  if(DATEF[L]) return dshort(x[DATEF[L]])||(L==='BF'?x.lpt||'':'');
   if(FIELD[L]){ let v=x[FIELD[L]]; if(L==='L'&&typeof v==='number') v=Math.round(v); if((L==='AI'||L==='BE')&&/^\d{4}-/.test(v||'')) return dshort(v); return v==null?'':String(v); }
   const v=(x.raw||{})[L]; if(v==null) return '';
   if(typeof v==='number'){ const hh=((D.hdr||{})[L]||''); if(/date|ott/i.test(hh)){ const d=xlDateS(v); if(d) return dshort(d); } return fmt(v); }
@@ -1116,10 +1523,10 @@ let BMC={};
 const cval=(c,k)=>k==='s'?[c.can?'Can dye':'Not ready']:c.p.map(x=>String(cellText(k,x)||'(blank)'));
 // quick type filters (any of the chosen types)
 let QF=new Set(store.get('mclp-qf')||[]);
-const QFDEF=[['FOC','FOC',c=>c.p.some(x=>/FOC/i.test((x.pt||'')+' '+(x.cat||'')))],['HANGER','Hanger',c=>c.p.some(x=>/HANGER/i.test((x.pt||'')+' '+(x.cat||'')))],['AOP','AOP',c=>c.p.some(x=>/AOP/i.test((x.sh||'')+' '+(x.pt||'')))],['LP','Line Plan',c=>c.p.some(x=>x.lp||/LINE\s*PLAN/i.test(x.pt||''))],['URG','Urgent',c=>c.p.some(x=>/URGENT/i.test(x.pt||''))],['LDP','LD Pending',c=>c.p.some(x=>!String(x.ld||'').trim())],['PROB','Problematic Batch',c=>overReq(c)]];
+const QFDEF=[['FOC','FOC',c=>c.p.some(x=>/FOC/i.test((x.pt||'')+' '+(x.cat||'')))],['HANGER','Hanger',c=>c.p.some(x=>/HANGER/i.test((x.pt||'')+' '+(x.cat||'')))],['AOP','AOP',c=>c.p.some(x=>/AOP/i.test((x.sh||'')+' '+(x.pt||'')))],['LP','Line Plan',c=>c.p.some(x=>x.lp||x.lpt||/LINE\s*PLAN/i.test(x.pt||''))],['URG','Urgent',c=>c.p.some(x=>/URGENT/i.test(x.pt||''))],['NKQ','Not in KQ',c=>c.p.some(x=>/not\s*in\s*kq/i.test((x.cat||'')+' '+(x.rmk||'')))],['LDP','LD Pending',c=>c.p.some(x=>!String(x.ld||'').trim())],['PROB','Problematic Batch',c=>overReq(c)]];
 function qfPass(c){ if(!QF.size) return true; for(const [k,,f] of QFDEF) if(QF.has(k)&&f(c)) return true; return false; }
 function drawQF(){ const pool=[...C.values()].filter(c=>cur==='ALL'||c.mc===cur);
-  $('qf').innerHTML=QFDEF.map(([k,n,f])=>{ const cnt=pool.filter(f).length; return `${k==='LDP'?'<span class="qgap"></span>':''}<button class="qfc${QF.has(k)?' on':''}${k==='PROB'||k==='LDP'?' prob':''}" data-q="${k}" title="${k==='LDP'?'Combos with no LD / Matching given':k==='PROB'?'Combos that take their order item above the 102% Req Qty Kg (planned ones already over, not planned ones if added)':'Show only '+n+' combos'} — click again to clear · Ctrl+click to add more">${n}<small>${cnt}</small></button>`; }).join(''); }
+  $('qf').innerHTML=QFDEF.map(([k,n,f])=>{ const cnt=pool.filter(f).length; return `${k==='NKQ'?'<span class="qgap"></span>':''}<button class="qfc${QF.has(k)?' on':''}${k==='PROB'||k==='LDP'||k==='NKQ'?' prob':''}" data-q="${k}" title="${k==='NKQ'?'Knit done in 280 but no Greige from and no knit qty — not in the knit queue':k==='LDP'?'Combos with no LD / Matching given':k==='PROB'?'Combos that take their order item above the 102% Req Qty Kg (planned ones already over, not planned ones if added)':'Show only '+n+' combos'} — click again to clear · Ctrl+click to add more">${n}<small>${cnt}</small></button>`; }).join(''); }
 function passes(c){ if(!qfPass(c)) return false; for(const k in FILT){ const set=FILT[k]; if(!set) continue; if(!(k==='s'||COLS.some(cc=>cc.k===k))) continue; if(!cval(c,k).some(v=>set.includes(v))) return false; } return true; }
 const sp=(v,cls)=>`<span${cls?' class="'+cls+'"':''} title="${esc(v)}">${esc(v)}</span>`;
 // Load Day for planned batches: SL order ÷ (MCs × batches per MC per day), working days from the plan start; only Day 1–3 shown
@@ -1702,12 +2109,7 @@ $('xls').addEventListener('click',async()=>{
   try{
     const {out}=await LPEngine.writePlan(JSZip,FILE.buf.slice(0),ed,order);
     $('busy').textContent='';
-    // file name carries today's date, e.g. Loading_plan-27th Oct'26.xlsx
-    const td=new Date(), dd=td.getDate(), sfx=(dd%10===1&&dd!==11)?'st':(dd%10===2&&dd!==12)?'nd':(dd%10===3&&dd!==13)?'rd':'th';
-    const today=`${dd}${sfx} ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][td.getMonth()]}'${String(td.getFullYear()).slice(2)}`;
-    let base=LABEL.replace(/[\\/:*?"<>|]/g,'');
-    const dre=/\d{1,2}(?:st|nd|rd|th)?[\s_-]*(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[\s_-]*'?\d{2,4}/i;
-    const name=dre.test(base)?base.replace(dre,today):base.replace(/(\.xlsx?)?$/i,`-${today}.xlsx`);
+    const name=todayName(LABEL);
     if(window.claude&&window.claude.use){
       try{ const dl=await window.claude.use('downloads'); if(dl){ await dl.save({filename:name,data:out}); toast('Saved '+name+' — '+n+' SL planned.'); return; } }
       catch(e){ if(e&&e.code==='declined'){toast('Save cancelled.');return;} toast('Could not save the file here ('+(e&&e.code||'error')+').'); return; }
@@ -1724,25 +2126,77 @@ const isFileDrag=e=>e.dataTransfer&&[...(e.dataTransfer.types||[])].includes('Fi
 let fdT=0;
 window.addEventListener('dragover',e=>{ if(!isFileDrag(e)) return; e.preventDefault(); e.dataTransfer.dropEffect='copy'; const hb=document.querySelector('header'); hb.classList.add('fdrag'); hb.classList.toggle('fover',!!(e.target.closest&&e.target.closest('header'))); clearTimeout(fdT); fdT=setTimeout(()=>{hb.classList.remove('fdrag','fover');},300); });
 window.addEventListener('drop',e=>{ if(!isFileDrag(e)) return; e.preventDefault(); document.querySelector('header').classList.remove('fdrag','fover');
-  const f=e.dataTransfer.files[0]; if(!f) return; if(!/\.xlsx$/i.test(f.name)){ toast('Please drop the Loading plan .xlsx file.'); return; } loadFile(f); });
+  const fs=[...e.dataTransfer.files]; const f=fs[0]; if(!f) return;
+  if((!$('dlgW').hidden&&$('dlg').querySelector('.upd'))||fs.length>1){ if($('dlgW').hidden||!$('dlg').querySelector('.upd')) openUpdate().then(()=>updTake(fs)); else updTake(fs); return; }
+  if(!/\.xlsx$/i.test(f.name)){ toast('Please drop the Loading plan .xlsx file.'); return; } loadFile(f); });
 // the Q menu
 function setQ(open){ $('qdd').hidden=!open; $('qmenu').setAttribute('aria-expanded',open?'true':'false'); }
 $('qmenu').addEventListener('click',e=>{ e.stopPropagation(); setQ($('qdd').hidden); });
 $('qdd').addEventListener('click',e=>{ const b=e.target.closest('[data-act]'); if(!b) return; setQ(false);
-  const a=b.dataset.act; if(a==='list'||a==='board') setMode(a); else if(a==='load') $('fileIn').click(); else if(a==='export') $('xls').click(); });
+  const a=b.dataset.act; if(a==='list'||a==='board') setMode(a); else if(a==='load') $('fileIn').click(); else if(a==='export') $('xls').click(); else if(a==='update') openUpdate(); });
 document.addEventListener('pointerdown',e=>{ if(!$('qdd').hidden&&!e.target.closest('.qbrand')) setQ(false); });
 document.addEventListener('keydown',e=>{ if(e.key==='Escape') setQ(false); });
-async function loadFile(f){
+// file name carries today's date, e.g. Loading_plan-27th Oct'26.xlsx
+function todayName(label){ const td=new Date(), dd=td.getDate(), sfx=(dd%10===1&&dd!==11)?'st':(dd%10===2&&dd!==12)?'nd':(dd%10===3&&dd!==13)?'rd':'th';
+  const today=`${dd}${sfx} ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][td.getMonth()]}'${String(td.getFullYear()).slice(2)}`;
+  let base=String(label||'Loading_plan.xlsx').replace(/[\\/:*?"<>|]/g,'').replace(/_AI(?=\.xlsx?$)/i,'');
+  const dre=/\d{1,2}(?:st|nd|rd|th)?[\s_-]*(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[\s_-]*'?\d{2,4}/i;
+  return dre.test(base)?base.replace(dre,today):base.replace(/(\.xlsx?)?$/i,`-${today}.xlsx`); }
+// ---------- Update File: Loading plan + DOC 280+217 + Line Plan → updated Loading plan ----------
+const UPD={lp:null,doc:null,line:null};
+const updKind=n=>/doc|280|217/i.test(n)?'doc':/line\s*_?plan|foc|hanger|aop/i.test(n)?'line':/loading/i.test(n)?'lp':null;
+function updTake(files){ const left=[]; for(const f of files){ if(!/\.xlsx$/i.test(f.name)){ toast(f.name+' is not an .xlsx file.'); continue; } const k=updKind(f.name); if(k&&!UPD[k]) UPD[k]=f; else left.push(f); }
+  for(const f of left) for(const k of ['lp','doc','line']) if(!UPD[k]){ UPD[k]=f; break; } drawUpd(); }
+function drawUpd(){ const d=$('dlg'); if($('dlgW').hidden||!d.querySelector('.upd')) return;
+  const slot=(k,t,sub)=>{ const f=UPD[k]; const use=k==='lp'&&!f&&FILE&&FILE.label===LABEL; return `<label class="us${f||use?' ok':''}" data-k="${k}"><input type="file" accept=".xlsx" hidden data-k="${k}"><b>${t}</b><span>${f?esc(f.name):use?'Use the loaded file · '+esc(LABEL):'Drop here or click to pick'}</span><em>${sub}</em>${f?`<button class="ux" data-x="${k}" title="Remove">×</button>`:''}</label>`; };
+  d.querySelector('.upd').innerHTML=slot('lp','1 · Loading plan','yesterday’s file — Master Sheet + 280')+slot('doc','2 · DOC 280+217','280 sheet + Dye Q (Add Plan column)')+slot('line','3 · Line Plan','Batch Wise Line Plan sheet');
+  const can=(UPD.lp||(FILE&&FILE.label===LABEL))&&UPD.doc; $('updGo').disabled=!can; }
+async function openUpdate(){
+  if(!window.JSZip){toast('The file library did not load. Check the internet connection and reload.');return;}
+  if(!FILE||FILE.label!==LABEL) FILE=await IDB.get();
+  const d=$('dlg'); d.className='wide';
+  d.innerHTML=`<div class="dlgt"><h3 style="color:#664356">⟳ Update the Loading plan</h3><button class="dlgx" id="dlgX" aria-label="Close">×</button></div>
+    <div class="note" style="background:#F4EFF2">Drop the three files (all at once is fine). The planner adds the <b>Add Plan</b> batches from Dye Q, brings in the new <b>280</b>, works out the row formulas, removes dyed batches and those no longer in Dye Q, sets <b>KOK / KBL / Not in KQ</b>, tags <b>FOC · Urgent · AOP</b> in Plan Type and takes <b>Line Plan</b> dyeing dates into BF.</div>
+    <div class="upd"></div><div class="ulog" id="updLog"></div>
+    <div class="dlgb"><span class="mut" style="font-size:11.5px">Takes about 10–20 seconds · nothing leaves this computer</span><span><button class="hb2" id="dlgN">Close</button> <button class="okb" id="updGo">Update</button></span></div>`;
+  $('dlgW').hidden=false; drawUpd();
+  $('dlgX').onclick=$('dlgN').onclick=()=>{ $('dlgW').hidden=true; };
+  d.querySelector('.upd').addEventListener('click',e=>{ const x=e.target.closest('[data-x]'); if(x){ e.preventDefault(); UPD[x.dataset.x]=null; drawUpd(); } });
+  d.querySelector('.upd').addEventListener('change',e=>{ const i=e.target.closest('input[data-k]'); if(i&&i.files[0]){ UPD[i.dataset.k]=i.files[0]; drawUpd(); } });
+  $('updGo').onclick=runUpdate; }
+async function runUpdate(){
+  const lg=$('updLog'), go=$('updGo'); go.disabled=true; const t0=Date.now(); const say=m=>{ lg.innerHTML=`<span class="spin"></span>${esc(m)}`; };
+  try{
+    say('Reading the files…');
+    const lpBuf=UPD.lp?await UPD.lp.arrayBuffer():FILE.buf.slice(0), lpName=UPD.lp?UPD.lp.name:FILE.label;
+    const docBuf=await UPD.doc.arrayBuffer(), lineBuf=UPD.line?await UPD.line.arrayBuffer():null;
+    const r=await LPUpdate.updateLoadingPlan(JSZip,lpBuf,docBuf,lineBuf,{log:say,type:'uint8array'});
+    const name=todayName(lpName), rp=r.report; const buf=r.out.buffer.slice(r.out.byteOffset,r.out.byteOffset+r.out.byteLength);
+    const li=(k,v)=>`<li><b>${v}</b> ${k}</li>`;
+    lg.innerHTML=`<div class="urep"><div class="uh">✓ Updated in ${Math.round((Date.now()-t0)/1000)} s — <b>${esc(name)}</b> · ${rp.rows} batches</div><ul>
+      ${li('added from Dye Q (Add Plan)',rp.added.length)}${rp.addSkipped.length?`<li class="uw">${rp.addSkipped.length} not added: ${esc(rp.addSkipped.slice(0,6).join(' · '))}${rp.addSkipped.length>6?' …':''}</li>`:''}
+      ${li('removed — already dyed',rp.delDyed)}${li('removed — no longer in Dye Q',rp.delNotQ)}
+      ${li('KOK — Greige from (M = P)',rp.kokGreige)}${li('KOK — knit qty (M = D)',rp.kokKnit)}${li('Not in KQ (noted in Workorder Category)',rp.notInKQ)}${li('KBL',rp.kbl)}
+      ${li('FOC added to Plan Type',rp.foc)}${li('Urgent added',rp.urgent)}${li('AOP added',rp.aop)}
+      ${lineBuf?li('Line Plan dyeing dates in BF',rp.lpDate)+li('Line Plan-TBC (no date yet)',rp.lpTBC)+(rp.lpCleared?li('old Line Plan dates cleared',rp.lpCleared):''):'<li class="uw">No Line Plan file — BF left as it was</li>'}
+      </ul><button class="hb2" id="updDl">⤓ Download ${esc(name)}</button></div>`;
+    $('updDl').onclick=()=>{ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1500); };
+    UPD.lp=UPD.doc=UPD.line=null;
+    await loadBuf(name,buf,`Updated file loaded — ${rp.rows} batches. Plan as usual, then Export.`);
+  }catch(err){ console.error(err); lg.innerHTML=`<div class="uw">Could not update: ${esc(err.message||err)}</div>`; go.disabled=false; }
+}
+async function loadFile(f){ return loadBuf(f.name, await f.arrayBuffer()); }
+async function loadBuf(name,buf,note){
+  const f={name};
   if(!window.JSZip){toast('The file reader library did not load. Check the internet connection and reload.');return;}
   $('busy').textContent='Reading '+f.name+'…';
   try{
-    const buf=await f.arrayBuffer();
     const d=await LPEngine.parseLoadingPlan(JSZip,buf.slice(0),m=>{$('busy').textContent=m;});
     FILE={label:f.name,buf}; IDB.put(FILE);
     const before=MCS.reduce((a,k)=>a+(S.plan[k]||[]).length,0);
     D=d; LABEL=f.name; store.set('mclp-data',{label:LABEL,data:D}); S.plan={}; S.ed={}; S.cx={}; S.over={}; S.del={}; build(); const nf=MCS.reduce((a,k)=>a+(S.plan[k]||[]).length,0); S.seeded=LABEL;
     save(); refreshView(); $('busy').textContent='';
-    toast(`Loaded ${f.name}. ${nf} SL with a Plan Date are planned, in the file's M/C and SL order.`);
+    toast(note||`Loaded ${f.name}. ${nf} SL with a Plan Date are planned, in the file's M/C and SL order.`);
   }catch(err){ console.error(err); $('busy').textContent=''; toast('Could not read this file: '+(err.message||err)); }
 }
 
