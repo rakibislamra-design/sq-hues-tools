@@ -759,7 +759,7 @@ h1{font:700 clamp(22px,2.6vw,30px)/1.1 var(--disp);margin:2px 0 4px;letter-spaci
         let txt = null;
         if (rn === 2) txt = 'Body Type'; else if (val.has(rn)) txt = val.get(rn);
         if (txt === null) return row;
-        const sm = new RegExp('<c r="DA' + rn + '"( s="\\d+")?').exec(row); const sty = sm && sm[1] ? sm[1] : '';
+        const sm = new RegExp('<c r="DA' + rn + '"[^>]*?(\\ss="\\d+")').exec(row); const sty = sm && sm[1] ? sm[1] : '';
         const cell = `<c r="DB${rn}"${sty} t="inlineStr"><is><t>${esc(txt)}</t></is></c>`;
         const re = /<c r="([A-Z]{1,3})\d+"/g; let mm, pos = -1;
         while ((mm = re.exec(row))) if (cn(mm[1]) > INS) { pos = mm.index; break; }
@@ -1159,6 +1159,83 @@ function writeValues(sh, c0, c1, first, vals, oldLast) {   // vals[i][j]
     }
   }
 }
+/* ---- styles: one consistent look per column (number format, font, border) + SQ stripe bands.
+   Data rows move every update, so each column gets the style most of its rows already have
+   (stray General / unstyled cells are fixed), and stripes are re-laid in strict alternation. */
+function styleBook(st) {
+  const fillsM = /<fills count="(\d+)">([\s\S]*?)<\/fills>/.exec(st);
+  const fills = fillsM[2].match(/<fill>[\s\S]*?<\/fill>|<fill\/>/g) || [];
+  let band = fills.findIndex(f => /fgColor rgb="FFEFECED"/i.test(f) && /solid/.test(f));
+  if (band < 0) { fills.push('<fill><patternFill patternType="solid"><fgColor rgb="FFEFECED"/><bgColor indexed="64"/></patternFill></fill>'); band = fills.length - 1; }
+  const xm = /<cellXfs count="(\d+)">([\s\S]*?)<\/cellXfs>/.exec(st);
+  const xfs = xm[2].match(/<xf\b[^>]*\/>|<xf\b[^>]*>[\s\S]*?<\/xf>/g);
+  const index = new Map(); xfs.forEach((x, i) => { if (!index.has(x)) index.set(x, i); });
+  const fillOf = sid => +((/fillId="(\d+)"/.exec(xfs[sid] || '') || [0, 0])[1]);
+  const kind = sid => { const f = fillOf(sid); if (f === band) return 'band'; const s = fills[f] || '';
+    return f <= 1 || !s || s === '<fill/>' || /patternType="none"/.test(s) ? 'plain' : 'hi'; };
+  const cache = new Map();
+  const variant = (sid, on) => {
+    const k = sid + '|' + on; if (cache.has(k)) return cache.get(k);
+    let out = sid;
+    if (kind(sid) !== 'hi') {
+      const want = on ? band : 0;
+      if (fillOf(sid) !== want) {
+        const x = xfs[sid] || xfs[0];
+        let nx = /fillId="/.test(x) ? x.replace(/fillId="\d+"/, `fillId="${want}"`) : x.replace(/^<xf\b/, `<xf fillId="${want}"`);
+        if (!/applyFill=/.test(nx)) nx = nx.replace(/^<xf\b/, '<xf applyFill="1"');
+        if (index.has(nx)) out = index.get(nx); else { xfs.push(nx); out = xfs.length - 1; index.set(nx, out); }
+      }
+    }
+    cache.set(k, out); return out;
+  };
+  const save = s => s.replace(fillsM[0], `<fills count="${fills.length}">${fills.join('')}</fills>`).replace(xm[0], `<cellXfs count="${xfs.length}">${xfs.join('')}</cellXfs>`);
+  return { kind, variant, save, get count() { return xfs.length; } };
+}
+// look of the existing data (rows first..last) before a paste: per column the usual plain / band style
+function canonStyles(sh, B, first, last, cols) {
+  const per = new Map(); let bandN = 0, plainN = 0, evenBand = 0, oddBand = 0;
+  for (let r = first; r <= last; r++) {
+    const row = sh.rows.get(r); if (!row) continue;
+    for (const c of cols) {
+      const x = row[1].get(c); if (!x) continue;
+      const s = +(styleOf(x) || 0), k = B.kind(s);
+      if (!per.has(c)) per.set(c, { all: new Map(), plain: new Map(), band: new Map() });
+      const p = per.get(c); p.all.set(s, (p.all.get(s) || 0) + 1);
+      if (k !== 'hi') { p[k].set(s, (p[k].get(s) || 0) + 1); if (k === 'band') { bandN++; ((r - first) % 2 ? oddBand++ : evenBand++); } else plainN++; }
+    }
+  }
+  const top = m => { let b = null, n = -1; for (const [s, k] of m) if (k > n) { n = k; b = s; } return b; };
+  const striped = bandN > 0.25 * (bandN + plainN);
+  const out = { striped, bandFirst: evenBand >= oddBand, cols: new Map() };
+  for (const [c, p] of per) {
+    const all = top(p.all);
+    if (B.kind(all) === 'hi' || !striped) { out.cols.set(c, [all, all]); continue; }
+    const pl = top(p.plain), bd = top(p.band);
+    const base = pl !== null ? pl : bd;
+    out.cols.set(c, [pl !== null ? pl : B.variant(base, false), bd !== null ? bd : B.variant(base, true)]);
+  }
+  return out;
+}
+const setStyleAttr = (x, s) => x.replace(/^<c\b([^>]*?)(\/?>)/, (m, at, end) => { at = at.replace(/\s+s="\d+"/, '');
+  return '<c' + (s ? at.replace(/(\sr="[A-Z]+\d+")/, `$1 s="${s}"`) : at) + end; });
+function applyCanon(sh, canon, first, last) {
+  let n = 0;
+  for (let r = first; r <= last; r++) {
+    const row = sh.rows.get(r); if (!row) continue;
+    const band = canon.striped && (((r - first) % 2 === 0) === canon.bandFirst);
+    for (const [c, pair] of canon.cols) {
+      const s = String(pair[band ? 1 : 0]), x = row[1].get(c);
+      if (x) { if (styleOf(x) !== s) { row[1].set(c, setStyleAttr(x, s === '0' ? null : s)); n++; } }
+      else if (s !== '0') { row[1].set(c, `<c r="${cl(c)}${r}" s="${s}"/>`); n++; }
+    }
+  }
+  return n;
+}
+function sheetCols(sh, hdrRow, upTo) {
+  const hc = (sh.rows.get(hdrRow) || ['', new Map()])[1];
+  const mx = Math.max(upTo || 0, ...[...hc.keys()].filter(c => cellValue(hc.get(c), []) !== null));
+  return [...Array(mx).keys()].map(k => k + 1);
+}
 function resetFilter(sh, newLast) {
   for (const v of sh.rows.values()) v[0] = stripHidden(v[0]);
   sh.tail = sh.tail.replace(/<autoFilter ref="([^"]+)"/, (m, ref) => {
@@ -1184,6 +1261,13 @@ function setDimension(sh) {
   sh.head = sh.head.replace(/<dimension ref="[^"]+"\/>/, `<dimension ref="A${minr === Infinity ? 1 : minr}:${cl(maxc)}${maxr}"/>`);
 }
 // speed: collapse duplicate-value conditional formats (Excel recalculates each one separately)
+// whole-column conditional formats (E1:E1048576 …) -> data rows only (+500 spare): lighter for Excel when filtering
+function boundCF(sh, nl) {
+  const end = nl + 500; let n = 0;
+  sh.tail = sh.tail.replace(/<conditionalFormatting sqref="([^"]+)"/g, (m, ref) => `<conditionalFormatting sqref="${ref.split(' ').map(a =>
+    a.replace(/^([A-Z]+)(\d+):([A-Z]+)1048576$/, (q, c1, r1, c2) => { n++; return `${c1}${r1}:${c2}${end}`; })).join(' ')}"`);
+  return n;
+}
 function slimDuplicateCF(sh) {
   const blocks = [...sh.tail.matchAll(/<conditionalFormatting sqref="([^"]+)">([\s\S]*?)<\/conditionalFormatting>/g)];
   const byCol = new Map(); let removed = 0;
@@ -1681,19 +1765,21 @@ async function build(files, opts = {}) {
 
   // ---- write sheets
   const filterRefs = {}, trimmed = {}; report.trimmed = trimmed;
+  const SB = styleBook(await rd('xl/styles.xml')); const restyled = report.restyled = {};
   note(46, 'Writing 217');
   let sh = new Sheet(await rd(pathOf['217']));
-  let oldLast = lastDataRow(sh, 1, 29, 3), nl = paste(sh, d217, 3, 1, 29, oldLast);
+  let oldLast = lastDataRow(sh, 1, 29, 3), canon = canonStyles(sh, SB, 3, oldLast, sheetCols(sh, 2, ci('BA'))), nl = paste(sh, d217, 3, 1, 29, oldLast);
   const f217 = []; for (let c = ci('AD'); c <= ci('BA'); c++) if (c !== ci('AM')) f217.push(c);
-  refitFormulas(sh, f217, 3, oldLast, nl);
-  filterRefs['217'] = resetFilter(sh, nl); trimmed['217'] = trimTail(sh, nl); report.cf217 = slimDuplicateCF(sh); setDimension(sh); wr(pathOf['217'], sh.serialize()); sh = null; await tick();
+  refitFormulas(sh, f217, 3, oldLast, nl); restyled['217'] = applyCanon(sh, canon, 3, nl);
+  filterRefs['217'] = resetFilter(sh, nl); trimmed['217'] = trimTail(sh, nl); report.cf217 = slimDuplicateCF(sh); boundCF(sh, nl); setDimension(sh); wr(pathOf['217'], sh.serialize()); sh = null; await tick();
 
   note(54, 'Writing 280 (A:AT data, AU:DB values, row height 15)');
-  oldLast = lastDataRow(sh280, 1, 46, 3); nl = paste(sh280, d280, 3, 1, 46, oldLast);
+  oldLast = lastDataRow(sh280, 1, 46, 3); canon = canonStyles(sh280, SB, 3, oldLast, sheetCols(sh280, 2, extraCol)); nl = paste(sh280, d280, 3, 1, 46, oldLast);
   for (let r = 3; r <= nl; r++) { const v = sh280.rows.get(r); v[0] = v[0].replace(/\s(ht|customHeight)="[^"]*"/g, '') + ' ht="15" customHeight="1"'; }
   if (extraCol === ci('DB')) writeValues(sh280, ci('AU'), ci('DB'), 3, c280.vals, oldLast);
   else { writeValues(sh280, ci('AU'), ci('DA'), 3, c280.vals.map(v => v.slice(0, 59)), oldLast); writeValues(sh280, extraCol, extraCol, 3, c280.vals.map(v => [v[59]]), oldLast); }
-  filterRefs['280'] = resetFilter(sh280, nl); trimmed['280'] = trimTail(sh280, nl); slimDuplicateCF(sh280); setDimension(sh280); wr(pathOf['280'], sh280.serialize()); await tick();
+  restyled['280'] = applyCanon(sh280, canon, 3, nl);
+  filterRefs['280'] = resetFilter(sh280, nl); trimmed['280'] = trimTail(sh280, nl); slimDuplicateCF(sh280); boundCF(sh280, nl); setDimension(sh280); wr(pathOf['280'], sh280.serialize()); await tick();
 
   note(66, 'Writing Dye Q');
   sh = new Sheet(await rd(pathOf['Dye Q']));
@@ -1733,25 +1819,26 @@ async function build(files, opts = {}) {
   filterRefs['Dye Q'] = (/<autoFilter ref="([^"]+)"/.exec(sh.tail) || [])[1] || filterRefs['Dye Q'];
   // old Body Type / Combo / Qty / MC (AM:AP) are rebuilt by the combo planner below
   for (const [r, [, cells]] of sh.rows) if (r >= 3) for (let c = ci('AM'); c <= ci('AP'); c++) cells.delete(c);
-  trimmed['Dye Q'] = trimTail(sh, nl); slimDuplicateCF(sh); setDimension(sh); wr(pathOf['Dye Q'], sh.serialize()); await tick();
+  trimmed['Dye Q'] = trimTail(sh, nl); slimDuplicateCF(sh); boundCF(sh, nl); setDimension(sh); wr(pathOf['Dye Q'], sh.serialize()); await tick();
   note(70, `LD New / Repeat on Dye Q ${cl(ldCol)}: New ${ldCount.New} · Repeat ${ldCount.Repeat} · blank ${ldCount.blank}`);
   report.ld = Object.assign({ col: cl(ldCol) }, ldCount);
 
   note(72, 'Writing Knit Q (Melange / Rib)');
   sh = new Sheet(await rd(pathOf['Knit Q']));
-  oldLast = lastDataRow(sh, 1, 31, 3); nl = paste(sh, dkq, 3, 1, 31, oldLast);
-  refitFormulas(sh, [ci('AF'), ci('AG')], 3, oldLast, nl);
-  filterRefs['Knit Q'] = resetFilter(sh, nl); trimmed['Knit Q'] = trimTail(sh, nl); slimDuplicateCF(sh); setDimension(sh); wr(pathOf['Knit Q'], sh.serialize()); await tick();
+  oldLast = lastDataRow(sh, 1, 31, 3); canon = canonStyles(sh, SB, 3, oldLast, sheetCols(sh, 2, ci('AG'))); nl = paste(sh, dkq, 3, 1, 31, oldLast);
+  refitFormulas(sh, [ci('AF'), ci('AG')], 3, oldLast, nl); restyled['Knit Q'] = applyCanon(sh, canon, 3, nl);
+  filterRefs['Knit Q'] = resetFilter(sh, nl); trimmed['Knit Q'] = trimTail(sh, nl); slimDuplicateCF(sh); boundCF(sh, nl); setDimension(sh); wr(pathOf['Knit Q'], sh.serialize()); await tick();
 
   note(76, 'Writing HS');
   sh = new Sheet(await rd(pathOf['HS']));
-  oldLast = lastDataRow(sh, 1, 14, 2); nl = paste(sh, dhs, 2, 1, 14, oldLast);
-  refitFormulas(sh, [ci('O')], 2, oldLast, nl);
+  oldLast = lastDataRow(sh, 1, 14, 2); canon = canonStyles(sh, SB, 2, oldLast, sheetCols(sh, 1, ci('O'))); nl = paste(sh, dhs, 2, 1, 14, oldLast);
+  refitFormulas(sh, [ci('O')], 2, oldLast, nl); restyled['HS'] = applyCanon(sh, canon, 2, nl);
   filterRefs['HS'] = resetFilter(sh, nl); trimmed['HS'] = trimTail(sh, nl); setDimension(sh); wr(pathOf['HS'], sh.serialize()); await tick();
 
   note(80, 'Writing Y-LOT');
   sh = new Sheet(await rd(pathOf['Y-LOT']));
-  oldLast = lastDataRow(sh, 1, 16, 3); nl = paste(sh, dlot, 3, 1, 16, oldLast);
+  oldLast = lastDataRow(sh, 1, 16, 3); canon = canonStyles(sh, SB, 3, oldLast, sheetCols(sh, 2, 16)); nl = paste(sh, dlot, 3, 1, 16, oldLast);
+  restyled['Y-LOT'] = applyCanon(sh, canon, 3, nl); wr('xl/styles.xml', SB.save(await rd('xl/styles.xml')));
   filterRefs['Y-LOT'] = resetFilter(sh, nl); trimmed['Y-LOT'] = trimTail(sh, nl); setDimension(sh); wr(pathOf['Y-LOT'], sh.serialize()); sh = null; await tick();
 
   // ---- speed: other sheets' duplicate-value rules (e.g. sheet "10" had 427 of them)
@@ -1874,18 +1961,33 @@ async function sqStripe(zip, path, firstRow = 3) {
     const want = on ? band : 0; if (fid === want) { cache.set(k, sid); return sid; }
     let nx = /fillId="/.test(x) ? x.replace(/fillId="\d+"/, `fillId="${want}"`) : x.replace(/^<xf\b/, `<xf fillId="${want}"`);
     if (!/applyFill=/.test(nx)) nx = nx.replace(/^<xf\b/, '<xf applyFill="1"');
+    const ex = xfs.indexOf(nx); if (ex >= 0) { cache.set(k, ex); return ex; }
     xfs.push(nx); cache.set(k, xfs.length - 1); return xfs.length - 1;
   };
   let x = await zip.file(path).async('string');
   const styleIn = (row, col) => { const m = new RegExp('<c r="' + col + '\\d+"[^>]*?\\bs="(\\d+)"').exec(row); return m ? +m[1] : 0; };
   let hdrAP = null;
+  // usual (non-highlight) style per column, without its stripe fill -> every row of a column looks the same
+  const fidOf = sid => +((/fillId="(\d+)"/.exec(xfs[sid] || xfs[0]) || [0, 0])[1]);
+  const isHi = sid => { const f = fidOf(sid); return !(plainFill(f) || f === band || f <= 1); };
+  const counts = new Map();
+  for (const m of x.matchAll(/<row r="(\d+)"[^>]*>([\s\S]*?)<\/row>/g)) {
+    if (+m[1] < firstRow) continue;
+    for (const c of m[2].matchAll(/<c r="([A-Z]{1,3})\d+"([^>]*?)\/?>/g)) {
+      const sid = +((/\bs="(\d+)"/.exec(c[2]) || [0, 0])[1]); if (isHi(sid)) continue;
+      const k = variant(sid, false) + ''; let cm = counts.get(c[1]); if (!cm) counts.set(c[1], cm = new Map());
+      cm.set(k, (cm.get(k) || 0) + 1);
+    }
+  }
+  const usual = new Map(); for (const [c, cm] of counts) { let b = null, n = -1; for (const [k, v] of cm) if (v > n) { n = v; b = +k; } usual.set(c, b); }
   x = x.replace(/<row r="(\d+)"[^>]*>[\s\S]*?<\/row>/g, (row, rn) => {
     rn = +rn;
     if (rn === 2) return row;   // header colours stay as the user set them
     if (rn < firstRow) return row;
-    const on = (rn - firstRow) % 2 === 0, ap = styleIn(row, 'AP');
+    const on = (rn - firstRow) % 2 === 0, ap = usual.get('AP') || styleIn(row, 'AP');
     return row.replace(/<c r="([A-Z]{1,3})(\d+)"([^>]*?)(\/?>)/g, (m, c, r, at, end) => {
       let sid = +((/\bs="(\d+)"/.exec(at) || [0, 0])[1]);
+      if (!isHi(sid) && usual.has(c)) sid = usual.get(c);
       if (ci(c) > ci('AP') && ap) sid = ap;
       return `<c r="${c}${r}"${at.replace(/\s+s="\d+"/, '')} s="${variant(sid, on)}"${end}`;
     });
@@ -2053,6 +2155,11 @@ async function putColumn(zip, pathOf, sheetName, INS, header, valueOf, styleCols
       const cell = typeof v === 'number' ? `<c r="${L}${rn}"${st}><v>${v}</v></c>` : `<c r="${L}${rn}"${st} t="inlineStr"><is><t>${esc(v)}</t></is></c>`;
       const re = /<c r="([A-Z]{1,3})\d+"/g; let mm, pos = -1; while ((mm = re.exec(inner))) if (ci(mm[1]) > INS) { pos = mm.index; break; }
       inner = pos >= 0 ? inner.slice(0, pos) + cell + inner.slice(pos) : inner + cell;
+    } else if (rn >= 3 && /<v>|<is>/.test(inner)) {      // blank MC No: keep the row's stripe / border
+      const st = sty(inner, styleCols[1]) || sty(inner, styleCols[0]);
+      if (st) { const cell = `<c r="${L}${rn}"${st}/>`;
+        const re = /<c r="([A-Z]{1,3})\d+"/g; let mm, pos = -1; while ((mm = re.exec(inner))) if (ci(mm[1]) > INS) { pos = mm.index; break; }
+        inner = pos >= 0 ? inner.slice(0, pos) + cell + inner.slice(pos) : inner + cell; }
     }
     return inner ? `<row r="${rn}"${at}>${inner}</row>` : `<row r="${rn}"${at}/>`;
   });
