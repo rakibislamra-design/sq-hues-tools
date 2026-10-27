@@ -764,6 +764,11 @@ header.fover::after{background:rgba(239,230,235,.92)}
       const raw = {}; for (const k of ALLC) { if (MAPPED.has(k)) continue; const v = o[k]; if (v === null || v === undefined || v === '') continue; raw[k] = typeof v === 'number' ? Math.round(v * 100) / 100 : str(v); } if (Object.keys(raw).length) batches[b].raw = raw;
       queue.push(b);
     }
+    // Buyer (E), Shade (F) and Fabric type (G) follow the 280 sheet for the same Batch No (280: E Customer, L Shade, N Fabric/Yarn)
+    { const s280 = new Map(); for (const o of rows280) { const h = str(o.H).trim(); if (h && !s280.has(h)) s280.set(h, o); }
+      for (const b in batches) { const o = s280.get(b); if (!o) continue; const x = batches[b]; const fix = {};
+        for (const [col, fld, src] of [['E', 'by', 'E'], ['F', 'sh', 'L'], ['G', 'fb', 'N']]) { const v = str(o[src]).trim(); if (v && v !== str(x[fld]).trim()) { fix[col] = v; x[fld] = v; } }
+        if (Object.keys(fix).length) x.fix280 = fix; } }
     // 102% Req Qty Kg per order item (280 BF), and kg already in process (dyed, not yet RFD)
     const ik = b => str(b).split('|').slice(0, 2).map(x => x.trim()).join(' | ');
     const WIP = new Set(['DYEING', 'FINISHING', 'QAD-INHOUSE', 'QAD-OUTSIDE', 'OUTSIDE DYEING']);
@@ -1655,6 +1660,7 @@ $('xls').addEventListener('click',async()=>{
     const inPl=new Set(lists[k]); const rest=[...C.values()].filter(c=>c.mc===k&&!inPl.has(c.id)).sort((a,b)=>cmpAuto(a,b,true));
     const restRows=[]; for(const c of rest) for(const b of c.m){ const x=D.batches[b]; if(x&&x.row){ restRows.push(x.row); if(S.over[c.id]||String(x.mc0||'').trim()!==k){ const r=row(b); if(r) r.A=k; } } }   // M/C cell = the machine it is listed under
     order.push({mc:k,rows,rest:restRows}); }
+  for(const b in D.batches){ const f=D.batches[b].fix280; if(!f) continue; const r=row(b); if(r) Object.assign(r,f); }   // Buyer / Shade / Fabric as in the 280 sheet
   for(const b in S.cx){const r=row(b); if(!r) continue; for(const L in S.cx[b]) if(!NOEDIT[L]) r[L]=cellOut(L,S.cx[b][L]);}
   for(const b in S.ed){const e=S.ed[b], r=row(b); if(!r) continue; if('pd' in e) r.N=e.pd||''; if('rmk' in e) r.Q=e.rmk; if('hold' in e) r.R=e.hold;}
   calcLoadDays(); for(const b in D.batches){ const r=D.batches[b].row; if(!r) continue; const v=LDAY[b]?'Day '+LDAY[b].n:''; if(v||(ed[r]&&ed[r].A)){ (ed[r]=ed[r]||{}).BH=v; } }
@@ -1664,7 +1670,12 @@ $('xls').addEventListener('click',async()=>{
   try{
     const {out}=await LPEngine.writePlan(JSZip,FILE.buf.slice(0),ed,order);
     $('busy').textContent='';
-    const name=LABEL.replace(/[\\/:*?"<>|]/g,'');
+    // file name carries today's date, e.g. Loading_plan-27th Oct'26.xlsx
+    const td=new Date(), dd=td.getDate(), sfx=(dd%10===1&&dd!==11)?'st':(dd%10===2&&dd!==12)?'nd':(dd%10===3&&dd!==13)?'rd':'th';
+    const today=`${dd}${sfx} ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][td.getMonth()]}'${String(td.getFullYear()).slice(2)}`;
+    let base=LABEL.replace(/[\\/:*?"<>|]/g,'');
+    const dre=/\d{1,2}(?:st|nd|rd|th)?[\s_-]*(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[\s_-]*'?\d{2,4}/i;
+    const name=dre.test(base)?base.replace(dre,today):base.replace(/(\.xlsx?)?$/i,`-${today}.xlsx`);
     if(window.claude&&window.claude.use){
       try{ const dl=await window.claude.use('downloads'); if(dl){ await dl.save({filename:name,data:out}); toast('Saved '+name+' — '+n+' SL planned.'); return; } }
       catch(e){ if(e&&e.code==='declined'){toast('Save cancelled.');return;} toast('Could not save the file here ('+(e&&e.code||'error')+').'); return; }
