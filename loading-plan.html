@@ -1076,9 +1076,10 @@ header.fover::after{background:rgba(239,230,235,.92)}
     const rep = { added: [], addSkipped: [], delDyed: 0, delNotQ: 0, kokGreige: 0, kokKnit: 0, notInKQ: 0, kbl: 0, foc: 0, urgent: 0, aop: 0, lpDate: 0, lpTBC: 0, lpCleared: 0, rows: 0 };
 
     // --- DOC file: 280 and Dye Q
-    log('Opening the DOC 280+217 file…');
-    const dz = await JSZip.loadAsync(docBuf); const dsp = await sheetPaths(dz);
-    const d280n = findSheet(dsp, /^280$/), dqn = findSheet(dsp, /^dye\s*q$/i);
+    // no DOC file → keep the Loading plan's own 280 (no Add Plan, 280 not replaced); the other steps still run
+    log(docBuf ? 'Opening the DOC 280+217 file…' : 'No DOC file — using the 280 already in the Loading plan…');
+    const dz = await JSZip.loadAsync(docBuf || lpBuf); const dsp = await sheetPaths(dz);
+    const d280n = findSheet(dsp, /^280$/), dqn = docBuf ? findSheet(dsp, /^dye\s*q$/i) : null; rep.noDoc = !docBuf; rep.noLine = !lineBuf;
     if (!d280n) throw new Error('The DOC file has no "280" sheet.');
     const dsst = parseSST(dz.file('xl/sharedStrings.xml') ? await dz.file('xl/sharedStrings.xml').async('string') : '');
     log('Reading the DOC 280 sheet…');
@@ -1331,7 +1332,7 @@ header.fover::after{background:rgba(239,230,235,.92)}
 
     // --- assemble the workbook
     log('Saving the updated workbook…');
-    lz.file(mPath, newMaster); lz.file(lsp['280'].path, new280);
+    lz.file(mPath, newMaster); if (docBuf) lz.file(lsp['280'].path, new280);
     if (lz.file('xl/calcChain.xml')) {
       lz.remove('xl/calcChain.xml');
       const rel = 'xl/_rels/workbook.xml.rels'; lz.file(rel, (await lz.file(rel).async('string')).replace(/<Relationship\b[^>]*calcChain[^>]*\/>/g, ''));
@@ -2150,13 +2151,14 @@ function updTake(files){ const left=[]; for(const f of files){ if(!/\.xlsx$/i.te
 function drawUpd(){ const d=$('dlg'); if($('dlgW').hidden||!d.querySelector('.upd')) return;
   const slot=(k,t,sub)=>{ const f=UPD[k]; const use=k==='lp'&&!f&&FILE&&FILE.label===LABEL; return `<label class="us${f||use?' ok':''}" data-k="${k}"><input type="file" accept=".xlsx" hidden data-k="${k}"><b>${t}</b><span>${f?esc(f.name):use?'Use the loaded file · '+esc(LABEL):'Drop here or click to pick'}</span><em>${sub}</em>${f?`<button class="ux" data-x="${k}" title="Remove">×</button>`:''}</label>`; };
   d.querySelector('.upd').innerHTML=slot('lp','1 · Loading plan','yesterday’s file — Master Sheet + 280')+slot('doc','2 · DOC 280+217','280 sheet + Dye Q (Add Plan column)')+slot('line','3 · Line Plan','Batch Wise Line Plan sheet');
-  const can=(UPD.lp||(FILE&&FILE.label===LABEL))&&UPD.doc; $('updGo').disabled=!can; }
+  const can=!!(UPD.lp||(FILE&&FILE.label===LABEL)); $('updGo').disabled=!can;
+  $('updGo').textContent=UPD.doc||UPD.line?'Update':'Load for planning'; }
 async function openUpdate(){
   if(!window.JSZip){toast('The file library did not load. Check the internet connection and reload.');return;}
   if(!FILE||FILE.label!==LABEL) FILE=await IDB.get();
   const d=$('dlg'); d.className='wide';
   d.innerHTML=`<div class="dlgt"><h3 style="color:#664356">⟳ Update the Loading plan</h3><button class="dlgx" id="dlgX" aria-label="Close">×</button></div>
-    <div class="note" style="background:#F4EFF2">Drop the three files (all at once is fine). The planner adds the <b>Add Plan</b> batches from Dye Q, brings in the new <b>280</b>, works out the row formulas, removes dyed batches and those no longer in Dye Q, sets <b>KOK / KBL / Not in KQ</b>, tags <b>FOC · Urgent · AOP</b> in Plan Type and takes <b>Line Plan</b> dyeing dates into BF.</div>
+    <div class="note" style="background:#F4EFF2">Drop the files you have (all at once is fine) — any file left out is simply skipped: <b>only the Loading plan</b> = plan with yesterday's data; <b>no DOC</b> = keep the old 280, no Add Plan; <b>no Line Plan</b> = BF left as it is. The planner adds the <b>Add Plan</b> batches from Dye Q, brings in the new <b>280</b>, works out the row formulas, removes dyed batches and those no longer in Dye Q, sets <b>KOK / KBL / Not in KQ</b>, tags <b>FOC · Urgent · AOP</b> in Plan Type and takes <b>Line Plan</b> dyeing dates into BF.</div>
     <div class="upd"></div><div class="ulog" id="updLog"></div>
     <div class="dlgb"><span class="mut" style="font-size:11.5px">Takes about 10–20 seconds · nothing leaves this computer</span><span><button class="hb2" id="dlgN">Close</button> <button class="okb" id="updGo">Update</button></span></div>`;
   $('dlgW').hidden=false; drawUpd();
@@ -2167,16 +2169,17 @@ async function openUpdate(){
 async function runUpdate(){
   const lg=$('updLog'), go=$('updGo'); go.disabled=true; const t0=Date.now(); const say=m=>{ lg.innerHTML=`<span class="spin"></span>${esc(m)}`; };
   try{
+    if(!UPD.doc&&!UPD.line){ if(UPD.lp){ const f=UPD.lp; UPD.lp=null; $('dlgW').hidden=true; await loadFile(f); } else { $('dlgW').hidden=true; toast('Planning with the loaded file — nothing to update.'); } return; }
     say('Reading the files…');
     const lpBuf=UPD.lp?await UPD.lp.arrayBuffer():FILE.buf.slice(0), lpName=UPD.lp?UPD.lp.name:FILE.label;
-    const docBuf=await UPD.doc.arrayBuffer(), lineBuf=UPD.line?await UPD.line.arrayBuffer():null;
+    const docBuf=UPD.doc?await UPD.doc.arrayBuffer():null, lineBuf=UPD.line?await UPD.line.arrayBuffer():null;
     const r=await LPUpdate.updateLoadingPlan(JSZip,lpBuf,docBuf,lineBuf,{log:say,type:'uint8array'});
     const name=todayName(lpName), rp=r.report; const buf=r.out.buffer.slice(r.out.byteOffset,r.out.byteOffset+r.out.byteLength);
     const li=(k,v)=>`<li><b>${v}</b> ${k}</li>`;
     lg.innerHTML=`<div class="urep"><div class="uh">✓ Updated in ${Math.round((Date.now()-t0)/1000)} s — <b>${esc(name)}</b> · ${rp.rows} batches</div><ul>
-      ${li('added from Dye Q (Add Plan)',rp.added.length)}${rp.addSkipped.length?`<li class="uw">${rp.addSkipped.length} not added: ${esc(rp.addSkipped.slice(0,6).join(' · '))}${rp.addSkipped.length>6?' …':''}</li>`:''}
+      ${rp.noDoc?'<li class="uw">No DOC 280+217 file — old 280 kept, no Add Plan</li>':li('added from Dye Q (Add Plan)',rp.added.length)}${rp.addSkipped.length?`<li class="uw">${rp.addSkipped.length} not added: ${esc(rp.addSkipped.slice(0,6).join(' · '))}${rp.addSkipped.length>6?' …':''}</li>`:''}
       ${li('removed — already dyed',rp.delDyed)}${li('removed — no longer in Dye Q',rp.delNotQ)}
-      ${li('KOK — Greige from (M = P)',rp.kokGreige)}${li('KOK — knit qty (M = D)',rp.kokKnit)}${li('Not in KQ (noted in Workorder Category)',rp.notInKQ)}${li('KBL',rp.kbl)}
+      ${li('KOK — Greige from (M = P)',rp.kokGreige)}${li('KOK — knit qty (M = D)',rp.kokKnit)}${li('Not in KQ (noted in Remarks)',rp.notInKQ)}${li('KBL',rp.kbl)}
       ${li('FOC added to Plan Type',rp.foc)}${li('Urgent added',rp.urgent)}${li('AOP added',rp.aop)}
       ${lineBuf?li('Line Plan dyeing dates in BF',rp.lpDate)+li('Line Plan-TBC (no date yet)',rp.lpTBC)+(rp.lpCleared?li('old Line Plan dates cleared',rp.lpCleared):''):'<li class="uw">No Line Plan file — BF left as it was</li>'}
       </ul><button class="hb2" id="updDl">⤓ Download ${esc(name)}</button></div>`;
