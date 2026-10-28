@@ -368,6 +368,8 @@ header.fover::after{background:rgba(239,230,235,.92)}
 .urep .uh{font-weight:600;color:#3c7a5a;margin-bottom:4px}.urep ul{margin:0 0 8px;padding-left:18px;columns:2;column-gap:24px;font-size:12px}.urep li{margin:1px 0}.uw{color:#AF4F5A}
 #dlg .okb{background:#664356;color:#fff;border:0;border-radius:6px;padding:6px 16px;font:600 13px var(--f-ui);cursor:pointer}#dlg .okb:disabled{opacity:.4;cursor:default}
 #dlg .dlgb{display:flex;justify-content:space-between;align-items:center;gap:10px}
+#rtip{position:fixed;z-index:60;pointer-events:none;background:#fff;border:1px solid #D9CBD2;border-left:3px solid #664356;border-radius:6px;box-shadow:0 6px 18px rgba(40,20,30,.16);padding:6px 10px;font:12px var(--f-ui);color:#1F1F1F;max-width:420px}
+#rtip div{display:flex;gap:10px;align-items:baseline;padding:1px 0}#rtip span{color:var(--muted);font-size:11px;min-width:76px}#rtip b{font-weight:600}#rtip b.lp{color:#664356}
 /* quick type chips */
 .qf{display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap;margin-left:10px}
 .qfc{font:600 12px var(--f-ui);border:1px solid var(--hdr-line);background:var(--surface);color:var(--fg);border-radius:14px;padding:3px 10px;cursor:pointer;white-space:nowrap;display:inline-flex;gap:5px;align-items:baseline}
@@ -1280,7 +1282,7 @@ header.fover::after{background:rgba(239,230,235,.92)}
         else if (o.BF !== undefined && o.BF !== '') { set.BF = ''; rep.lpCleared++; }
       }
       // a batch with a Line Plan date (or Line Plan-TBC) in BF shows LINE PLAN in Plan Type
-      { const bf = 'BF' in set ? set.BF : o.BF; if ((typeof bf === 'number' && bf > 0) || (typeof bf === 'string' && /line\s*plan/i.test(bf))) { const n = add(C, 'LINE PLAN', true); if (n !== C.trim()) rep.lpTag = (rep.lpTag || 0) + 1; C = n; } }
+      { const bf = 'BF' in set ? set.BF : o.BF; if ((typeof bf === 'number' && bf > 0) || (typeof bf === 'string' && /line\s*plan/i.test(bf))) { const n = add(C, 'LINE PLAN', false); if (n !== C.trim()) rep.lpTag = (rep.lpTag || 0) + 1; C = n; } }
       if (C !== (o.C == null ? '' : String(o.C))) set.C = C;
       d.O = O;   // O written as a value only when it carries a note, else =AL
     }
@@ -1573,7 +1575,8 @@ function isHold(x){ return !!String(x.hold||'').trim()||!!holdText(x); }
 function box(c,sl,alt,ns){
   const l=loadPct(c);
   const lead=sl?`<span class="hdl" title="Drag to reorder">⋮⋮</span><span class="slw"><input class="sn" type="number" min="1" value="${sl}" aria-label="SL"><span class="dot${c.can?' on':''}"></span></span>`:`<span class="tick"></span><span class="slw"><span class="ns" title="Suggested serial (Auto-order rules)">${ns||''}</span><span class="dot${c.can?' on':''}"></span></span>`;
-  const tip=`${c.can?'Can dye':'Not ready: '+(c.body.rm||'')}${c.m.length===2?' · body + gusset':''}${c.outside?' · partner '+c.outside:''} · combo ${fmt(c.q)} kg${l!=null?' · load '+l.toFixed(0)+'%':''} · click to ${sl?'take out of':'add to'} the plan`;
+  const po=[...new Set(c.p.map(x=>x.po).filter(Boolean))].join(' / '), lpd=[...new Set(c.p.map(x=>dshort(x.lp)||x.lpt).filter(Boolean))].join(' / ');
+  const tip=`Customer PO: ${po||'–'}\nLine Plan: ${lpd||'–'}\n${c.can?'Can dye':'Not ready: '+(c.body.rm||'')}${c.m.length===2?' · body + gusset':''}${c.outside?' · partner '+c.outside:''} · combo ${fmt(c.q)} kg${l!=null?' · load '+l.toFixed(0)+'%':''} · click to ${sl?'take out of':'add to'} the plan`;
   const okp=!sl&&c.p.every(x=>x.kn==='KOK'&&String(x.ld||'').trim()&&!isHold(x));
   return `<div class="cb${c.id===KF?' kf':''}${sl?' pl':''}${okp?' okp':''}${SELSET.has(c.id)?' msel':''}${c.can?' can':''}${alt?' alt':''}" data-id="${esc(c.id)}"${sl?' draggable="true"':''} title="${esc(tip)}"><div class="lead">${lead}</div><div class="lines">${c.p.map(x=>line(x,c)).join('')}</div></div>`;
 }
@@ -2039,6 +2042,15 @@ $('qf').addEventListener('click',e=>{ const b=e.target.closest('[data-q]'); if(!
   if(e.ctrlKey||e.metaKey){ QF.has(k)?QF.delete(k):QF.add(k); }        // Ctrl+click: pick several
   else { const only=QF.size===1&&QF.has(k); QF.clear(); if(!only) QF.add(k); }
   store.set('mclp-qf',[...QF]); refreshView(); });
+// hover a row: small card with Customer PO and Line Plan date
+(()=>{ const tp=document.createElement('div'); tp.id='rtip'; tp.hidden=true; document.body.appendChild(tp); let cur=null, t=null;
+  const show=(cb,e)=>{ const c=C.get(cb.dataset.id); if(!c) return; const po=[...new Set(c.p.map(x=>x.po).filter(Boolean))], lp=[...new Set(c.p.map(x=>dshort(x.lp)||x.lpt).filter(Boolean))];
+    tp.innerHTML=`<div><span>Customer PO</span><b>${esc(po.join(' / ')||'–')}</b></div><div><span>Line Plan</span><b class="${lp.length?'lp':''}">${esc(lp.join(' / ')||'–')}</b></div>`; tp.hidden=false; place(e); };
+  const place=e=>{ const w=tp.offsetWidth,h=tp.offsetHeight; let x=e.clientX+14, y=e.clientY-h-12; if(y<6) y=e.clientY+18; if(x+w>innerWidth-6) x=innerWidth-w-6; tp.style.left=x+'px'; tp.style.top=y+'px'; };
+  $('list').addEventListener('mousemove',e=>{ const cb=e.target.closest('.cb[data-id]'); if(cb!==cur){ cur=cb; tp.hidden=true; clearTimeout(t); if(cb) t=setTimeout(()=>show(cb,e),250); return; } if(!tp.hidden) place(e); });
+  $('list').addEventListener('mouseleave',()=>{ cur=null; clearTimeout(t); tp.hidden=true; });
+  $('list').addEventListener('scroll',()=>{ tp.hidden=true; cur=null; },{passive:true});
+})();
 // drag any popup box by its title bar
 (()=>{ const d=$('dlg'), w=$('dlgW'); let st=null;
   new MutationObserver(()=>{ if(w.hidden){ d.style.transform=''; d._dx=d._dy=0; } }).observe(w,{attributes:true,attributeFilter:['hidden']});
