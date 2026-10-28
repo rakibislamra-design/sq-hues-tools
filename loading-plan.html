@@ -952,7 +952,7 @@ header.fover::after{background:rgba(239,230,235,.92)}
     const out = await zip.generateAsync({ type: typeof window === 'undefined' ? 'nodebuffer' : 'blob', compression: 'DEFLATE', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     return { out, rows: Object.keys(E).length, order, slots };
   }
-  const api = { writePlan, parseLoadingPlan, mc, mcKey, MCS, parseB };
+  const api = { writePlan, parseLoadingPlan, mc, mcKey, MCS, parseB, buildModel };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.LPEngine = api;
 })(typeof window !== 'undefined' ? window : globalThis);
 
@@ -1113,8 +1113,8 @@ header.fover::after{background:rgba(239,230,235,.92)}
 
     // --- one pass over the DOC 280: new sheet XML + lookups
     log('Copying the 280 sheet and building lookups…');
-    const NEED = new Set(['A', 'D', 'E', 'F', 'H', 'K', 'L', 'N', 'P', 'R', 'W', 'X', 'AF', 'AG', 'AO', 'AS', 'BC', 'BF', 'BL', 'BM', 'BN', 'BP', 'BQ', 'CR', 'CU', 'DB', 'DC']);
-    const byH = new Map(), byBC = new Map(), blSum = new Map(), blCnt = new Map();
+    const NEED = new Set(['A', 'BB', 'G', 'D', 'E', 'F', 'H', 'K', 'L', 'N', 'P', 'R', 'W', 'X', 'AF', 'AG', 'AO', 'AS', 'BC', 'BF', 'BL', 'BM', 'BN', 'BP', 'BQ', 'CR', 'CU', 'DB', 'DC']);
+    const all280 = [], byH = new Map(), byBC = new Map(), blSum = new Map(), blCnt = new Map();
     const parts = []; let last280 = 0;
     { const a = d280.indexOf('<sheetData>'), b = d280.lastIndexOf('</sheetData>'); const body = d280.slice(a + 11, b);
       ROW_RE.lastIndex = 0; let m;
@@ -1131,6 +1131,7 @@ header.fover::after{background:rgba(239,230,235,.92)}
         }
         parts.push(`<row${rattrs}>${cells}</row>`);
         if (r < 3) continue;
+        if (lineBuf) all280.push(vals);
         const h = vals.H; if (typeof h === 'string' && h.trim()) { const k = lc(h); if (!byH.has(k)) byH.set(k, vals); }
         if (vals.BC !== undefined && !isE(vals.BC)) { const k = lc(txt(vals.BC)); if (!byBC.has(k)) byBC.set(k, vals.BF); }
         if (vals.BL !== undefined && !isE(vals.BL)) { const k = lc(txt(vals.BL)); blCnt.set(k, (blCnt.get(k) || 0) + 1); if (typeof vals.BN === 'number') blSum.set(k, (blSum.get(k) || 0) + vals.BN); }
@@ -1249,6 +1250,10 @@ header.fover::after{background:rgba(239,230,235,.92)}
       d.c = c;
     }
 
+    // body/gusset partners (same rules as the planner) — only needed for the Line Plan step
+    let PM = null;
+    if (lineBuf) { try { const LPE = root.LPEngine || (typeof require !== 'undefined' ? require('./lpengine.js') : null); if (LPE && LPE.buildModel) PM = LPE.buildModel(all280.map(v => ({ E: v.E, F: v.F, G: v.G, H: typeof v.H === 'string' ? v.H.trim() : v.H, L: v.L, N: v.N, W: typeof v.W === 'number' ? v.W : 0, BB: v.BB }))); } catch (e) { PM = null; } }
+    all280.length = 0;
     // --- 5 delete: dyed (AI date) and not in Dye Q (AM not a number); MC rows stay
     const keep = [];
     for (const d of data) {
@@ -1277,7 +1282,9 @@ header.fover::after{background:rgba(239,230,235,.92)}
       if (/aop/i.test(txt(isE(o.F) ? '' : o.F))) { const n = add(C, 'AOP', false); if (n !== C.trim()) rep.aop++; C = n; }
       // line plan
       if (lineBuf) {
-        const k = lc(o.D.trim());
+        let k = lc(o.D.trim());
+        // a gusset (or body) not on the line plan takes its partner's line plan date
+        if (!lineMap.has(k) && PM) { const pb = PM.partner(o.D.trim()); if (pb && lineMap.has(lc(pb))) { k = lc(pb); rep.lpPartner = (rep.lpPartner || 0) + 1; } }
         if (lineMap.has(k)) { const dt = lineMap.get(k); if (typeof dt === 'number') { set.BF = Math.floor(dt); rep.lpDate++; } else { set.BF = 'Line Plan-TBC'; rep.lpTBC++; } }
         else if (o.BF !== undefined && o.BF !== '') { set.BF = ''; rep.lpCleared++; }
       }
@@ -2203,7 +2210,7 @@ async function runUpdate(){
       ${li('removed — already dyed',rp.delDyed)}${li('removed — no longer in Dye Q',rp.delNotQ)}
       ${li('KOK — Greige from (M = P)',rp.kokGreige)}${li('KOK — knit qty (M = D)',rp.kokKnit)}${li('Not in KQ (noted in Remarks)',rp.notInKQ)}${li('KBL',rp.kbl)}
       ${li('FOC added to Plan Type',rp.foc)}${li('Urgent added',rp.urgent)}${li('AOP added',rp.aop)}${li('LINE PLAN added to Plan Type',rp.lpTag||0)}
-      ${lineBuf?li('Line Plan dyeing dates in BF',rp.lpDate)+li('Line Plan-TBC (no date yet)',rp.lpTBC)+(rp.lpCleared?li('old Line Plan dates cleared',rp.lpCleared):''):'<li class="uw">No Line Plan file — BF left as it was</li>'}
+      ${lineBuf?li('Line Plan dyeing dates in BF',rp.lpDate)+li('Line Plan-TBC (no date yet)',rp.lpTBC)+(rp.lpPartner?li('gusset/body took its partner’s Line Plan',rp.lpPartner):'')+(rp.lpCleared?li('old Line Plan dates cleared',rp.lpCleared):''):'<li class="uw">No Line Plan file — BF left as it was</li>'}
       </ul><button class="hb2" id="updDl">⤓ Download ${esc(name)}</button></div>`;
     $('updDl').onclick=()=>{ $('xls').click(); };   // same as Export: the updated file with the re-ordered plan
     UPD.lp=UPD.doc=UPD.line=null;
