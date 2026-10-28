@@ -487,7 +487,7 @@ header.fover::after{background:rgba(239,230,235,.92)}
       <button class="qi" data-act="export"><span>⤓</span>Export File<em>Loading plan with your plan</em></button>
       <button class="qi" data-act="update"><span>⟳</span>Update File<em>Loading plan + DOC 280+217 + Line Plan</em></button>
       <div class="qsep"></div><a class="qi" href="index.html"><span>←</span>SQ Hues Tools</a>
-      <div class="qver">Version 28 Oct 16:37</div>
+      <div class="qver">Version 28 Oct 16:54</div>
     </div>
   </div>
   <div class="hcol">
@@ -2129,10 +2129,10 @@ $('xls').addEventListener('click',async()=>{
   let n=0;
   const order=[]; order.del=[]; for(const c of D.combos) if(S.del[c.id]) for(const b of c.m){ const x=D.batches[b]; if(x&&x.row) order.del.push(x.row); }
   const lists={}; for(const k of MCS) lists[k]=(S.plan[k]||[]).filter(id=>C.has(id));
-  for(const k in lists){ const rows=[]; lists[k].forEach((id,i)=>{const c=C.get(id); n++; const cpd=c.p.map(x=>x.pd).filter(Boolean).sort()[0]||''; for(const b of c.m){const r=row(b); if(!r) continue; r.B=i+1; r.A=k; if(!D.batches[b].pd&&cpd) r.N=cpd;   /* partner of a planned combo gets the same Plan Date */ rows.push(D.batches[b].row);}});
+  for(const k in lists){ const rows=[]; lists[k].forEach((id,i)=>{const c=C.get(id); n++; const cpd=c.p.map(x=>x.pd).filter(Boolean).sort()[0]||''; for(const b of c.m){const r=row(b); if(!r) continue; r.B=i+1;   /* one SL per combo: body and gusset carry the same number */ r.A=k; if(!D.batches[b].pd&&cpd) r.N=cpd;   /* partner of a planned combo gets the same Plan Date */ rows.push(D.batches[b].row);}});
     // not-planned combos of this machine follow, in the Not planned order (FOC → Hanger → Line Plan old→new → AOP → Urgent → other → rest)
     const inPl=new Set(lists[k]); const rest=[...C.values()].filter(c=>c.mc===k&&!inPl.has(c.id)).sort((a,b)=>cmpAuto(a,b,true));
-    const restRows=[]; for(const c of rest) for(const b of c.m){ const x=D.batches[b]; if(x&&x.row){ restRows.push(x.row); if(S.over[c.id]||String(x.mc0||'').trim()!==k){ const r=row(b); if(r) r.A=k; } } }   // M/C cell = the machine it is listed under
+    const restRows=[]; for(const c of rest) for(const b of c.m){ const x=D.batches[b]; if(x&&x.row){ restRows.push(x.row); if(String(x.sl||'').trim()){ const r=row(b); if(r) r.B=''; }   /* not planned: no SL */ if(S.over[c.id]||String(x.mc0||'').trim()!==k){ const r=row(b); if(r) r.A=k; } } }   // M/C cell = the machine it is listed under
     order.push({mc:k,rows,rest:restRows}); }
   for(const b in D.batches){ const f=D.batches[b].fix280; if(!f) continue; const r=row(b); if(r) Object.assign(r,f); }   // Buyer / Shade / Fabric as in the 280 sheet
   for(const b in S.cx){const r=row(b); if(!r) continue; for(const L in S.cx[b]) if(!NOEDIT[L]){ const fv=S.cx[b][L]; r[L]=String(fv).startsWith('=')?{f:fxExcel(fv),v:(()=>{const t=cellText(L,D.batches[b]);return isNumTxt(t)?+String(t).replace(/,/g,''):t;})()}:cellOut(L,fv); } }
