@@ -1057,12 +1057,14 @@ header.fover::after{background:rgba(239,230,235,.92)}
       if (typeof v === 'boolean') return `<c r="${ref}"${sa} t="b">${fx}<v>${v ? 1 : 0}</v></c>`;
       return `<c r="${ref}"${sa} t="str">${fx}<v>${xesc(v == null ? '' : v)}</v></c>`;
     }
+    if (v === EMPTY) return `<c r="${ref}"${sa} t="s"><v>${EMPTY.idx}</v></c>`;
     if (v === undefined || v === null || v === '') return `<c r="${ref}"${sa}/>`;
     if (isE(v)) return `<c r="${ref}"${sa} t="e"><v>${xesc(v.e)}</v></c>`;
     if (typeof v === 'number') return `<c r="${ref}"${sa}><v>${v}</v></c>`;
     if (typeof v === 'boolean') return `<c r="${ref}"${sa} t="b"><v>${v ? 1 : 0}</v></c>`;
     return `<c r="${ref}"${sa} t="inlineStr"><is><t xml:space="preserve">${xesc(v)}</t></is></c>`;
   }
+  const EMPTY = { empty: true };   // an empty-text cell (not a blank cell)
   const ROW_RE = /<row\b([^>]*?)(?:\/>|>([\s\S]*?)<\/row>)/g;
   const CELL_RE = /<c r="([A-Z]{1,3})(\d+)"([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g;
   function splitCells(inner) { const out = []; CELL_RE.lastIndex = 0; let m; while ((m = CELL_RE.exec(inner || ''))) out.push({ col: m[1], row: +m[2], attrs: m[3], inner: m[4] }); return out; }
@@ -1089,7 +1091,11 @@ header.fover::after{background:rgba(239,230,235,.92)}
     log('Opening the Loading plan file…');
     const lz = await JSZip.loadAsync(lpBuf); const lsp = await sheetPaths(lz);
     if (!lsp['Master Sheet'] || !lsp['280']) throw new Error('The Loading plan file needs a "Master Sheet" and a "280" sheet.');
-    const lsst = parseSST(lz.file('xl/sharedStrings.xml') ? await lz.file('xl/sharedStrings.xml').async('string') : '');
+    let sstXml = lz.file('xl/sharedStrings.xml') ? await lz.file('xl/sharedStrings.xml').async('string') : '';
+    const lsst = parseSST(sstXml);
+    // an empty text is kept as a shared "" (like Excel's paste-values), so =AL / =AC show blank instead of 0-Jan
+    EMPTY.idx = lsst.indexOf('');
+    if (EMPTY.idx < 0 && sstXml) { EMPTY.idx = lsst.length; sstXml = sstXml.replace(/<\/sst>\s*$/, '<si><t></t></si></sst>').replace(/uniqueCount="(\d+)"/, (m, n) => `uniqueCount="${+n + 1}"`); lz.file('xl/sharedStrings.xml', sstXml); }
 
     // styles of the old 280 sheet (per column: rows 1, 2 and data) + its head / tail
     const old280 = await lz.file(lsp['280'].path).async('uint8array');
@@ -1265,15 +1271,17 @@ header.fover::after{background:rgba(239,230,235,.92)}
       // tags in Plan Type (C)
       let C = o.C == null ? '' : String(o.C);
       if (/foc/i.test(txt(isE(c.O) ? '' : c.O))) { const n = add(C, 'FOC', true); if (n !== C.trim()) rep.foc++; C = n; }
-      if (/urgent/i.test(txt(isE(c.BQ280) || c.BQ280 == null ? '' : c.BQ280))) { const n = add(C, 'Urgent', false); if (n !== C.trim()) rep.urgent++; C = n; }
+      if (/urgent/i.test(txt(isE(c.BQ280) || c.BQ280 == null ? '' : c.BQ280))) { const n = add(C, 'URGENT', false); if (n !== C.trim()) rep.urgent++; C = n; }
       if (/aop/i.test(txt(isE(o.F) ? '' : o.F))) { const n = add(C, 'AOP', false); if (n !== C.trim()) rep.aop++; C = n; }
-      if (C !== (o.C == null ? '' : String(o.C))) set.C = C;
       // line plan
       if (lineBuf) {
         const k = lc(o.D.trim());
         if (lineMap.has(k)) { const dt = lineMap.get(k); if (typeof dt === 'number') { set.BF = Math.floor(dt); rep.lpDate++; } else { set.BF = 'Line Plan-TBC'; rep.lpTBC++; } }
         else if (o.BF !== undefined && o.BF !== '') { set.BF = ''; rep.lpCleared++; }
       }
+      // a batch with a Line Plan date (or Line Plan-TBC) in BF shows LINE PLAN in Plan Type
+      { const bf = 'BF' in set ? set.BF : o.BF; if ((typeof bf === 'number' && bf > 0) || (typeof bf === 'string' && /line\s*plan/i.test(bf))) { const n = add(C, 'LINE PLAN', true); if (n !== C.trim()) rep.lpTag = (rep.lpTag || 0) + 1; C = n; } }
+      if (C !== (o.C == null ? '' : String(o.C))) set.C = C;
       d.O = O;   // O written as a value only when it carries a note, else =AL
     }
     // AW (Total Q per order+fabric+shade), AX, AY, AZ, BA — on the rows that stay
@@ -1293,6 +1301,7 @@ header.fover::after{background:rgba(239,230,235,.92)}
     // --- write the Master Sheet
     log('Writing the Master Sheet…');
     const VALCOLS = ['S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'AA', 'AB', 'AC', 'AD', 'AE', 'AF', 'AG', 'AH', 'AI', 'AJ', 'AK', 'AL', 'AM', 'AN', 'AO', 'AP', 'AQ', 'AR', 'AS', 'AT', 'AU', 'AV', 'AW', 'AX', 'AY', 'AZ', 'BA', 'BB', 'BC', 'BD'];
+    const DATECOLS = new Set(['Z', 'AH', 'AN', 'AS']);
     const FCOL = { H: 'AK', K: 'AD', L: 'AE', O: 'AL', P: 'AC' };
     let next = 4; const out = []; const head3 = R.filter(x => x.r < 4);
     const rowsXml = [];
@@ -1303,7 +1312,8 @@ header.fover::after{background:rgba(239,230,235,.92)}
       if (d.batch) {
         const c = d.c, o = d.v;
         for (const k of ['E', 'F', 'G']) if (o[k] !== undefined) want[k] = { v: o[k] };
-        for (const k of VALCOLS) want[k] = { v: c[k] };
+        // an empty result stays an empty text (so =AL / =AC show blank, not 0-Jan); a 0 in a date column is left blank
+        for (const k of VALCOLS) { let v = c[k]; if (DATECOLS.has(k) && v === 0) v = ''; want[k] = { v: v === '' ? EMPTY : v }; }
         for (const k in FCOL) want[k] = { v: c[k], f: FCOL[k] + nr };
         if (d.O !== c.O) want.O = { v: d.O };
         for (const k in d.set) { const s = d.set[k]; want[k] = (s && typeof s === 'object' && 'f' in s) ? { v: s.v, f: s.f + nr } : { v: s }; }
@@ -2180,12 +2190,14 @@ async function runUpdate(){
       ${rp.noDoc?'<li class="uw">No DOC 280+217 file — old 280 kept, no Add Plan</li>':li('added from Dye Q (Add Plan)',rp.added.length)}${rp.addSkipped.length?`<li class="uw">${rp.addSkipped.length} not added: ${esc(rp.addSkipped.slice(0,6).join(' · '))}${rp.addSkipped.length>6?' …':''}</li>`:''}
       ${li('removed — already dyed',rp.delDyed)}${li('removed — no longer in Dye Q',rp.delNotQ)}
       ${li('KOK — Greige from (M = P)',rp.kokGreige)}${li('KOK — knit qty (M = D)',rp.kokKnit)}${li('Not in KQ (noted in Remarks)',rp.notInKQ)}${li('KBL',rp.kbl)}
-      ${li('FOC added to Plan Type',rp.foc)}${li('Urgent added',rp.urgent)}${li('AOP added',rp.aop)}
+      ${li('FOC added to Plan Type',rp.foc)}${li('Urgent added',rp.urgent)}${li('AOP added',rp.aop)}${li('LINE PLAN added to Plan Type',rp.lpTag||0)}
       ${lineBuf?li('Line Plan dyeing dates in BF',rp.lpDate)+li('Line Plan-TBC (no date yet)',rp.lpTBC)+(rp.lpCleared?li('old Line Plan dates cleared',rp.lpCleared):''):'<li class="uw">No Line Plan file — BF left as it was</li>'}
       </ul><button class="hb2" id="updDl">⤓ Download ${esc(name)}</button></div>`;
-    $('updDl').onclick=()=>{ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1500); };
+    $('updDl').onclick=()=>{ $('xls').click(); };   // same as Export: the updated file with the re-ordered plan
     UPD.lp=UPD.doc=UPD.line=null;
-    await loadBuf(name,buf,`Updated file loaded — ${rp.rows} batches. Plan as usual, then Export.`);
+    await loadBuf(name,buf,`Updated file loaded — ${rp.rows} batches, planned rows re-ordered by the Auto-order rules. Plan as usual, then Export.`);
+    // planned rows follow today's data: Auto-order on every machine (FOC → Hanger → Line Plan by date → AOP → Urgent → rest)
+    for(const k of MCS){ const L=S.plan[k]||[]; L.sort((a,b)=>cmpAuto(C.get(a),C.get(b))); } save(); refreshView();
   }catch(err){ console.error(err); lg.innerHTML=`<div class="uw">Could not update: ${esc(err.message||err)}</div>`; go.disabled=false; }
 }
 async function loadFile(f){ return loadBuf(f.name, await f.arrayBuffer()); }
