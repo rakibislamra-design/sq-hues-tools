@@ -246,6 +246,58 @@ td.fail.hov:hover{background:var(--red-soft)}
 .linkbtn{background:none;border:none;color:var(--accent);font:600 13px var(--f-body);padding:4px 6px;cursor:pointer;text-decoration:underline}
 .spark{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 14px}
 .spark svg{display:block;width:100%;height:70px}
+/* ---- Ground rules panel: docked right on wide screens, drawer otherwise ---- */
+.rtab{position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:40;writing-mode:vertical-rl;background:var(--q);color:#fff;border:0;border-radius:10px 0 0 10px;padding:16px 9px;font:600 13px/1 var(--f-display);letter-spacing:.06em;cursor:pointer;display:flex;align-items:center;gap:8px;box-shadow:-4px 0 18px rgba(43,32,39,.18)}
+.rtab b{writing-mode:horizontal-tb;background:#fff;color:var(--q);border-radius:999px;font-size:11px;padding:2px 6px}
+.rules{position:fixed;top:0;right:0;bottom:0;z-index:45;width:min(360px,100vw);background:var(--surface);border-left:1px solid var(--line);box-shadow:-16px 0 40px rgba(43,32,39,.2);transform:translateX(105%);transition:transform .25s ease;display:flex;flex-direction:column}
+.rules.open{transform:none}
+.rscrim{position:fixed;inset:0;z-index:44;background:rgba(28,22,25,.35)}
+.rules .rh{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:16px 18px 12px;border-bottom:3px solid var(--q)}
+.rules .rh h2{margin:0;font:700 17px/1.2 var(--f-display)}
+.rules .rh small{display:block;color:var(--muted);font:500 11.5px/1.3 var(--f-mono);margin-top:3px}
+.rules .rx{border:1px solid var(--line);background:transparent;color:var(--fg);border-radius:8px;width:30px;height:30px;cursor:pointer;font-size:16px}
+.rules .rb{overflow-y:auto;overflow-x:hidden;min-width:0;padding:4px 18px 24px;font-size:13.5px;line-height:1.45}
+.rules details{border-bottom:1px solid var(--line);padding:10px 0}
+.rules summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;font:700 13.5px/1.3 var(--f-display);color:var(--fg)}
+.rules summary::-webkit-details-marker{display:none}
+.rules summary .n{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:6px;background:var(--q);color:#fff;font-size:11px;flex:none}
+.rules summary::after{content:"›";margin-left:auto;color:var(--muted);transition:transform .2s;font-size:16px}
+.rules details[open] summary::after{transform:rotate(90deg)}
+.rules .in{padding-top:8px;display:grid;gap:7px}
+.rules p{margin:0}
+.rules .muted{color:var(--muted)}
+.rules code,.rules .k{font-family:var(--f-mono);font-size:11.5px;background:var(--q5);border:1px solid var(--line);border-radius:5px;padding:1px 5px;white-space:nowrap}
+.rules table{border-collapse:collapse;width:100%;font-size:12.5px;table-layout:fixed}
+.rules td code,.rules p code{white-space:normal;overflow-wrap:anywhere}
+.rules td{overflow-wrap:anywhere}
+.rules td{padding:4px 6px;border-bottom:1px solid var(--q5);vertical-align:top}
+.rules td:first-child{width:58px;font:600 11.5px var(--f-mono);color:var(--q80)}
+.rules tr.own td{background:var(--q5)}
+.rules tr.own td:first-child{color:var(--q)}
+.rules .tagw{font:600 10px/1 var(--f-mono);color:#fff;background:var(--q);border-radius:4px;padding:2px 4px;margin-left:4px;vertical-align:1px}
+.rules .tagf{font:600 10px/1 var(--f-mono);color:var(--q);border:1px solid var(--q60);border-radius:4px;padding:1px 4px;margin-left:4px;vertical-align:1px}
+.chk{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.chk li{display:flex;gap:8px;align-items:flex-start}
+.chk code{white-space:normal;word-break:break-all}
+.chk li i{flex:none;width:17px;height:17px;border-radius:50%;border:1.5px solid var(--q60);margin-top:1px;display:grid;place-items:center;font-style:normal;font-size:10px;color:#fff}
+.chk li.ok i{background:var(--blue);border-color:var(--blue)}
+.chk li.ok i::before{content:"✓"}
+.chk li.bad i{background:var(--red);border-color:var(--red)}
+.chk li.bad i::before{content:"!"}
+.chk li.bad span{color:var(--red)}
+.sw{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.sw div{border-radius:8px;height:34px;display:flex;align-items:flex-end;padding:3px 5px;font:600 9.5px/1.1 var(--f-mono);color:#fff}
+.sw div.lt{color:#2B2027}
+.leg{display:grid;gap:5px}
+.leg span{display:flex;align-items:center;gap:8px}
+.leg span::before{content:"";width:14px;height:10px;border-radius:3px;background:var(--c)}
+.dont li{margin-bottom:3px}
+.dont{margin:0;padding-left:18px}
+@media (min-width:1560px){
+  body.rdock{padding-right:350px}
+  .rules.dock{transform:none;box-shadow:none;top:20px;bottom:20px;right:20px;width:330px;border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  body.rdock .rtab, body.rdock .rscrim{display:none}
+}
 </style>
 
 <div class="wrap">
@@ -304,6 +356,9 @@ td.fail.hov:hover{background:var(--red-soft)}
     <div class="panel">
       <label class="f" for="runDate">Report date (used in file name)
         <input type="date" id="runDate">
+      </label>
+      <label class="f" for="kpkFrom" title="M &amp; S - T61 (KPK) lines without PO: RFD qty from DOC sheet 280 is counted from this RFD date onward">KPK black/white · count RFD from
+        <input type="date" id="kpkFrom">
       </label>
       <div><div class="tag">Output</div><div class="outname" id="outName">—</div></div>
     </div>
@@ -386,6 +441,109 @@ td.fail.hov:hover{background:var(--red-soft)}
   <footer>Excel recalculates every formula when you open the updated file. Check the Buyer Wise OTT Hit Rate MTD figures after opening it.</footer>
 </div>
 
+<button type="button" class="rtab" id="rTab" aria-controls="rules" aria-expanded="false">Ground rules <b id="rTabN">0/6</b></button>
+<div class="rscrim" id="rScrim" hidden></div>
+<aside class="rules" id="rules" aria-label="Ground rules for updating the OTT tracker">
+  <div class="rh"><div><h2>Ground rules</h2><small>Read before every OTT update</small></div><button type="button" class="rx" id="rClose" aria-label="Close">✕</button></div>
+  <div class="rb">
+    <details open><summary><span class="n">✓</span>Ready-to-run check</summary><div class="in">
+      <p class="muted">Ticks itself as you add the files.</p>
+      <ul class="chk" id="rChk">
+        <li data-c="fp"><i></i><span>Fabric Plan has sheet <code>Fab Plan-Final</code></span></li>
+        <li data-c="fpx"><i></i><span>Also has <code>Buyer Wise OTT Hit Rate</code> and <code>Date Wise Pivot -Hues</code></span></li>
+        <li data-c="fpn"><i></i><span>File is yesterday's output: <code>Fabric_Plan_&lt;Mon&gt;&lt;YY&gt;-Hues_Feedback-…_SQ.xlsx</code></span></li>
+        <li data-c="doc"><i></i><span>DOC file has sheet <code>217</code></span></li>
+        <li data-c="docn"><i></i><span>DOC file is today's <code>DOC -280+217 …xlsx</code></span></li>
+        <li data-c="date"><i></i><span>Report date is today, not in the future</span></li>
+      </ul>
+    </div></details>
+
+    <details open><summary><span class="n">1</span>Files you need</summary><div class="in">
+      <p><b>Box 1: Fabric Plan</b>: the last updated file (download it with the button above). Must be <code>.xlsx</code>, not <code>.xlsb</code> or <code>.xls</code>.</p>
+      <p><b>Box 2: DOC -280+217</b>: today's master, saved <b>in Excel with values</b> (open it, then press Save once). The tool reads only sheet <code>217</code>.</p>
+      <p class="muted">One file per box. Close both files in Excel before you upload.</p>
+    </div></details>
+
+    <details><summary><span class="n">2</span>Fixed names: don't rename</summary><div class="in">
+      <p>Sheet names, in this order:</p>
+      <p><code>Buyer Wise OTT Hit Rate</code> → <code>Fab Plan-Final</code> → <code>Date Wise Pivot -Hues</code></p>
+      <p>DOC master: sheet <code>217</code> (other sheets aren't read).</p>
+      <p>Fab Plan-Final: headers in rows 1–2, <b>data from row 3</b>. Column <code>A</code> (Buyer) must be filled on every row, because the data range ends at the last filled A cell.</p>
+    </div></details>
+
+    <details><summary><span class="n">3</span>Fixed columns: Fab Plan-Final</summary><div class="in">
+      <p class="muted">Don't insert, delete or move columns between A and AX. <span class="tagw">TOOL</span> marks columns the tool writes, so don't type in them. <span class="tagf">KEY</span> marks inputs the tool reads.</p>
+      <table>
+        <tr><td>A</td><td>Buyer<span class="tagf">KEY</span></td></tr>
+        <tr><td>I</td><td>Article<span class="tagf">KEY</span></td></tr>
+        <tr><td>J</td><td>Colour<span class="tagf">KEY</span></td></tr>
+        <tr><td>L</td><td>Req qty (plan)<span class="tagf">KEY</span></td></tr>
+        <tr class="own"><td>M</td><td>RFD qty: Step 2 sets <code>=L</code>, Step 3 fills Psbl to RFD, oldest agreed date first<span class="tagw">TOOL</span></td></tr>
+        <tr><td>O</td><td>Recovered qty<span class="tagf">KEY</span></td></tr>
+        <tr><td>P</td><td>Balance = M − L + O (keep the formula)</td></tr>
+        <tr><td>Q</td><td>PO<span class="tagf">KEY</span>. <b>KPK</b> lines (buyer "M &amp; S - T61 (KPK)" or "T61-KPK") with no PO are KPK black/white: M comes from DOC sheet 280 (RFD Qty Mtr, RFD date on/after the KPK date, Sri Lanka POs and AOP shades skipped, 120 gsm gusset / 140 gsm body), oldest date first</td></tr>
+        <tr><td>S</td><td>Agreed RFD date: a real date, or <code>TBC</code></td></tr>
+        <tr><td>AJ AK AL</td><td>Taps key parts. AM joins them as AJ &amp; AL &amp; AK, so they must match DOC 217 <code>AP</code> exactly<span class="tagf">KEY</span></td></tr>
+        <tr class="own"><td>AM</td><td>Key <code>=TRIM(AJ)&amp;TRIM(AL)&amp;TRIM(AK)</code><span class="tagw">TOOL</span></td></tr>
+        <tr class="own"><td>AN</td><td>Taps RFD qty (value from DOC AQ)<span class="tagw">TOOL</span></td></tr>
+        <tr class="own"><td>AO</td><td>Taps balance (value from DOC AR)<span class="tagw">TOOL</span></td></tr>
+        <tr class="own"><td>AP–AU</td><td>Group sums, check (<code>ok</code>/<code>ck</code>) and Psbl to RFD<span class="tagw">TOOL</span></td></tr>
+        <tr class="own"><td>AV AW</td><td>DOC AQ and AF % (values)<span class="tagw">TOOL</span></td></tr>
+        <tr class="own"><td>AX</td><td>AN − AP<span class="tagw">TOOL</span></td></tr>
+      </table>
+    </div></details>
+
+    <details><summary><span class="n">4</span>Fixed cells: other sheets</summary><div class="in">
+      <table>
+        <tr class="own"><td>C7</td><td><b>Buyer Wise OTT Hit Rate</b>: daily date. The tool sets it to report date − 1<span class="tagw">TOOL</span></td></tr>
+        <tr><td>AP</td><td><b>DOC 217</b>: Taps key (PO + colour + article)<span class="tagf">KEY</span></td></tr>
+        <tr><td>AQ</td><td><b>DOC 217</b>: Rfd qty<span class="tagf">KEY</span></td></tr>
+        <tr><td>AR</td><td><b>DOC 217</b>: Balance<span class="tagf">KEY</span></td></tr>
+        <tr><td>AF</td><td><b>DOC 217</b>: %<span class="tagf">KEY</span></td></tr>
+      </table>
+      <p class="muted">DOC 217 data starts at row 3. Don't add totals or notes inside the AP:AR range.</p>
+    </div></details>
+
+    <details><summary><span class="n">5</span>Colours</summary><div class="in">
+      <p><b>Q Brand colour bank</b>. Use only these in the file and in reports:</p>
+      <div class="sw">
+        <div style="background:#664356">Purple<br>664356</div>
+        <div class="lt" style="background:#B7A19B">Tan<br>B7A19B</div>
+        <div style="background:#366083">Blue<br>366083</div>
+        <div style="background:#929597">Gray<br>929597</div>
+        <div style="background:#AF4F5A">Red<br>AF4F5A</div>
+      </div>
+      <p>Headers are Q Purple with white text, and gridlines stay off. Keep the approved SQ layout: don't add fills, borders or new styles in the data area.</p>
+      <p><b>OTT % colours on the site</b>:</p>
+      <div class="leg">
+        <span style="--c:#664356">95% and above: on target</span>
+        <span style="--c:#B29EA6">70–94%: watch</span>
+        <span style="--c:#AF4F5A">Below 70%: failed day</span>
+      </div>
+    </div></details>
+
+    <details><summary><span class="n">6</span>After the run: check</summary><div class="in">
+      <ul class="chk">
+        <li><i></i><span><b>Added qty &gt; 0</b> in the buyer summary. If it's 0, the DOC file is probably old.</span></li>
+        <li><i></i><span>AN has numbers, not all “-”.</span></li>
+        <li><i></i><span>Open the file in Excel, let it recalculate, then <b>Save</b>.</span></li>
+        <li><i></i><span>Check the Buyer Wise OTT Hit Rate MTD figures.</span></li>
+        <li><i></i><span>Output name has the report date and no “_Updated”, e.g. <code>…-22nd_Oct_26_SQ.xlsx</code></span></li>
+      </ul>
+      <p class="muted">“No Fabric Plan row matched a Taps key” means the wrong DOC file, or AJ/AK/AL were edited.</p>
+    </div></details>
+
+    <details><summary><span class="n">!</span>Never</summary><div class="in">
+      <ul class="dont">
+        <li>Paste the site key in chat, email or WhatsApp.</li>
+        <li>Click “Compare &amp; pull request” for the <code>data</code> branch on GitHub.</li>
+        <li>Upload a file that's still open and unsaved in Excel.</li>
+        <li>Type over the tool's columns (M and AM–AX) by hand after the run.</li>
+      </ul>
+    </div></details>
+  </div>
+</aside>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script>
 "use strict";
@@ -440,6 +598,31 @@ function rawVal(t,inner,sst){
   if(t==="e") return decode(v);
   if(t==="b") return v==="1";
   return Number(v);
+}
+
+/* ---------- KPK black/white: RFD pool from DOC sheet 280 ----------
+   Customer (E) = M & S - T61 (KPK) · Customer PO (F) without "Sri Lanka" · Shade (L) has Black/White, not AOP ·
+   Fabric/Yarn (N) -120- = gusset, -140- = body · RFD Date (U) on/after the chosen date · qty = RFD Qty Mtr (AC) */
+const KPK_BUYER=/^\s*M\s*&\s*S\s*-\s*T61\s*\(KPK\)\s*$/i;
+const KPK_FP=/KPK/i;   // Fabric Plan buyer name for KPK lines: "M & S - T61 (KPK)" or "T61-KPK" (Sri Lanka excluded)
+const kpkColour=s=>/black/i.test(s)?"Black":/white/i.test(s)?"White":null;
+async function readKPK(zip,fromSer){
+  const path=await sheetPath(zip,"280");
+  const ssf=zip.file("xl/sharedStrings.xml"); const sst=ssf?parseSST(await ssf.async("string")):[];
+  const xml=await zip.file(path).async("string");
+  const want=new Set(["E","F","L","N","U","AC"]), pool=new Map(); let used=0, skippedSL=0, early=0;
+  const rowRe=/<row [^>]*?r="(\d+)"[^>]*?(?:\/>|>([\s\S]*?)<\/row>)/g, cRe=/<c r="([A-Z]+)\d+"([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g;
+  let m; while((m=rowRe.exec(xml))){ if(!m[2]||+m[1]<3) continue; const v={}; let c; cRe.lastIndex=0;
+    while((c=cRe.exec(m[2]))){ if(!want.has(c[1])) continue; const tm=/\bt="(\w+)"/.exec(c[2]); v[c[1]]=rawVal(tm?tm[1]:null,c[3]||null,sst); }
+    if(!KPK_BUYER.test(String(v.E??""))) continue;
+    const shade=String(v.L??""); if(/aop/i.test(shade)) continue;   // solid Black / White only, AOP shades are not KPK black/white
+    const col=kpkColour(shade); if(!col) continue;
+    if(/sri\s*-?\s*lanka/i.test(String(v.F??""))){ skippedSL++; continue; }
+    const fab=/-140-/.test(String(v.N??""))?"140":/-120-/.test(String(v.N??""))?"120":null; if(!fab) continue;
+    if(!isNum(v.U)) continue; if(Math.floor(v.U)<fromSer){ early++; continue; }
+    const k=fab+"|"+col; pool.set(k,(pool.get(k)||0)+(isNum(v.AC)?v.AC:0)); used++;
+  }
+  return {pool,used,skippedSL,early};
 }
 
 /* ---------- mini formula engine (for DOC files saved without calculated values) ---------- */
@@ -586,6 +769,8 @@ async function run(){
     setStep("read","run");status("Reading DOC -280+217 (sheet 217)…");await tick();
     const D=await readDOC(docZip);
     status(`Sheet 217: ${D.rows.toLocaleString()} rows${D.computed?` (${D.computed.toLocaleString()} formulas worked out)`:""}. Reading Fabric Plan…`);prog(36,"Reading Fabric Plan · Fab Plan-Final");await tick();
+    const kf=$("kpkFrom").value.split("-").map(Number), kpkSer=Math.round((Date.UTC(kf[0],kf[1]-1,kf[2])-Date.UTC(1899,11,30))/864e5);
+    const KP=await readKPK(docZip,kpkSer);
     const F=await readFP(fpFile);
     const doc=F.doc, NS=doc.documentElement.namespaceURI;
     const sheetData=doc.getElementsByTagName("sheetData")[0];
@@ -608,6 +793,10 @@ async function run(){
       Mf.set(r, mi.f && /^\$?L\$?\d+$/.test(mi.f.trim()) ? "L"+mi.f.replace(/\$/g,"").slice(1) : null);
       Mv.set(r, mi.v);
     }
+    // KPK black/white lines (no PO): filled from sheet 280, kept out of steps 2 and 3
+    const kpk=new Map(); for(const r of rows){ if(!KPK_FP.test(buyer.get(r))||/sri\s*-?\s*lanka/i.test(buyer.get(r))||String(val(r,"Q").v??"").trim()!=="") continue;
+      const art=String(val(r,"I").v??""), col=kpkColour(String(val(r,"J").v??"")), fab=/140\s*gsm/i.test(art)?"140":/120\s*gsm/i.test(art)?"120":null;
+      if(col&&fab) kpk.set(r,fab+"|"+col); }
     const mval=r=>{const f=Mf.get(r); if(f){return L.get(+f.slice(1))??num(val(+f.slice(1),"L").v)} return num(Mv.get(r))};
     const P=r=>(mval(r)-L.get(r))+O.get(r);
     const Mbefore=new Map(rows.map(r=>[r,mval(r)]));
@@ -626,12 +815,14 @@ async function run(){
     setStep("taps","run");await tick();
     const mWrite=new Map(); // r -> {f} or {v}
     let step2=0; const step2Rows=new Set(), step2New=new Set();
-    for(const r of rows){ const ao=AO.get(r); if(isNum(ao)&&ao<=20){ if(Math.abs(mval(r)-L.get(r))>EPS){ step2++; step2New.add(r); } Mf.set(r,"L"+r); mWrite.set(r,{f:"L"+r}); step2Rows.add(r);} }
+    for(const r of rows){ if(kpk.has(r)) continue; const ao=AO.get(r); if(isNum(ao)&&ao<=20){ if(Math.abs(mval(r)-L.get(r))>EPS){ step2++; step2New.add(r); } Mf.set(r,"L"+r); mWrite.set(r,{f:"L"+r}); step2Rows.add(r);} }
     setStep("taps","done");
 
     /* step 3 */
     setStep("alloc","run");status("Allocating Psbl to RFD…");await tick();
-    const groups=new Map(); for(const r of rows){const g=norm(key.get(r)); if(!groups.has(g))groups.set(g,[]); groups.get(g).push(r)}
+    const groups=new Map(); for(const r of rows){if(kpk.has(r))continue;const g=norm(key.get(r)); if(!groups.has(g))groups.set(g,[]); groups.get(g).push(r)}
+    // fill order inside each group: oldest Agreed RFD date (col S) first; TBC / blank last; ties keep sheet order
+    { const dk=r=>{const v=val(r,"S").v; return isNum(v)?v:Infinity}; for(const rs of groups.values()) rs.sort((a,b)=>(dk(a)-dk(b))||(a-b)); }
     const AU=g=>{const rs=groups.get(g);let s=0;for(const r of rs)s+=-P(r);const ao=AO.get(rs[0]);if(!isNum(ao))return false;return s>ao+EPS?s-ao:false};
     const report=[];
     for(let it=0;it<10;it++){
@@ -652,6 +843,18 @@ async function run(){
     }
     const open=[...groups.keys()].filter(g=>{const a=AU(g);return a!==false&&a>EPS&&groups.get(g).some(r=>P(r)< -EPS)}).length;
     setStep("alloc","done");
+
+    /* KPK black/white: pour each 280 RFD pool into its rows, oldest Agreed RFD date first, each up to L − O */
+    const kpkReport=[], kpkLeft=new Map();
+    { const by=new Map(); for(const [r,k] of kpk){ if(!by.has(k))by.set(k,[]); by.get(k).push(r) }
+      const dk=r=>{const v=val(r,"S").v; return isNum(v)?v:Infinity};
+      for(const [k,rs] of by){ rs.sort((a,b)=>(dk(a)-dk(b))||(a-b)); let rem=KP.pool.get(k)||0;
+        for(const r of rs){ const cap=Math.max(0,L.get(r)-O.get(r)), put=Math.min(rem,cap), before=mval(r); rem-=put;
+          const nv=put>EPS?(put>=cap-EPS?r6(cap):r3(put)):null;
+          Mf.set(r,null); Mv.set(r,nv); mWrite.set(r,{v:nv});
+          kpkReport.push({row:r,fab:k.split("|")[0]==="140"?"Body 140":"Gusset 120",col:k.split("|")[1],date:dk(r),L:L.get(r),before:r3(before),after:nv??0}); }
+        if(rem>EPS) kpkLeft.set(k,r3(rem)); }
+    }
 
     /* write */
     DEM=rows.map(r=>{const sv=val(r,"S").v;return {b:buyer.get(r),s:isNum(sv)?Math.floor(sv):null,tbc:typeof sv==="string"&&/tbc/i.test(sv),L:L.get(r),M:mval(r),O:O.get(r),po:String(val(r,"Q").v??"").trim(),col:String(val(r,"J").v??"").trim(),art:String(val(r,"I").v??"").trim()}});
@@ -730,10 +933,10 @@ async function run(){
     const added=report.reduce((s,x)=>s+x.add,0), nGroups=new Set(report.map(x=>norm(x.key))).size;
     let anChanged=0,anComparable=0; for(const r of rows){const p=prevAN.get(r);if(isNum(p)){anComparable++;if(Math.abs(p-AN.get(r))>0.01)anChanged++}}
     const d=new Date($("runDate").value+"T00:00:00");
-    const logBlob=buildLog(report,buyers,{fp:fpFile.name,doc:docFile.name,date:d});
+    const logBlob=buildLog(report,buyers,{fp:fpFile.name,doc:docFile.name,date:d,kpk:kpkReport,kpkFrom:$("kpkFrom").value});
     prog(98,"Building the update log…");
     outputs={ott:ottBlob,log:logBlob,ottName:outNames().ott,logName:outNames().log};
-    render({rows:rows.length,step2,report,nGroups,added,totBefore,totAfter,buyers,anChanged,anComparable,open,docRows:D.rows});
+    render({kpk:{rows:kpkReport.length,before:kpkReport.reduce((s,x)=>s+x.before,0),after:kpkReport.reduce((s,x)=>s+x.after,0),pool:[...KP.pool.values()].reduce((a,b)=>a+b,0),left:kpkLeft,skippedSL:KP.skippedSL,from:$("kpkFrom").value},rows:rows.length,step2,report,nGroups,added,totBefore,totAfter,buyers,anChanged,anComparable,open,docRows:D.rows});
     setViewer(false);
     autoSave();
     status(`Done · ${rows.length.toLocaleString()} plan rows processed.`);
@@ -772,11 +975,15 @@ function buildLog(report,buyers,meta){
     ["Buyer","Rows set =L","Rows filled","Groups filled","Added qty","RFD Qty before","RFD Qty after"],[22,12,12,13,14,15,15],
     buyers.map(b=>[b.buyer,b.step2,b.filled,b.groups.size,r3(b.added),r3(b.before),r3(b.after)]),new Set([1,2,3,4,5,6]),new Set([1,2,3,4,5,6]));
   const styles=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="1"><numFmt numFmtId="164" formatCode="#,##0.00"/></numFmts><fonts count="5"><font><sz val="10"/><name val="Calibri"/><family val="2"/></font><font><b/><sz val="13"/><color rgb="FF664356"/><name val="Calibri"/><family val="2"/></font><font><i/><sz val="9"/><color rgb="FF929597"/><name val="Calibri"/><family val="2"/></font><font><b/><sz val="10"/><color rgb="FFFFFFFF"/><name val="Calibri"/><family val="2"/></font><font><b/><sz val="10"/><color rgb="FF664356"/><name val="Calibri"/><family val="2"/></font></fonts><fills count="4"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF664356"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFE6DFE1"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="thin"><color rgb="FF000000"/></left><right style="thin"><color rgb="FF000000"/></right><top style="thin"><color rgb="FF000000"/></top><bottom style="thin"><color rgb="FF000000"/></bottom><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="9"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="0" fontId="3" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1"/><xf numFmtId="164" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"/><xf numFmtId="0" fontId="4" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1"/><xf numFmtId="164" fontId="4" fillId="3" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1"/><xf numFmtId="1" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center"/></xf></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
-  z.file("[Content_Types].xml",`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`);
+  z.file("[Content_Types].xml",`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet3.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`);
   z.file("_rels/.rels",`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`);
-  z.file("xl/workbook.xml",`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><bookViews><workbookView/></bookViews><sheets><sheet name="Allocation Log" sheetId="1" r:id="rId1"/><sheet name="Buyer Summary" sheetId="2" r:id="rId2"/></sheets><definedNames><definedName name="_xlnm._FilterDatabase" localSheetId="0" hidden="1">'Allocation Log'!$A$3:$H$${Math.max(4,report.length+3)}</definedName><definedName name="_xlnm._FilterDatabase" localSheetId="1" hidden="1">'Buyer Summary'!$A$3:$G$${Math.max(4,buyers.length+3)}</definedName></definedNames><calcPr calcId="191029" fullCalcOnLoad="1"/></workbook>`);
-  z.file("xl/_rels/workbook.xml.rels",`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`);
-  z.file("xl/styles.xml",styles); z.file("xl/worksheets/sheet1.xml",s1); z.file("xl/worksheets/sheet2.xml",s2);
+  z.file("xl/workbook.xml",`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><bookViews><workbookView/></bookViews><sheets><sheet name="Allocation Log" sheetId="1" r:id="rId1"/><sheet name="Buyer Summary" sheetId="2" r:id="rId2"/><sheet name="KPK Black-White" sheetId="3" r:id="rId4"/></sheets><definedNames><definedName name="_xlnm._FilterDatabase" localSheetId="0" hidden="1">'Allocation Log'!$A$3:$H$${Math.max(4,report.length+3)}</definedName><definedName name="_xlnm._FilterDatabase" localSheetId="1" hidden="1">'Buyer Summary'!$A$3:$G$${Math.max(4,buyers.length+3)}</definedName></definedNames><calcPr calcId="191029" fullCalcOnLoad="1"/></workbook>`);
+  z.file("xl/_rels/workbook.xml.rels",`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/><Relationship Id="rId4" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet3.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`);
+  const kp=meta.kpk||[], kfd=meta.kpkFrom?new Date(meta.kpkFrom+"T00:00:00"):null;
+  const s3=sheet("KPK Black/White – RFD from DOC sheet 280 into M",sub+(kfd?` | RFD counted from ${kfd.getDate()} ${MON[kfd.getMonth()]} ${kfd.getFullYear()}`:"")+" | oldest agreed date first",
+    ["Row","Fabric","Colour","Agreed RFD Date","Req Qty L","M before","M after"],[8,14,10,15,13,13,13],
+    kp.map(x=>[x.row,x.fab,x.col,isFinite(x.date)?(()=>{const t=new Date(Date.UTC(1899,11,30)+x.date*864e5);return `${String(t.getUTCDate()).padStart(2,"0")}-${MON[t.getUTCMonth()]}-${String(t.getUTCFullYear()).slice(2)}`})():"TBC",x.L,x.before,x.after]),new Set([0,4,5,6]),new Set([4,5,6]));
+  z.file("xl/styles.xml",styles); z.file("xl/worksheets/sheet1.xml",s1); z.file("xl/worksheets/sheet2.xml",s2); z.file("xl/worksheets/sheet3.xml",s3);
   return z.generateAsync({type:"blob",compression:"DEFLATE"});
 }
 
@@ -833,6 +1040,8 @@ function render(R){
   if(R.anComparable&&R.anChanged===0) flags.push(`<div class="flag warn"><b>DOC file may be the old copy.</b>&nbsp;Tps Rfd Qty (AN) matches the previous values on every row. Check that you picked today's DOC -280+217.</div>`);
   else if(R.anComparable) flags.push(`<div class="flag good">DOC is a newer copy. Tps Rfd Qty changed on ${R.anChanged.toLocaleString()} of ${R.rows.toLocaleString()} rows.</div>`);
   if(R.open) flags.push(`<div class="flag warn">${R.open} group(s) still have Psbl to RFD left after 10 passes. Check them in the log.</div>`);
+  if(R.kpk&&R.kpk.rows){ const fd=new Date(R.kpk.from+"T00:00:00"); const left=[...R.kpk.left].map(([k,v])=>`${k.replace("|"," gsm ")} ${fmt(v)} m`).join(", ");
+    flags.push(`<div class="flag good"><b>KPK black/white</b>&nbsp;· ${R.kpk.rows} lines filled from sheet 280 (RFD from ${fd.getDate()} ${MON[fd.getMonth()]}${R.kpk.skippedSL?`, ${R.kpk.skippedSL} Sri Lanka PO rows skipped`:""}): ${fmt(R.kpk.pool)} m RFD · M ${fmt(R.kpk.before)} → ${fmt(R.kpk.after)} m${left?` · more than the plan, left over: ${esc(left)}`:""}.</div>`); }
   const top=R.buyers.slice().sort((a,b)=>b.added-a.added)[0];
   if(top&&R.added>0&&top.added/R.added>0.6) flags.push(`<div class="flag warn">${esc(top.buyer)} takes ${Math.round(top.added/R.added*100)}% of the allocated qty (${fmt(top.added)} m). Check its groups in the log before sharing.</div>`);
   $("flags").innerHTML=flags.join("");
@@ -1177,7 +1386,7 @@ const RULE={
 function bindDrop(dropId,inputId,nameId,kind,okId,badId){
   const drop=$(dropId),inp=$(inputId),R=RULE[kind];
   const setFile=(f,zip)=>{ if(kind==="FP"){fpFile=f}else{docFile=f;docZip=zip} };
-  const reject=(f,msg)=>{ setFile(null,null); drop.classList.remove("has","checking"); drop.classList.add("bad"); $(nameId).textContent=f?f.name:"Wrong file"; $(badId).textContent="✕ "+msg; inp.value=""; refresh(); };
+  const reject=(f,msg)=>{ setFile(null,null); window.dispatchEvent(new CustomEvent("sq:file",{detail:{kind,names:null}})); drop.classList.remove("has","checking"); drop.classList.add("bad"); $(nameId).textContent=f?f.name:"Wrong file"; $(badId).textContent="✕ "+msg; inp.value=""; refresh(); };
   const take=async f=>{ if(!f) return;
     drop.classList.remove("has","bad"); drop.classList.add("checking"); $(nameId).textContent=f.name; $(badId).textContent=""; setFile(null,null); refresh(); status(`Checking ${f.name}…`);
     if(!/\.xlsx$/i.test(f.name)) return reject(f,"Not an .xlsx file. Upload the "+R.label+".");
@@ -1185,6 +1394,7 @@ function bindDrop(dropId,inputId,nameId,kind,okId,badId){
     try{ zip=await JSZip.loadAsync(f); names=await sheetNames(zip); }catch(e){ return reject(f,"Can't open this file as an Excel workbook. Save it as .xlsx and try again."); }
     if(!names.includes(R.need)) return reject(f, names.includes(R.other)?R.otherMsg:`Wrong file: sheet “${R.need}” not found. Upload the ${R.label}.`);
     setFile(f,kind==="DOC"?zip:null);
+    window.dispatchEvent(new CustomEvent("sq:file",{detail:{kind,names,name:f.name}}));
     const mb=f.size/1048576; $(okId).textContent=`✓ Uploaded · ${mb>=1?mb.toFixed(1)+" MB":Math.max(1,Math.round(f.size/1024))+" KB"} · sheet ${R.need} found`;
     drop.classList.remove("checking","bad"); void drop.offsetWidth; drop.classList.add("has"); refresh(); };
   inp.addEventListener("change",()=>take(inp.files[0]));
@@ -1196,6 +1406,8 @@ bindDrop("dropFP","fileFP","nameFP","FP","okFP","badFP");
 bindDrop("dropDOC","fileDOC","nameDOC","DOC","okDOC","badDOC");
 (function(){const d=new Date();$("runDate").value=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`})();
 $("runDate").addEventListener("change",refresh);
+(function(){let v=null;try{v=localStorage.getItem("sqhues.kpkFrom")}catch(e){} $("kpkFrom").value=v||"2026-10-23";
+  $("kpkFrom").addEventListener("change",()=>{try{localStorage.setItem("sqhues.kpkFrom",$("kpkFrom").value)}catch(e){}})})();
 $("runBtn").addEventListener("click",run);
 $("q").addEventListener("input",()=>{SUGALL=false;drawSug();drawPO()});
 const openAllSug=()=>{SUGALL=true;drawSug();try{$("q").select()}catch(e){}};
@@ -1285,6 +1497,33 @@ $("newUpdBtn").addEventListener("click",()=>{ setViewer(false); $("fileFP").focu
 drawSummary(null);
 fetchSnapshot();
 refresh();
+/* ---- Ground rules panel ---- */
+(function(){
+  const P=$("rules"),T=$("rTab"),SC=$("rScrim"),mq=matchMedia("(min-width:1560px)");
+  let pref=null; try{pref=localStorage.getItem("sqhues.rules")}catch(e){}
+  const dockOK=()=>mq.matches&&pref!=="hide";
+  const layout=()=>{const d=dockOK();P.classList.toggle("dock",d);document.body.classList.toggle("rdock",d);if(d){P.classList.remove("open");SC.hidden=true}};
+  const open=()=>{P.classList.add("open");SC.hidden=false;T.setAttribute("aria-expanded","true")};
+  const close=()=>{P.classList.remove("open");SC.hidden=true;T.setAttribute("aria-expanded","false")};
+  T.onclick=()=>{ if(mq.matches){pref=null;try{localStorage.removeItem("sqhues.rules")}catch(e){};layout()} else open() };
+  $("rClose").onclick=()=>{ if(P.classList.contains("dock")){pref="hide";try{localStorage.setItem("sqhues.rules","hide")}catch(e){};layout()} else close() }; SC.onclick=close;
+  document.addEventListener("keydown",e=>{if(e.key==="Escape"&&P.classList.contains("open"))close()});
+  mq.addEventListener("change",layout); layout();
+
+  const st={};
+  const set=(c,v)=>{st[c]=v;const li=document.querySelector(`#rChk [data-c="${c}"]`);if(!li)return;li.classList.toggle("ok",v===true);li.classList.toggle("bad",v===false);
+    const n=Object.values(st).filter(x=>x===true).length;$("rTabN").textContent=`${n}/6`};
+  window.addEventListener("sq:file",e=>{const {kind,names,name}=e.detail;
+    if(kind==="FP"){ if(!names){["fp","fpx","fpn"].forEach(c=>set(c,null));return}
+      set("fp",names.includes("Fab Plan-Final"));
+      set("fpx",names.includes("Buyer Wise OTT Hit Rate")&&names.some(n=>/^Date Wise Pivot/i.test(n)));
+      set("fpn",/^Fabric_Plan_[A-Za-z]{3}\d{2}-Hues_Feedback.*_SQ\.xlsx$/i.test(name)); }
+    else { if(!names){["doc","docn"].forEach(c=>set(c,null));return}
+      set("doc",names.includes("217")); set("docn",/^DOC\s*-?\s*280\s*\+\s*217/i.test(name)); }
+  });
+  const chkDate=()=>{const v=$("runDate").value;if(!v)return set("date",false);const d=new Date(v+"T00:00"),t=new Date();t.setHours(0,0,0,0);set("date",d<=t)};
+  $("runDate").addEventListener("change",chkDate); chkDate();
+})();
 </script>
 
 </body>
