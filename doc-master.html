@@ -73,6 +73,7 @@ h1{font:700 clamp(22px,2.6vw,30px)/1.1 var(--disp);margin:2px 0 4px;letter-spaci
 .taps li .c{display:inline-block;width:14px;color:var(--q40)}
 .taps li.got .c{color:var(--blue)}
 .taps li.opt{grid-column:1/-1}
+#lpDl.dim{opacity:.55}
 .side{cursor:default}
 .side:hover{border-color:var(--line)}
 .side label{display:block;color:var(--muted);font-size:13.5px}
@@ -2938,7 +2939,7 @@ function showLatest(){
   $('lastWhen').textContent=fmtWhen(latest.updated);
   $('lastInfo').textContent=latest.reportDate?`Report date ${latest.reportDate}`:'';
   $('lastDl').hidden=false;
-  const lp=latest.linePlan;$('lpDl').hidden=!lp;if(lp)$('lpDl').title=lp.name;
+  const lp=latest.linePlan;$('lpDl').hidden=false;$('lpDl').classList.toggle('dim',!lp);$('lpDl').title=lp?lp.name:'Not on the site yet — run an update with the Line Plan file in box 2';
   const ad=latest.additional;$('addDl').hidden=!ad;if(ad)$('addDl').title=`${ad.total.toLocaleString('en-US')} kg across ${ad.orders} orders`;
 }
 async function dlFromSite(file,name,size,b){
@@ -2961,7 +2962,8 @@ async function dlFromSite(file,name,size,b){
   b.disabled=false;b.innerHTML=html;
 }
 $('lastDl').addEventListener('click',()=>dlFromSite(DATA_FILE,latest.name||outName(new Date(latest.updated)),latest.size,$('lastDl')));
-$('lpDl').addEventListener('click',()=>{const lp=latest&&latest.linePlan;if(lp)dlFromSite(LP_FILE,lp.name,lp.size,$('lpDl'));});
+$('lpDl').addEventListener('click',()=>{const lp=latest&&latest.linePlan;if(lp)dlFromSite(LP_FILE,lp.name,lp.size,$('lpDl'));
+  else note('The Line Plan file is not on the site yet. Run a new update with the six TAPS files and the Line Plan-Foc-Aop-Hanger file in box 2 — after it saves, this button downloads it.',true);});
 $('addDl').addEventListener('click',()=>{const ad=latest&&latest.additional;if(ad)dlFromSite(ADD_FILE,ad.name,ad.size,$('addDl'));});
 function b64(bytes){let s='';const CH=0x8000;for(let i=0;i<bytes.length;i+=CH)s+=String.fromCharCode.apply(null,bytes.subarray(i,i+CH));return btoa(s);}
 async function gh(path,opt={}){
