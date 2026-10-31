@@ -53,6 +53,19 @@ select{font:inherit;font-size:.8rem;font-weight:600;padding:6px 8px;border-radiu
 .lastbar b{font-family:var(--f-display);font-weight:700;letter-spacing:.02em}
 .lastbar .dl{display:inline-flex;align-items:center;gap:6px;font-weight:700;color:var(--purple);background:var(--surface);padding:5px 10px;border-radius:6px;text-decoration:none;cursor:pointer}
 .lastbar .dl svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.gear{all:unset;cursor:pointer;width:28px;height:28px;display:inline-grid;place-items:center;border-radius:6px;opacity:.28}
+.gear:hover,.gear:focus-visible{opacity:1;background:rgba(255,255,255,.14)}
+.gear svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.dlwrap{position:relative;display:inline-flex}
+.dlb{border-radius:6px 0 0 6px;padding:6px 8px}.dlc{border-radius:0 6px 6px 0;padding:6px 4px;margin-left:1px}
+.dlb svg{width:17px;height:17px;stroke-width:2}.dlc svg{width:13px;height:13px;stroke-width:2.2}
+.dlb.busy{opacity:.6;pointer-events:none}
+.dlmenu{position:absolute;right:0;top:calc(100% + 6px);z-index:40;min-width:250px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:9px;box-shadow:0 12px 30px rgba(0,0,0,.2);padding:5px;display:grid}
+.dlmenu button{all:unset;cursor:pointer;display:grid;gap:1px;padding:8px 10px;border-radius:6px}
+.dlmenu button:hover,.dlmenu button:focus-visible{background:var(--sunk)}
+.dlmenu b{font-size:.82rem;font-weight:600;color:var(--purple)}.dlmenu span{font-size:.72rem;color:var(--muted)}
+.uprow{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;padding:10px;border:1.5px dashed var(--line);border-radius:8px}
+.uprow.off{opacity:.5;pointer-events:none}
 .upload{display:flex;flex-wrap:wrap;align-items:center;gap:10px;border:1.5px dashed rgba(255,255,255,.45);border-radius:8px;padding:8px 12px}
 .upload.over{background:rgba(255,255,255,.14)}
 .upbtn{cursor:pointer;font-size:.8rem;font-weight:700;padding:7px 12px;border-radius:6px;background:var(--surface);color:var(--purple)}
@@ -61,6 +74,7 @@ select{font:inherit;font-size:.8rem;font-weight:600;padding:6px 8px;border-radiu
 .save{font-family:var(--f-mono);font-size:.74rem;padding:5px 9px;border-radius:6px;background:rgba(255,255,255,.14)}
 .save.live{background:#E6F2EA;color:#2F6B47}
 .save.bad{background:var(--red-2);color:var(--red)}
+.save{margin-left:auto}
 #file,#tgtIn{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
 .setdlg{position:absolute;right:14px;top:56px;z-index:30;width:min(420px,calc(100% - 28px));background:var(--surface);color:var(--ink);border:1px solid var(--line);border-top:4px solid var(--purple);border-radius:10px;box-shadow:0 14px 36px rgba(0,0,0,.22);padding:14px;display:grid;gap:10px;font-size:.82rem}
 .setdlg h2{margin:0;font-family:var(--f-display);font-size:1rem;color:var(--purple)}
@@ -140,6 +154,7 @@ td .pb s i{display:block;height:100%;background:var(--purple-2)}
 <body>
 <div class="overlay" id="overlay" hidden>Drop the AOP WIP file to load it</div>
 <div class="wrap">
+ <div class="wrap pg" id="page1">
   <header>
     <div class="htop">
       <div>
@@ -147,9 +162,16 @@ td .pb s i{display:block;height:100%;background:var(--purple-2)}
         <input type="date" id="tgtIn" tabindex="-1" aria-hidden="true">
         <div class="sub">Q Collection · Quality Seeks Quality · Order to RFD flow through the AOP mill</div>
       </div>
-      <div class="navr">
-        <button type="button" class="hbtn" id="gearBtn" aria-label="Site settings" title="Site settings (owner)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
-        <a class="hbtn" href="./">← All tools</a>
+      <div class="navr" data-html2canvas-ignore>
+        <div class="dlwrap">
+          <button type="button" class="hbtn dlb" id="dlPng" aria-label="Download screenshot" title="Download screenshot (PNG)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg></button><button type="button" class="hbtn dlc" id="dlMore" aria-label="More download options" aria-haspopup="menu" aria-expanded="false" title="More download options"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5"/></svg></button>
+          <div class="dlmenu" id="dlMenu" role="menu" hidden>
+            <button type="button" role="menuitem" data-dl="png1"><b>Screenshot · PNG</b><span>Page 1 · headline, flow &amp; balance</span></button>
+            <button type="button" role="menuitem" data-dl="png2"><b>Screenshot · PNG</b><span>Page 2 · trend &amp; summary</span></button>
+            <button type="button" role="menuitem" data-dl="ppt"><b>PowerPoint · 2 pages</b><span>Editable slides, Q colours</span></button>
+          </div>
+        </div>
+        <button type="button" class="gear" id="gearBtn" aria-label="Site settings" title="Site settings (owner)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
       </div>
     </div>
     <div class="controls">
@@ -157,17 +179,17 @@ td .pb s i{display:block;height:100%;background:var(--purple-2)}
       <div class="seg" role="group" aria-label="Order view" id="seg"></div>
       <div class="chip" id="rdate">Report date · –</div>
       <div class="chip" id="left" hidden></div>
+      <span class="save" id="save" hidden data-html2canvas-ignore></span>
     </div>
     <div class="lastbar" id="lastbar" hidden></div>
-    <div class="upload" id="dropzone" hidden>
-      <label class="upbtn" for="file">Upload AOP WIP file</label>
-      <input type="file" id="file" accept=".xlsx,.xlsm,.xls">
-      <span class="msg" id="msg">or drag and drop the .xlsx anywhere on this page · it reads every "AOP DASHBOARD" sheet and saves it to the site</span>
-      <span class="save" id="save" hidden></span>
-    </div>
-    <div class="setdlg" id="setDlg" role="dialog" aria-label="Site settings" hidden>
+    <div class="setdlg" id="setDlg" role="dialog" aria-label="Site settings" hidden data-html2canvas-ignore>
       <h2>Auto-save to the site</h2>
       <p>Paste your GitHub key once (the same key works for every SQ Hues tool in this browser). After that, every upload saves the AOP WIP file and dashboard to the site and replaces the previous one, so storage stays flat. Visitors never see the key.</p>
+      <div class="uprow" id="upRow">
+        <label class="btn pri" for="file">Upload AOP WIP file</label>
+        <input type="file" id="file" accept=".xlsx,.xlsm,.xls">
+        <span class="st" id="msg">or drag and drop the .xlsx anywhere on the page</span>
+      </div>
       <label for="siteKey">GitHub key (fine-grained token · Contents: read and write)
         <input type="password" id="siteKey" autocomplete="off" placeholder="github_pat_…"></label>
       <label for="tgtSet">Balance completion target
@@ -199,6 +221,8 @@ td .pb s i{display:block;height:100%;background:var(--purple-2)}
     </div>
   </div>
 
+ </div>
+ <div class="wrap pg" id="page2">
   <div class="grid2">
     <section class="panel">
       <h2>Monthly trend</h2>
@@ -213,6 +237,7 @@ td .pb s i{display:block;height:100%;background:var(--purple-2)}
   </div>
 
   <div class="note" id="note"></div>
+ </div>
 </div>
 
 <script>
@@ -315,7 +340,7 @@ function drawLast(){
     try{ const r=await fetch(rawURL(SNAP.xlsx)+"?ts="+Date.now(),{cache:"no-store"}); if(!r.ok)throw 0; const u=URL.createObjectURL(await r.blob()), x=document.createElement("a"); x.href=u; x.download=SNAP.file||XLS_PATH; document.body.appendChild(x); x.click(); setTimeout(()=>{URL.revokeObjectURL(u);x.remove()},4000); }
     catch(e){ location.href=rawURL(SNAP.xlsx); } finally{ a.lastChild.textContent=t; } });
 }
-function applyRole(){ $("dropzone").hidden=!isOwner(); drawTarget(); }
+function applyRole(){ $("upRow").classList.toggle("off",!isOwner()); drawTarget(); }
 
 function render(){
   const M = MONTHS[idx]; if(!M) return;
@@ -476,11 +501,12 @@ $("seg").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)r
 $("trend").addEventListener("click",e=>{const b=e.target.closest(".tb");if(!b)return;idx=+b.dataset.i;render();});
 
 const msg=$("msg");
+function say(t,bad){ msg.innerHTML=t; if(bad) setChip("bad","✕ "+msg.textContent); }
 function loadFile(f){
   if(!f||!isOwner()) return;
-  if(!/\.(xlsx|xlsm|xls)$/i.test(f.name)){ msg.innerHTML=`<b>${esc(f.name)}</b> is not an Excel file. Choose the AOP WIP .xlsx file.`; return; }
-  if(typeof XLSX==="undefined"){ msg.textContent="The Excel reader did not load. Reload the page and try again."; return; }
-  msg.textContent=`Reading ${f.name}…`;
+  if(!/\.(xlsx|xlsm|xls)$/i.test(f.name)){ say(`<b>${esc(f.name)}</b> is not an Excel file. Choose the AOP WIP .xlsx file.`,1); return; }
+  if(typeof XLSX==="undefined"){ say("The Excel reader did not load. Reload the page and try again.",1); return; }
+  msg.textContent=`Reading ${f.name}…`; setChip("",`Reading ${f.name}…`);
   const rd=new FileReader();
   rd.onload=()=>{
     try{
@@ -488,21 +514,21 @@ function loadFile(f){
       const wb=XLSX.read(bytes,{type:"array",cellDates:true});
       const sheets=wb.SheetNames.filter(n=>/dashboard/i.test(n)).map(n=>({name:n,rows:compactRows(XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:null}))}));
       const ok=sheets.filter(s=>parseSheet(s.name,s.rows));
-      if(!ok.length){ msg.innerHTML=`No "AOP DASHBOARD" sheet with a "Total order in-hand qty" row was found in <b>${esc(f.name)}</b>.`; return; }
+      if(!ok.length){ say(`No "AOP DASHBOARD" sheet with a "Total order in-hand qty" row was found in <b>${esc(f.name)}</b>.`,1); return; }
       const snap={v:1,tool:"aop-wip",at:new Date().toISOString(),file:f.name,target:TARGET,xlsx:XLS_PATH,sheets:ok};
       view="total"; useSnap(snap,false);
       msg.innerHTML=`Loaded <b>${esc(f.name)}</b> · ${ok.length} monthly sheets · showing ${esc(MONTHS[idx].short)}`;
       commitSnap(snap, bytes.length<20*1048576?bytes:null);
-    }catch(err){ msg.innerHTML=`Could not read <b>${esc(f.name)}</b>. Save it as .xlsx in Excel and try again.`; }
+    }catch(err){ say(`Could not read <b>${esc(f.name)}</b>. Save it as .xlsx in Excel and try again.`,1); }
   };
   rd.readAsArrayBuffer(f);
 }
 $("file").addEventListener("change",e=>{loadFile(e.target.files[0]);e.target.value="";});
-const ov=$("overlay"), dz=$("dropzone"); let depth=0;
-window.addEventListener("dragenter",e=>{if(!isOwner()||![...e.dataTransfer.types].includes("Files"))return;e.preventDefault();depth++;ov.hidden=false;dz.classList.add("over");});
+const ov=$("overlay"); let depth=0;
+window.addEventListener("dragenter",e=>{if(!isOwner()||![...e.dataTransfer.types].includes("Files"))return;e.preventDefault();depth++;ov.hidden=false;});
 window.addEventListener("dragover",e=>{e.preventDefault();});
-window.addEventListener("dragleave",e=>{depth=Math.max(depth-1,0);if(!depth){ov.hidden=true;dz.classList.remove("over");}});
-function hideOv(){depth=0;ov.hidden=true;dz.classList.remove("over");}
+window.addEventListener("dragleave",e=>{depth=Math.max(depth-1,0);if(!depth)ov.hidden=true;});
+function hideOv(){depth=0;ov.hidden=true;}
 window.addEventListener("drop",e=>{e.preventDefault();hideOv();loadFile(e.dataTransfer.files[0]);});
 window.addEventListener("dragend",hideOv);
 
@@ -530,6 +556,143 @@ document.addEventListener("keydown",e=>{ if(e.key==="Escape") $("setDlg").hidden
 
 matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change",render);
 new MutationObserver(render).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
+
+/* ---------- downloads: PNG screenshot (default) and 2-page PowerPoint ---------- */
+const LIBS={h2c:"https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js",ppt:"https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"};
+const libP={};
+function lib(k){ return libP[k]||(libP[k]=new Promise((ok,no)=>{ const s=document.createElement("script"); s.src=LIBS[k]; s.onload=ok;
+  s.onerror=()=>{ delete libP[k]; s.remove(); no(new Error("download helper did not load · check the internet connection")); }; document.head.appendChild(s); })); }
+const dmy = d => `${String(d.getDate()).padStart(2,"0")}-${MON[d.getMonth()]}-${d.getFullYear()}`;
+function fileBase(){ const M=MONTHS[idx]; return `AOP_WIP_Status_${M.short.replace(/[^A-Za-z0-9]+/g,"")}_${dmy(M.date||new Date())}`; }
+function saveBlob(blob,name){ const u=URL.createObjectURL(blob),a=document.createElement("a"); a.href=u; a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(u);a.remove()},4000); }
+async function shot(id){
+  await lib("h2c"); if(document.fonts&&document.fonts.ready) await document.fonts.ready;
+  const bg=css("--bg");
+  // render at desktop width so the picture looks the same from any device
+  const c=await html2canvas($(id),{scale:2,backgroundColor:bg,useCORS:true,logging:false,windowWidth:1320});
+  const pad=48, out=document.createElement("canvas"); out.width=c.width+pad*2; out.height=c.height+pad*2;
+  const g=out.getContext("2d"); g.fillStyle=bg; g.fillRect(0,0,out.width,out.height); g.drawImage(c,pad,pad);
+  return new Promise(r=>out.toBlob(r,"image/png"));
+}
+function leftText(M){
+  const td=toDate(TARGET), today=new Date(); today.setHours(0,0,0,0); if(!td) return "";
+  const days=Math.round((td-today)/864e5), bal=Math.max(val(M,"rfdBal"),0);
+  return days<0?`Target passed ${-days} day${days===-1?"":"s"} ago`:days===0?"Target is today":`${days} day${days===1?"":"s"} left · ${fmt(bal/days)} kg/day needed`;
+}
+async function buildPpt(){
+  await lib("ppt");
+  const M=MONTHS[idx], ord=val(M,"order"), vName={total:"Total",a:M.planLabel,b:M.otherLabel}[view];
+  const C={purple:"664356",p2:"957B87",p3:"D2C7CB",p10:"E6DFE1",p5:"EFECED",tan:"B7A19B",tan2:"DED5D0",blue:"366083",blue2:"A3ABBF",red:"AF4F5A",ink:"2B1F25",muted:"7A6D73",line:"E2DADD",bg:"F6F3F4",white:"FFFFFF"};
+  const FONT="Segoe UI", MONO="Consolas";
+  const pptx=new PptxGenJS(); pptx.layout="LAYOUT_WIDE"; pptx.title="AOP WIP Status"; pptx.company="Q Collection";
+  const W=13.333;
+  const rd=M.date?M.date.toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"}):"–";
+  const isLatest=idx===MONTHS.length-1;
+  const header=(s,pg)=>{
+    s.background={color:C.bg};
+    s.addShape(pptx.ShapeType.rect,{x:0,y:0,w:W,h:1.0,fill:{color:C.purple},line:{color:C.purple}});
+    s.addText([{text:"AOP WIP Status  ",options:{fontSize:24,bold:true}},{text:`(Balance Completion Target: ${longDate(TARGET)})`,options:{fontSize:17,bold:true}}],
+      {x:.35,y:.1,w:11.2,h:.52,fontFace:FONT,color:C.white,margin:0,valign:"middle"});
+    s.addText(`Q Collection · Quality Seeks Quality   |   ${M.short} · ${vName} · Report date ${rd}${isLatest&&leftText(M)?" · "+leftText(M):""}`,
+      {x:.35,y:.6,w:11.2,h:.28,fontFace:FONT,fontSize:10,color:C.p10,margin:0,valign:"middle"});
+    s.addText(`Page ${pg} of 2`,{x:11.6,y:.1,w:1.38,h:.3,fontFace:FONT,fontSize:9,color:C.p10,align:"right",margin:0});
+  };
+  const panel=(s,x,y,w,h,title,hint)=>{
+    s.addShape(pptx.ShapeType.roundRect,{x,y,w,h,rectRadius:.08,fill:{color:C.white},line:{color:C.line,width:.75}});
+    s.addText(title,{x:x+.2,y:y+.1,w:w-.4,h:.28,fontFace:FONT,fontSize:12,bold:true,color:C.purple,margin:0});
+    if(hint) s.addText(hint,{x:x+.2,y:y+.37,w:w-.4,h:.22,fontFace:FONT,fontSize:8.5,color:C.muted,margin:0});
+  };
+  const bar=(s,x,y,w,h,p,color)=>{
+    s.addShape(pptx.ShapeType.roundRect,{x,y,w,h,rectRadius:h/2.5,fill:{color:C.p5},line:{color:C.p5}});
+    const fw=w*Math.min(Math.max(p,0),100)/100; if(fw>.02) s.addShape(pptx.ShapeType.roundRect,{x,y,w:fw,h,rectRadius:h/2.5,fill:{color},line:{color}});
+  };
+  const pick=(...ks)=>ks.find(k=>has(M,k));
+
+  /* ----- page 1 ----- */
+  const s1=pptx.addSlide(); header(s1,1);
+  const kp=[["TOTAL ORDER","order",C.purple],["PFP SENT TO AOP",pick("sent","pfpDone"),C.p2],["PRINTING DONE","printed",C.blue],
+            ["RECEIVED FROM AOP","received",C.tan],["RFD COMPLETE","rfd",C.blue],["RFD BALANCE","rfdBal",C.red]];
+  const kx=.35, kg=.12, kw=(W-.7-kg*5)/6, ky=1.18, kh=1.05;
+  kp.forEach(([lab,k,c],i)=>{ const x=kx+i*(kw+kg), v=val(M,k), p=pct(v,ord);
+    s1.addShape(pptx.ShapeType.roundRect,{x,y:ky,w:kw,h:kh,rectRadius:.08,fill:{color:C.white},line:{color:C.line,width:.75}});
+    s1.addText(lab,{x:x+.15,y:ky+.08,w:kw-.3,h:.2,fontFace:FONT,fontSize:8,bold:true,color:C.muted,charSpacing:1,margin:0});
+    s1.addText([{text:fmt(v),options:{fontSize:22,bold:true,color:c}},{text:" kg",options:{fontSize:10,bold:true,color:C.muted}}],{x:x+.15,y:ky+.29,w:kw-.3,h:.42,fontFace:FONT,margin:0,valign:"middle"});
+    s1.addText(k==="order"?`${M.planLabel} ${fmt(val(M,"order","a"))} · Other ${fmt(val(M,"order","b"))}`:`${p1(p)} of order`,{x:x+.15,y:ky+.71,w:kw-.3,h:.18,fontFace:FONT,fontSize:8,color:C.muted,margin:0,fit:"shrink"});
+    bar(s1,x+.15,ky+.93,kw-.3,.05,p,c);
+  });
+  // order flow
+  const fx=.35, fy=2.38, fw=7.75, fh=4.8;
+  panel(s1,fx,fy,fw,fh,"Order flow",`${vName} · bars scaled to order quantity (${fmt(ord)} kg) · red notes show quantity still waiting between steps`);
+  const steps=[["Order","order","In hand",C.purple],["PFP RFD","pfpDone","Fabric ready",C.p2],["Sent to AOP","sent","At print mill",C.p2],
+    ["Printed","printed","AOP done",C.blue],["Received","received","Back in house",C.tan],["RFD done","rfd","After AOP",C.blue]].filter(s=>has(M,s[1]));
+  const rh=Math.min(.68,3.95/Math.max(steps.length,1)); let prev=null;
+  steps.forEach(([lab,k,sub,c],i)=>{ const y=fy+.72+i*rh, v=val(M,k), p=pct(v,ord), bx=fx+1.65, bw=4.75;
+    if(prev!==null&&prev-v>=.5) s1.addText(`▼ ${fmt(prev-v)} kg not yet moved on`,{x:bx,y:y-.2,w:bw,h:.18,fontFace:FONT,fontSize:8,color:C.red,margin:0});
+    s1.addText([{text:lab,options:{fontSize:10.5,bold:true,color:C.ink,breakLine:true}},{text:sub,options:{fontSize:8,color:C.muted}}],{x:fx+.2,y,w:1.4,h:.38,fontFace:FONT,margin:0,valign:"middle"});
+    bar(s1,bx,y+.06,bw,.27,p,c);
+    if(p>=9) s1.addText(p1(p),{x:bx+.08,y:y+.06,w:1,h:.27,fontFace:MONO,fontSize:8.5,bold:true,color:C.white,margin:0,valign:"middle"});
+    s1.addText([{text:fmt(v),options:{fontSize:12.5,bold:true,color:C.ink,breakLine:true}},{text:(p<9?p1(p)+" · ":"")+"kg",options:{fontSize:8,color:C.muted}}],{x:fx+fw-1.35,y,w:1.15,h:.4,fontFace:FONT,align:"right",margin:0,valign:"middle"});
+    prev=v; });
+  // rings (native doughnut charts)
+  const rx=8.25, rw=W-.35-rx;
+  panel(s1,rx,fy,rw,2.22,"Progress against order","Share of order quantity reached at each checkpoint");
+  [[pct(val(M,pick("sent","pfpDone")),ord),C.purple,"PFP sent to AOP"],[pct(val(M,"printed"),ord),C.blue,"Printing done"],[pct(val(M,"rfd"),ord),C.tan,"RFD complete"]].forEach(([p,c,t],i)=>{
+    const q=Math.min(Math.max(p,0),100), cw=rw/3, cx=rx+i*cw+(cw-1.2)/2, cy=fy+.62;
+    s1.addChart(pptx.ChartType.doughnut,[{name:t,labels:["Done","Open"],values:[Math.round(q*10)/10,Math.round((100-q)*10)/10]}],
+      {x:cx,y:cy,w:1.2,h:1.2,holeSize:72,chartColors:[c,C.p5],showLegend:false,showValue:false,showPercent:false,showLabel:false,showTitle:false,dataBorder:{pt:0,color:C.white}});
+    s1.addText(`${Math.round(p)}%`,{x:cx,y:cy+.42,w:1.2,h:.36,fontFace:FONT,fontSize:14,bold:true,color:C.ink,align:"center",margin:0,valign:"middle"});
+    s1.addText(t,{x:rx+i*cw,y:cy+1.22,w:cw,h:.22,fontFace:FONT,fontSize:8.5,color:C.muted,align:"center",margin:0});
+  });
+  // balance
+  const by=fy+2.34, bh=fh-2.34;
+  const parts=[["PFP still to send","pfpBal",C.p3],["Waiting for printing","waitPrint",C.p2],["WIP at AOP mill","wipAop",C.tan],["Ready to collect","collect",C.tan2],["WIP at Hues-QA","wipQa",C.blue2]].filter(p=>has(M,p[1]));
+  const tot=parts.reduce((s,[,k])=>s+Math.max(val(M,k),0),0);
+  panel(s1,rx,by,rw,bh,"Where the balance sits",`${fmt(tot)} kg in the pipeline · RFD balance ${fmt(val(M,"rfdBal"))} kg`);
+  let sx=rx+.2; const sw=rw-.4;
+  s1.addShape(pptx.ShapeType.rect,{x:sx,y:by+.68,w:sw,h:.3,fill:{color:C.p5},line:{color:C.p5}});
+  parts.forEach(([,k,c])=>{ const w=tot?sw*Math.max(val(M,k),0)/tot:0; if(w>.005) s1.addShape(pptx.ShapeType.rect,{x:sx,y:by+.68,w,h:.3,fill:{color:c},line:{color:c,width:0}}); sx+=w; });
+  const lr=Math.min(.27,(bh-1.15)/Math.max(parts.length,1));
+  parts.forEach(([l,k,c],i)=>{ const y=by+1.12+i*lr, v=val(M,k);
+    s1.addShape(pptx.ShapeType.roundRect,{x:rx+.2,y:y+.06,w:.13,h:.13,rectRadius:.02,fill:{color:c},line:{color:c}});
+    s1.addText(l,{x:rx+.42,y,w:2.4,h:.25,fontFace:FONT,fontSize:9.5,color:C.ink,margin:0,valign:"middle"});
+    s1.addText(fmt(v),{x:rx+rw-1.85,y,w:1,h:.25,fontFace:FONT,fontSize:10,bold:true,color:C.ink,align:"right",margin:0,valign:"middle"});
+    s1.addText(p1(pct(Math.max(v,0),tot)),{x:rx+rw-.85,y,w:.65,h:.25,fontFace:FONT,fontSize:8.5,color:C.muted,align:"right",margin:0,valign:"middle"}); });
+
+  /* ----- page 2 ----- */
+  const s2=pptx.addSlide(); header(s2,2);
+  const tp=MONTHS.map(m=>Math.round(pct(val(m,"rfd","a"),val(m,"order","a"))*10)/10);
+  panel(s2,.35,1.18,4.3,5.95,"Monthly trend","RFD complete % against each month's line plan");
+  s2.addChart(pptx.ChartType.bar,[{name:"RFD complete %",labels:MONTHS.map(m=>m.short),values:tp}],
+    {x:.45,y:1.75,w:4.1,h:5.25,barDir:"col",barGapWidthPct:45,chartColors:[C.purple],showLegend:false,showValue:true,dataLabelFormatCode:'0"%"',dataLabelFontSize:8,dataLabelColor:C.ink,dataLabelPosition:"outEnd",
+     valAxisMinVal:0,valAxisMaxVal:Math.max(100,Math.ceil(Math.max(...tp)/10)*10),valAxisHidden:true,valGridLine:{style:"none"},catAxisLabelFontSize:8,catAxisLabelColor:C.muted,catAxisLineShow:false,catAxisLabelFontFace:FONT,dataLabelFontFace:FONT});
+  // summary table
+  const tx=4.8, tw=W-.35-tx;
+  panel(s2,tx,1.18,tw,5.95,"Summary",`Kg · ${M.name}`);
+  const totOrd=val(M,"order"), aOrd=val(M,"order","a");
+  const hc={bold:true,color:C.white,fill:{color:C.purple},fontSize:8.5,align:"right",valign:"middle"};
+  const rows=[[{text:"Category",options:{...hc,align:"left"}},{text:M.planLabel,options:hc},{text:M.otherLabel,options:hc},{text:"Total",options:hc},{text:`% vs ${M.planLabel}`,options:hc},{text:"% vs total order",options:hc}]];
+  M.lines.forEach((l,i)=>{ const s=l.a+l.b, pa=l.key==="order"?pct(l.a,totOrd):pct(l.a,aOrd);
+    const o={fontSize:8.5,color:l.key==="rfdBal"?C.red:C.ink,bold:l.key==="rfdBal"||l.key==="received"||l.key==="rfd",fill:{color:i%2?C.white:"FAF8F9"},align:"right",valign:"middle"};
+    rows.push([{text:l.label,options:{...o,align:"left"}},{text:fmt(l.a),options:o},{text:fmt(l.b),options:o},{text:fmt(s),options:o},{text:p1(pa),options:o},{text:p1(pct(s,totOrd)),options:o}]); });
+  const cw=[3.0,1.1,1.15,1.05,1.05,1.05], k=(tw-.4)/cw.reduce((a,b)=>a+b,0);
+  s2.addTable(rows,{x:tx+.2,y:1.78,w:tw-.4,colW:cw.map(c=>c*k),rowH:Math.min(.3,4.9/rows.length),fontFace:FONT,border:{type:"solid",pt:.5,color:C.line},margin:[0,.06,0,.06],autoPage:false});
+  s2.addText(`Source: ${source} · sheet "${M.name}" · created ${dmy(new Date())}`,{x:.35,y:7.17,w:W-.7,h:.22,fontFace:FONT,fontSize:8,color:C.muted,margin:0});
+  return pptx;
+}
+async function download(kind){
+  const btn=$("dlPng"); $("dlMenu").hidden=true; $("dlMore").setAttribute("aria-expanded","false");
+  btn.classList.add("busy");
+  try{
+    if(kind==="ppt"){ const p=await buildPpt(); await p.writeFile({fileName:fileBase()+".pptx"}); }
+    else { const b=await shot(kind==="png2"?"page2":"page1"); saveBlob(b,fileBase()+(kind==="png2"?"_page2":"")+".png"); }
+  }catch(e){ setChip("bad","✕ Download failed: "+(e.message||e)); }
+  finally{ btn.classList.remove("busy"); }
+}
+$("dlPng").addEventListener("click",()=>download("png1"));
+$("dlMore").addEventListener("click",e=>{ e.stopPropagation(); const m=$("dlMenu"); m.hidden=!m.hidden; $("dlMore").setAttribute("aria-expanded",String(!m.hidden)); if(!m.hidden) m.querySelector("button").focus(); });
+$("dlMenu").addEventListener("click",e=>{ const b=e.target.closest("[data-dl]"); if(b) download(b.dataset.dl); });
+document.addEventListener("click",e=>{ if(!e.target.closest(".dlwrap")){ $("dlMenu").hidden=true; $("dlMore").setAttribute("aria-expanded","false"); } });
+document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ $("dlMenu").hidden=true; $("dlMore").setAttribute("aria-expanded","false"); } });
 
 /* ---------- start: show sample at once, then the last saved update from the site ---------- */
 applyRole(); render();
