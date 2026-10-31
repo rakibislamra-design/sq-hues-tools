@@ -300,6 +300,7 @@ h1{font:700 clamp(22px,2.6vw,30px)/1.1 var(--disp);margin:2px 0 4px;letter-spaci
       <span id="lastInfo" class="muted"></span>
       <button class="btn" id="lastDl" type="button" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 20h14"/></svg>Download 217+280 file</button>
       <button class="btn" id="addDl" type="button" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 20h14"/></svg>Additional Req</button>
+      <button class="btn" id="lpDl" type="button" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 20h14"/></svg>Line Plan file</button>
       <div class="dlp" id="dlp" hidden><div class="dlbar"><i id="dlFill"></i></div><span id="dlTxt"></span></div>
     </div>
     <button class="btn light newrun" id="newRun" type="button" aria-expanded="false" aria-controls="updater" hidden>+ Run a new update</button>
@@ -2402,8 +2403,8 @@ async function additionalXlsx(rows0, title) {
    last date in Comments → RFD Date; pivots refresh on open.
    ========================================================================== */
 const LP_SHEETS = [
-  { name: 'Hanger', doc: 'Hanger', paste: 'E', key: 'F', rfdPlan: 'Q' },
-  { name: 'FOC', doc: 'Foc', paste: 'E', key: 'F', rfdPlan: 'Q' },
+  { name: 'Hanger', doc: 'Hanger', cat: 'hanger', paste: 'E', key: 'F', rfdPlan: 'Q' },
+  { name: 'FOC', doc: 'Foc', cat: 'foc', paste: 'E', key: 'F', rfdPlan: 'Q' },
   { name: 'PFP Plan', doc: 'PFP', paste: 'D', key: 'E', rfdPlan: 'P' },
 ];
 const LP_SRC_COLS = ['E', 'H', 'L', 'N'];          // 280 Customer, Batch No, Shade, Fabric/Yarn (pivot columns D:G / C:F)
@@ -2444,7 +2445,22 @@ const relTargets = async (zip, part) => {
 };
 const normV = v => v === null || v === undefined ? '' : typeof v === 'number' ? numStr(v) : typeof v === 'boolean' ? (v ? 'true' : 'false') : isErr(v) ? v.err : String(v).trim().toLowerCase();
 
-// rows a DOC pivot (Hanger / Foc / PFP) shows after refresh: same filters, same row order
+// WIP batches straight from the DOC 280 sheet: Hanger / FOC by Workorder Category (D), PFP by Aop (BU);
+// WIP = Final Batch Position (BB) is not CLOSED / Final Reject / PO PENDING / RFD DONE. Order: Position (Z→A), then 280 order.
+const LP_NOT_WIP = new Set(['closed', 'final reject', 'final rejects', 'po pending', 'rfd done']);
+function wipRows(vals280, last280, cfg) {
+  const pick = cfg.name === 'PFP Plan' ? (row => normV(row.get(ci('BU'))) === 'aop') : (row => normV(row.get(ci('D'))) === cfg.cat);
+  const out = [], seen = new Set();
+  for (let r = 3; r <= last280; r++) {
+    const row = vals280.get(r); if (!row) continue;
+    const b = normV(row.get(ci('H'))); if (!b || seen.has(b)) continue;
+    if (!pick(row) || LP_NOT_WIP.has(normV(row.get(ci('BB'))).replace(/\s+/g, ' '))) continue;
+    seen.add(b); out.push(r);
+  }
+  const pos = r => String(vals280.get(r).get(ci('BB')) ?? '').trim().toLowerCase();
+  return out.sort((a, b) => (pos(a) === pos(b) ? 0 : !pos(a) ? 1 : !pos(b) ? -1 : pos(b).localeCompare(pos(a))) || a - b);
+}
+// (older) rows a DOC pivot (Hanger / Foc / PFP) shows after refresh: same filters, same row order
 async function docPivotRows(zip, W, sheetName, vals280, last280) {
   const sn = Object.keys(W.pathOf).find(n => n.toLowerCase() === sheetName.toLowerCase());
   if (!sn) throw new Error(`DOC has no "${sheetName}" sheet`);
@@ -2617,7 +2633,7 @@ async function updateLinePlan(lpBytes, docBytes, opts = {}) {
     let oldLast = 2; const oldByKey = new Map();
     for (const [r, [, cells]] of old.rows) if (r >= 3) { const k = cellValue(cells.get(K), L.sst); if (k !== null && k !== '') { oldLast = Math.max(oldLast, r); const kk = normV(k); if (!oldByKey.has(kk)) oldByKey.set(kk, r); } }
     // new list from the DOC pivot
-    const recs = await docPivotRows(dz, D, cfg.doc, vals280, last280);
+    const recs = wipRows(vals280, last280, cfg);
     const n = 2 + recs.length;
     const rowVals = new Map();     // r -> Map(col -> value) for paste / carry columns
     recs.forEach((rr, i) => { const r = 3 + i, m = new Map(), src = vals280.get(rr);
@@ -2825,7 +2841,7 @@ function wire(box,input,onFiles){
   ['dragleave','drop'].forEach(t=>box.addEventListener(t,e=>{e.preventDefault();box.classList.remove('over');}));
   box.addEventListener('drop',e=>onFiles(e.dataTransfer.files));
 }
-wire($('boxDoc'),$('pickDoc'),list=>{const f=[...list].find(x=>/\.xlsx$/i.test(x.name));if(f&&list.length===1){files.master=f;outBlob=null;render();}else addFiles(list);});
+wire($('boxDoc'),$('pickDoc'),list=>{const f=[...list].find(x=>/\.xlsx$/i.test(x.name));if(f&&list.length===1&&DocBuilder.detect(f.name)!=='lineplan'){files.master=f;outBlob=null;render();}else addFiles(list);});
 wire($('boxTaps'),$('pickTaps'),addFiles);
 
 /* ---------- run ---------- */
@@ -2899,7 +2915,7 @@ function cfgLoad(){let c={};try{c=JSON.parse(localStorage.getItem(LS)||'{}')}cat
   c.branch=c.branch||'doc-master-data';if(c.auto===undefined)c.auto=true;return c;}
 let cfg=cfgLoad();
 function cfgSave(){try{localStorage.setItem(LS,JSON.stringify(cfg))}catch(e){}}
-const DATA_FILE='DOC -280+217.xlsx',ADD_FILE='DOC Additional Req.xlsx';
+const DATA_FILE='DOC -280+217.xlsx',ADD_FILE='DOC Additional Req.xlsx',LP_FILE='Line Plan-Foc-Aop-Hanger List.xlsx';
 // files are read by commit id (never stale); the branch name is only a fallback (GitHub caches it ~5 min)
 let curSha=null;
 const rawUrl=(f,v)=>`https://raw.githubusercontent.com/${encodeURIComponent(cfg.owner)}/${encodeURIComponent(cfg.repo)}/${curSha||encodeURIComponent(cfg.branch)}/${encodeURIComponent(f)}?v=${encodeURIComponent(v||Date.now())}`;
@@ -2922,6 +2938,7 @@ function showLatest(){
   $('lastWhen').textContent=fmtWhen(latest.updated);
   $('lastInfo').textContent=latest.reportDate?`Report date ${latest.reportDate}`:'';
   $('lastDl').hidden=false;
+  const lp=latest.linePlan;$('lpDl').hidden=!lp;if(lp)$('lpDl').title=lp.name;
   const ad=latest.additional;$('addDl').hidden=!ad;if(ad)$('addDl').title=`${ad.total.toLocaleString('en-US')} kg across ${ad.orders} orders`;
 }
 async function dlFromSite(file,name,size,b){
@@ -2944,6 +2961,7 @@ async function dlFromSite(file,name,size,b){
   b.disabled=false;b.innerHTML=html;
 }
 $('lastDl').addEventListener('click',()=>dlFromSite(DATA_FILE,latest.name||outName(new Date(latest.updated)),latest.size,$('lastDl')));
+$('lpDl').addEventListener('click',()=>{const lp=latest&&latest.linePlan;if(lp)dlFromSite(LP_FILE,lp.name,lp.size,$('lpDl'));});
 $('addDl').addEventListener('click',()=>{const ad=latest&&latest.additional;if(ad)dlFromSite(ADD_FILE,ad.name,ad.size,$('addDl'));});
 function b64(bytes){let s='';const CH=0x8000;for(let i=0;i<bytes.length;i+=CH)s+=String.fromCharCode.apply(null,bytes.subarray(i,i+CH));return btoa(s);}
 async function gh(path,opt={}){
@@ -2962,11 +2980,16 @@ async function publish(){
     const blob=await gh('/git/blobs',{method:'POST',body:JSON.stringify({content:b64(bytes),encoding:'base64'})});
     const addB=addBlob?new Uint8Array(await addBlob.arrayBuffer()):null;
     const addBlobGh=addB?await gh('/git/blobs',{method:'POST',body:JSON.stringify({content:b64(addB),encoding:'base64'})}):null;
+    // Line Plan file: the new one from this run, else keep the one already on the site
+    const lpB=lpBlob?new Uint8Array(await lpBlob.arrayBuffer()):null;
+    const lpGh=lpB?await gh('/git/blobs',{method:'POST',body:JSON.stringify({content:b64(lpB),encoding:'base64'})}):null;
+    const lpOld=!lpB&&latest&&latest.linePlan&&latest.linePlan.sha?latest.linePlan:null;
     const d=rdate();
-    const meta={summary:lastReport&&lastReport.summary,newArt:lastReport&&lastReport.newArt,updated:new Date().toISOString(),reportDate:`${pad(d.getDate())}-${MON[d.getMonth()]}-${String(d.getFullYear()).slice(2)}`,name:outName(),size:bytes.length,rows:lastReport&&lastReport.rows,ld:lastReport&&lastReport.ld,fixSlips:true,additional:addB&&lastReport&&lastReport.additional?{name:addName(),size:addB.length,total:lastReport.additional.total,orders:lastReport.additional.orders}:null};
+    const meta={linePlan:lpGh?{name:lpName(),size:lpB.length,sha:lpGh.sha}:lpOld,summary:lastReport&&lastReport.summary,newArt:lastReport&&lastReport.newArt,updated:new Date().toISOString(),reportDate:`${pad(d.getDate())}-${MON[d.getMonth()]}-${String(d.getFullYear()).slice(2)}`,name:outName(),size:bytes.length,rows:lastReport&&lastReport.rows,ld:lastReport&&lastReport.ld,fixSlips:true,additional:addB&&lastReport&&lastReport.additional?{name:addName(),size:addB.length,total:lastReport.additional.total,orders:lastReport.additional.orders}:null};
     const tree=await gh('/git/trees',{method:'POST',body:JSON.stringify({tree:[
       {path:DATA_FILE,mode:'100644',type:'blob',sha:blob.sha},
       ...(addBlobGh?[{path:ADD_FILE,mode:'100644',type:'blob',sha:addBlobGh.sha}]:[]),
+      ...(meta.linePlan?[{path:LP_FILE,mode:'100644',type:'blob',sha:meta.linePlan.sha}]:[]),
       {path:'latest.json',mode:'100644',type:'blob',content:JSON.stringify(meta,null,2)}]})});
     // parentless commit + force-moved branch: the previous file is wiped, no history builds up
     const commit=await gh('/git/commits',{method:'POST',body:JSON.stringify({message:'DOC master update '+meta.updated,tree:tree.sha,parents:[]})});
