@@ -2690,12 +2690,13 @@ async function updateLinePlan(lpBytes, docBytes, opts = {}) {
       return ctx;
     };
     // look of each column (most common style in the old rows), boxed
-    const canon = new Map();
+    const canon = new Map(), lastSt = new Map();
     for (let c = 1; c <= lastCol; c++) {
       const cnt = new Map();
-      for (let r = 3; r <= oldLast; r++) { const x = old.get(r, c); if (!x) continue; const s = +(styleOf(x) || 0); cnt.set(s, (cnt.get(s) || 0) + 1); }
+      for (let r = 3; r < Math.max(oldLast, 4); r++) { const x = old.get(r, c); if (!x) continue; const s = +(styleOf(x) || 0); cnt.set(s, (cnt.get(s) || 0) + 1); }
       let best = 0, bn = -1; for (const [s, k] of cnt) if (k > bn) { bn = k; best = s; }
-      canon.set(c, SB.boxed(best));
+      canon.set(c, best);
+      const lx = oldLast > 3 ? old.get(oldLast, c) : null; lastSt.set(c, lx ? +(styleOf(lx) || 0) : best);   // closing (bottom) row look                   // exactly the look the list already has (borders, fonts, wrap, formats)
     }
     const rfdCol = [ci(cfg.rfdPlan)];      // RFD Plan (FOC Q was headed 'Rfd Okan')
     const comCol = [...hdr].find(([c, h]) => /^comments?$/i.test(h) && tmpl.has(c));
@@ -2712,7 +2713,7 @@ async function updateLinePlan(lpBytes, docBytes, opts = {}) {
         const d = lastCommentDate(vals.get(comCol[0]), today); if (d !== null) { vals.set(rfdCol[0], d); rfdSet++; }
       }
       for (let c = 1; c <= lastCol; c++) {
-        const s = String(canon.get(c)), ref = cl(c) + r;
+        const s = String(r === n ? lastSt.get(c) : canon.get(c)), ref = cl(c) + r;
         if (left.has(c)) cells.set(c, fcellXml(ref, s, left.get(c)(r, c).replace(/^=/, '')));
         else if (vals.has(c)) { const v = vals.get(c);
           if (opts.debugFormulas && !(v && v.formula)) { (report.debug || (report.debug = {}))[cfg.name + '!' + ref] = v; cells.set(c, fcellXml(ref, s, gens.get(c) ? gens.get(c)(r, c).replace(/^=/, '') : '""')); }
@@ -2721,7 +2722,7 @@ async function updateLinePlan(lpBytes, docBytes, opts = {}) {
       }
       // keep anything the user has to the right of the list
       const o = sh.rows.get(r); if (o) for (const [c, x] of o[1]) if (c > lastCol) cells.set(c, x);
-      sh.rows.set(r, [(o ? stripHidden(o[0]) : ta.replace(/\s*\br="\d+"/, ' r="' + r + '"')).replace(/\br="\d+"/, `r="${r}"`), cells]);
+      sh.rows.set(r, [ta.replace(/\br="\d+"/, `r="${r}"`).replace(/\sspans="[^"]*"/, ''), cells]);   // same row height as the list's first row
     }
     for (let r = n + 1; r <= oldLast; r++) sh.rows.delete(r);
     { const [, hc] = sh.row(2); const x = hc.get(rfdCol[0]); const h = String(cellValue(x, L.sst) || '').replace(/\s+/g, ' ').trim();
