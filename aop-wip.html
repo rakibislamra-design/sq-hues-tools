@@ -1,0 +1,545 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AOP WIP Status</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#F6F3F4; --surface:#FFFFFF; --sunk:#EFECED; --line:#E2DADD;
+  --ink:#2B1F25; --muted:#7A6D73;
+  --purple:#664356; --purple-2:#957B87; --purple-3:#D2C7CB;
+  --tan:#B7A19B; --tan-2:#DED5D0; --blue:#366083; --blue-2:#A3ABBF; --red:#AF4F5A; --red-2:#E7D1CE;
+  --on-accent:#FFFFFF; --veil:rgba(102,67,86,.86);
+  --f-display:"Archivo","Segoe UI",Arial,sans-serif; --f-body:"IBM Plex Sans","Segoe UI",Arial,sans-serif; --f-mono:"IBM Plex Mono",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#1C1519; --surface:#271E23; --sunk:#30252B; --line:#3E3138; --ink:#F1EAEE; --muted:#B5A6AE;
+  --purple:#B48FA3; --purple-2:#8E6A7D; --purple-3:#4A3842; --tan:#CDB9B2; --tan-2:#4A3F3B;
+  --blue:#7FA3C6; --blue-2:#3B4A5C; --red:#D9848D; --red-2:#4A2C30; --on-accent:#1C1519; --veil:rgba(28,21,25,.9); color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#1C1519; --surface:#271E23; --sunk:#30252B; --line:#3E3138; --ink:#F1EAEE; --muted:#B5A6AE;
+  --purple:#B48FA3; --purple-2:#8E6A7D; --purple-3:#4A3842; --tan:#CDB9B2; --tan-2:#4A3F3B;
+  --blue:#7FA3C6; --blue-2:#3B4A5C; --red:#D9848D; --red-2:#4A2C30; --on-accent:#1C1519; --veil:rgba(28,21,25,.9); color-scheme:dark }
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.45;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px}
+.wrap{max-width:1280px;margin:0 auto;display:grid;gap:14px}
+.num{font-variant-numeric:tabular-nums}
+header{display:grid;gap:12px;background:var(--purple);color:var(--on-accent);border-radius:10px;padding:14px 18px;position:relative}
+.htop{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px}
+header h1{font-family:var(--f-display);font-weight:800;font-size:1.45rem;margin:0;text-wrap:balance}
+header h1 .tgt{all:unset;font-weight:700;font-size:.82em;white-space:nowrap}
+header h1 button.tgt{cursor:pointer;border-bottom:1.5px dashed rgba(255,255,255,.5)}
+header h1 button.tgt:focus-visible{outline:2px solid var(--on-accent);outline-offset:2px}
+header .sub{font-size:.78rem;opacity:.85;margin-top:2px}
+.controls{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.chip{font-family:var(--f-mono);font-size:.78rem;background:rgba(255,255,255,.14);padding:6px 10px;border-radius:6px}
+.chip.warn{background:rgba(255,255,255,.92);color:var(--red);font-weight:500}
+.seg{display:inline-flex;background:rgba(255,255,255,.14);border-radius:8px;padding:3px;gap:2px;flex-wrap:wrap}
+.seg button{all:unset;cursor:pointer;font-size:.8rem;font-weight:600;padding:6px 12px;border-radius:6px;opacity:.85}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--purple);opacity:1}
+.seg button:focus-visible,select:focus-visible,.upbtn:focus-visible,.hbtn:focus-visible{outline:2px solid var(--on-accent);outline-offset:2px}
+label.sel{display:inline-flex;align-items:center;gap:6px;font-size:.78rem;font-weight:600}
+select{font:inherit;font-size:.8rem;font-weight:600;padding:6px 8px;border-radius:6px;border:0;background:var(--surface);color:var(--purple);cursor:pointer}
+.navr{display:flex;align-items:center;gap:8px}
+.hbtn{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-size:.78rem;font-weight:600;padding:5px 9px;border-radius:6px;background:rgba(255,255,255,.14);color:var(--on-accent);text-decoration:none}
+.hbtn:hover{background:rgba(255,255,255,.24)}
+.hbtn svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.lastbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;font-size:.78rem;border-top:1px solid rgba(255,255,255,.22);padding-top:10px}
+.lastbar b{font-family:var(--f-display);font-weight:700;letter-spacing:.02em}
+.lastbar .dl{display:inline-flex;align-items:center;gap:6px;font-weight:700;color:var(--purple);background:var(--surface);padding:5px 10px;border-radius:6px;text-decoration:none;cursor:pointer}
+.lastbar .dl svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.upload{display:flex;flex-wrap:wrap;align-items:center;gap:10px;border:1.5px dashed rgba(255,255,255,.45);border-radius:8px;padding:8px 12px}
+.upload.over{background:rgba(255,255,255,.14)}
+.upbtn{cursor:pointer;font-size:.8rem;font-weight:700;padding:7px 12px;border-radius:6px;background:var(--surface);color:var(--purple)}
+.upload .msg{font-size:.76rem;opacity:.9;flex:1;min-width:200px}
+.upload .msg b{font-weight:600}
+.save{font-family:var(--f-mono);font-size:.74rem;padding:5px 9px;border-radius:6px;background:rgba(255,255,255,.14)}
+.save.live{background:#E6F2EA;color:#2F6B47}
+.save.bad{background:var(--red-2);color:var(--red)}
+#file,#tgtIn{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.setdlg{position:absolute;right:14px;top:56px;z-index:30;width:min(420px,calc(100% - 28px));background:var(--surface);color:var(--ink);border:1px solid var(--line);border-top:4px solid var(--purple);border-radius:10px;box-shadow:0 14px 36px rgba(0,0,0,.22);padding:14px;display:grid;gap:10px;font-size:.82rem}
+.setdlg h2{margin:0;font-family:var(--f-display);font-size:1rem;color:var(--purple)}
+.setdlg p{margin:0;color:var(--muted)}
+.setdlg label{display:grid;gap:4px;font-weight:600;font-size:.76rem}
+.setdlg input{font:inherit;font-size:.82rem;padding:7px 9px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink)}
+.setrow{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px}
+.setrow .st{font-size:.74rem;color:var(--muted)}
+.btn{font:inherit;font-size:.78rem;font-weight:600;padding:6px 11px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.btn.pri{background:var(--purple);border-color:var(--purple);color:var(--on-accent)}
+
+.kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:grid;gap:4px}
+.kpi .lab{font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+.kpi .val{font-family:var(--f-display);font-weight:700;font-size:1.6rem;line-height:1.1}
+.kpi .val small{font-size:.75rem;font-weight:600;color:var(--muted);margin-left:3px}
+.kpi .meta{font-size:.74rem;color:var(--muted)}
+.track{height:5px;background:var(--sunk);border-radius:3px;overflow:hidden;margin-top:4px}
+.track i{display:block;height:100%;border-radius:3px}
+
+.grid{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);gap:14px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;min-width:0}
+.panel h2{font-family:var(--f-display);font-size:.95rem;font-weight:700;margin:0 0 2px;color:var(--purple)}
+.panel .hint{font-size:.74rem;color:var(--muted);margin:0 0 12px}
+.flow{display:grid;gap:9px}
+.frow{display:grid;grid-template-columns:132px minmax(0,1fr) 112px;align-items:center;gap:10px}
+.frow .name{font-size:.82rem;font-weight:500}
+.frow .name span{display:block;font-size:.68rem;color:var(--muted);font-weight:400}
+.bar{height:22px;background:var(--sunk);border-radius:5px;position:relative;overflow:hidden}
+.bar i{position:absolute;inset:0 auto 0 0;border-radius:5px;transition:width .5s ease}
+.bar b{position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:.72rem;font-weight:600;color:var(--on-accent);font-family:var(--f-mono)}
+.frow .q{text-align:right;font-family:var(--f-display);font-weight:600;font-size:.95rem}
+.frow .q span{display:block;font-size:.68rem;color:var(--muted);font-family:var(--f-body);font-weight:400}
+.drop{font-size:.68rem;color:var(--red);margin:-4px 0 0 142px}
+.side{display:grid;gap:14px;min-width:0;align-content:start}
+.rings{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;text-align:center}
+.ring{display:grid;justify-items:center;gap:4px}
+.ring svg{width:92px;height:92px}
+.ring .t{font-size:.74rem;color:var(--muted);line-height:1.25}
+.stack{display:flex;height:26px;border-radius:6px;overflow:hidden;background:var(--sunk);margin-bottom:10px}
+.stack i{display:block;height:100%;transition:width .5s ease}
+.legend{display:grid;gap:6px}
+.lg{display:grid;grid-template-columns:12px minmax(0,1fr) auto auto;gap:8px;align-items:center;font-size:.8rem}
+.lg .sw{width:12px;height:12px;border-radius:3px}
+.lg .v{font-family:var(--f-display);font-weight:600}
+.lg .p{font-size:.72rem;color:var(--muted);min-width:44px;text-align:right}
+
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2.2fr);gap:14px}
+.trend{display:flex;align-items:flex-end;gap:8px;height:150px;padding-top:18px}
+.tb{flex:1;display:grid;grid-template-rows:1fr auto;gap:4px;height:100%;min-width:0;cursor:pointer;background:none;border:0;padding:0;font:inherit;color:inherit}
+.tb .col{position:relative;display:flex;align-items:flex-end;height:100%}
+.tb .col i{display:block;width:100%;background:var(--purple-3);border-radius:4px 4px 0 0;position:relative}
+.tb .col i em{position:absolute;top:-16px;left:50%;transform:translateX(-50%);font-style:normal;font-size:.66rem;color:var(--muted);font-family:var(--f-mono);white-space:nowrap}
+.tb.on .col i{background:var(--purple)}
+.tb.on .col i em{color:var(--purple);font-weight:600}
+.tb span{font-size:.7rem;color:var(--muted);text-align:center}
+.tb:focus-visible{outline:2px solid var(--purple);outline-offset:2px;border-radius:4px}
+.tablewrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.8rem;min-width:640px}
+th{font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);text-align:right;padding:6px 8px;border-bottom:1px solid var(--line);font-weight:600}
+th:first-child,td:first-child{text-align:left}
+td{padding:5px 8px;border-bottom:1px solid var(--line);text-align:right}
+tr.key td{font-weight:600}
+tr.alert td{color:var(--red);font-weight:600}
+td .pb{display:inline-grid;grid-template-columns:52px 44px;gap:6px;align-items:center}
+td .pb s{display:block;height:6px;background:var(--sunk);border-radius:3px;overflow:hidden}
+td .pb s i{display:block;height:100%;background:var(--purple-2)}
+.pill{display:inline-block;font-size:.66rem;font-weight:600;padding:2px 7px;border-radius:99px;background:var(--red-2);color:var(--red);margin-left:6px;vertical-align:1px}
+.note{font-size:.72rem;color:var(--muted);display:grid;gap:4px}
+.note b{color:var(--red);font-weight:600}
+.overlay{position:fixed;inset:0;background:var(--veil);color:#fff;display:grid;place-items:center;z-index:20;font-family:var(--f-display);font-size:1.4rem;font-weight:700;pointer-events:none}
+@media (max-width:1000px){.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}.grid,.grid2{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:560px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.frow{grid-template-columns:96px minmax(0,1fr) 84px}.drop{margin-left:106px}header h1{font-size:1.2rem}header h1 .tgt{white-space:normal}}
+@media (prefers-reduced-motion:reduce){.bar i,.stack i{transition:none}}
+</style>
+</head>
+<body>
+<div class="overlay" id="overlay" hidden>Drop the AOP WIP file to load it</div>
+<div class="wrap">
+  <header>
+    <div class="htop">
+      <div>
+        <h1>AOP WIP Status <span class="tgt" id="tgt">(Balance Completion Target: –)</span></h1>
+        <input type="date" id="tgtIn" tabindex="-1" aria-hidden="true">
+        <div class="sub">Q Collection · Quality Seeks Quality · Order to RFD flow through the AOP mill</div>
+      </div>
+      <div class="navr">
+        <button type="button" class="hbtn" id="gearBtn" aria-label="Site settings" title="Site settings (owner)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+        <a class="hbtn" href="./">← All tools</a>
+      </div>
+    </div>
+    <div class="controls">
+      <label class="sel" for="month">Month <select id="month"></select></label>
+      <div class="seg" role="group" aria-label="Order view" id="seg"></div>
+      <div class="chip" id="rdate">Report date · –</div>
+      <div class="chip" id="left" hidden></div>
+    </div>
+    <div class="lastbar" id="lastbar" hidden></div>
+    <div class="upload" id="dropzone" hidden>
+      <label class="upbtn" for="file">Upload AOP WIP file</label>
+      <input type="file" id="file" accept=".xlsx,.xlsm,.xls">
+      <span class="msg" id="msg">or drag and drop the .xlsx anywhere on this page · it reads every "AOP DASHBOARD" sheet and saves it to the site</span>
+      <span class="save" id="save" hidden></span>
+    </div>
+    <div class="setdlg" id="setDlg" role="dialog" aria-label="Site settings" hidden>
+      <h2>Auto-save to the site</h2>
+      <p>Paste your GitHub key once (the same key works for every SQ Hues tool in this browser). After that, every upload saves the AOP WIP file and dashboard to the site and replaces the previous one, so storage stays flat. Visitors never see the key.</p>
+      <label for="siteKey">GitHub key (fine-grained token · Contents: read and write)
+        <input type="password" id="siteKey" autocomplete="off" placeholder="github_pat_…"></label>
+      <label for="tgtSet">Balance completion target
+        <input type="date" id="tgtSet"></label>
+      <div class="setrow"><span class="st" id="setSt"></span><span><button type="button" class="btn" id="keyRemove">Remove key</button> <button type="button" class="btn" id="setClose">Close</button> <button type="button" class="btn pri" id="keySave">Save</button></span></div>
+    </div>
+  </header>
+
+  <section class="kpis" id="kpis" aria-label="Headline figures"></section>
+
+  <div class="grid">
+    <section class="panel">
+      <h2>Order flow</h2>
+      <p class="hint" id="flowhint"></p>
+      <div class="flow" id="flow"></div>
+    </section>
+    <div class="side">
+      <section class="panel">
+        <h2>Progress against order</h2>
+        <p class="hint">Share of order quantity reached at each checkpoint</p>
+        <div class="rings" id="rings"></div>
+      </section>
+      <section class="panel">
+        <h2>Where the balance sits</h2>
+        <p class="hint" id="balhint"></p>
+        <div class="stack" id="stack"></div>
+        <div class="legend" id="legend"></div>
+      </section>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <section class="panel">
+      <h2>Monthly trend</h2>
+      <p class="hint">RFD complete % against each month's line plan · click a month to open it</p>
+      <div class="trend" id="trend"></div>
+    </section>
+    <section class="panel">
+      <h2>Summary</h2>
+      <p class="hint" id="tblhint"></p>
+      <div class="tablewrap"><table id="tbl"></table></div>
+    </section>
+  </div>
+
+  <div class="note" id="note"></div>
+</div>
+
+<script>
+/* Built-in sample, shown only until the site has a saved update */
+const SEED = [{"name":"AOP DASHBOARD (Jan'26)","rows":[[null,null,null,null,null,null,null,null],[null,"2026-02-01","Jan Line Plan","Without Jan Line Plan","Total-(Kg)","% against Jan Line Plan","% against total order",null],[null,"Total order in-hand qty (kg)",19942.1462,19605.535,39547.6812,0.5043,1,null],[null,"PFP dyeing done qty",19942.1462,13550.3908,33492.537,1,0.8469,null],[null,"PFP Dyeing pending qty",0,6055.1442,6055.1442,0,0.1531,null],[null,"PFP balance qty to be sent ",0,6055.1442,6055.1442,0,0.1531,null],[null,"Printing done qty (kg)",19942.1462,7505,27447.1462,1,0.694,null],[null,"Waiting for printing at AOP mill",0,7438.3908,7438.3908,null,null,null],[null,"Received total qty up to date",19942.1462,3262,23204.1462,1,0.5867,null],[null,"RFD complete qty up to date",19942.1462,1534,21476.1462,1,0.543,null],[null,"RFD balance qty (kg)",0,19085.3178,19085.3178,0,0.4826,null],[null,"AOP WIP at (SQ Hues QA) qty-(kg)",0,1728,1728,0,0.0437,null],[null,null,null,null,null,null,null,null]]},{"name":"AOP DASHBOARD (Mar'26)","rows":[[null,"2026-03-31","March Line Plan","Without March Plan","Total-(Kg)","% Against March Line Plan","% Against total order",null],[null,"Total order in-hand qty (kg)",17712.558,55121.6269,72834.1849,0.2432,1,null],[null,"PFP dyeing done qty (kg)",17712.558,2073,19785.558,1,0.2717,null],[null,"PFP Dyeing pending qty (kg)",0,53048.6269,53048.6269,0,0.7283,null],[null,"PFP balance qty to be sent (kg)",0,53348.6269,53348.6269,0,0.7325,null],[null,"Printing done qty (kg)",17712.558,494,18206.558,1,0.25,null],[null,"Waiting for printing at AOP mill (kg)",0,1279,1279,null,null,null],[null,"Received total qty up to date (kg)",17712.558,474,18186.558,1,0.2497,null],[null,"RFD complete qty up to date (kg)",17712.558,69,17781.558,1,0.2441,null],[null,"RFD balance qty (kg)",0,55052.6269,55052.6269,0,0.7559,null],[null,"AOP WIP at (SQ Hues QA) qty-(kg)",0,405,405,0,0.0056,null],[null,null,null,null,null,null,null,null]]},{"name":"AOP DASHBOARD (April'26)","rows":[[null,"2026-04-30","April Line Plan","Without April Plan","Total-(Kg)","% Against April Line Plan","% Against total order",null],[null,"Total order in-hand qty (kg)",40735.0523,42717.7527,83452.805,0.4881,1,null],[null,"PFP dyeing done qty (kg)",40735.3598,9993,50728.3598,1.0,0.6079,null],[null,"PFP Dyeing pending qty (kg)",-0.3075,32724.7527,32724.4452,-0.0,0.3921,null],[null,"PFP balance qty to be sent (kg)",0,34224.7527,34224.7527,0,0.4101,null],[null,"Printing done qty (kg)",40735.3598,1690,42425.3598,1.0,0.5084,null],[null,"Waiting for printing at AOP mill (kg)",0,6803,6803,null,null,null],[null,"Received total qty up to date (kg)",40232.854,1468,41700.854,0.9877,0.4997,null],[null,"RFD complete qty up to date (kg)",40171.854,1209,41380.854,0.9862,0.4959,null],[null,"RFD balance qty (kg)",563.1983,41508.7527,42071.951,0.0138,0.5041,null],[null,"AOP WIP at (SQ Hues QA) qty-(kg)",61,259,320,0.0015,0.0038,null],[null,null,null,null,null,null,null,null]]},{"name":"AOP DASHBOARD (May'26)","rows":[[null,"2026-06-06","May Line Plan","Without May Plan","Total-(Kg)","% Against May Line Plan","% Against total order",null],[null,"Total order in-hand qty (kg)",48811.7521,45760.9984,94572.7505,0.5161,1,null],[null,"PFP dyeing done qty (kg)",48769,10847,59616,0.9991,0.6304,null],[null,"PFP Dyeing pending qty (kg)",42.7521,34913.9984,34956.7505,0.0009,0.3696,null],[null,"PFP balance qty to be sent (kg)",90,40913.9984,41003.9984,0.0018,0.4336,null],[null,"Printing done qty (kg)",48210.5188,2763,50973.5188,0.9877,0.539,null],[null,"Waiting for printing at AOP mill (kg)",394.5567,3012,3406.5567,null,null,null],[null,"Received total qty up to date (kg)",46229.5926,1835,48064.5926,0.9471,0.5082,null],[null,"RFD complete qty up to date (kg)",44435.5926,432,44867.5926,0.9103,0.4744,null],[null,"RFD balance qty (kg)",4376.1595,45328.9984,49705.1579,0.0897,0.5256,null],[null,"AOP WIP at (SQ Hues QA) qty-(kg)",1794,902,2696,0.0368,0.0285,null],[null,null,null,null,null,null,null,null]]},{"name":"AOP DASHBOARD (JUNE'26)","rows":[[null,"2026-07-01","June Line Plan","Without June Plan","Total-(Kg)","% Against June Line Plan","% Against total order",null],[null,"Total order in-hand qty (kg)",53404.6763,48853.1695,102257.8458,0.5223,1,null],[null,"PFP dyeing done qty (kg)",53404.6763,12299.8527,65704.529,1,0.6425,null],[null,"PFP Dyeing pending qty (kg)",0,36553.3168,36553.3168,0,0.3575,null],[null,"PFP balance qty to be sent (kg)",0,38053.3168,38053.3168,0,0.3721,null],[null,"Printing done qty (kg)",53404.6763,6247.8527,59652.529,1,0.5834,null],[null,"Waiting for printing at AOP mill (kg)",0,4552,4552,null,null,null],[null,"Received total qty up to date (kg)",53404.6763,5444.8527,58849.529,1,0.5755,null],[null,"RFD complete qty up to date (kg)",53404.6763,3551,56955.6763,1,0.557,null],[null,"RFD balance qty (kg)",0,45302.1695,45302.1695,0,0.443,null],[null,"AOP WIP at (SQ Hues QA) qty-(kg)",0,1893.8527,1893.8527,0,0.0185,null],[null,null,null,null,null,null,null,null]]},{"name":"AOP DASHBOARD (JULY'26)","rows":[[null,"2026-08-02","July Line Plan","Without July Plan","Total-(Kg)","% Against July Line Plan","% Against total order",null],[null,"Total order in-hand qty (kg)",38549.1808,42921.1839,81470.3647,0.4732,1,null],[null,"PFP dyeing done qty (kg)",38549.1808,1632,40181.1808,1,0.4932,null],[null,"PFP Dyeing pending qty (kg)",0,41289.1839,41289.1839,0,0.5068,null],[null,"PFP balance qty to be sent (kg)",0,41289.1839,41289.1839,0,0.5068,null],[null,"Printing done qty (kg)",36162.7282,110,36272.7282,0.9381,0.4452,null],[null,"Waiting for printing at AOP mill (kg)",2386,1522,3908,null,null,null],[null,"Received total qty up to date (kg)",34422.6854,99,34521.6854,0.893,0.4237,null],[null,"RFD complete qty up to date (kg)",34332.6854,75,34407.6854,0.8906,0.4223,null],[null,"RFD balance qty (kg)",4216.4954,42846.1839,47062.6793,0.1094,0.5777,null],[null,"AOP WIP at (SQ Hues QA) qty-(kg)",90,24,114,0.0023,0.0014,null],[null,null,null,null,null,null,null,null]]},{"name":"AOP DASHBOARD (AUG'26)","rows":[[null,"2026-08-31","Aug Line Plan","Without Aug Plan","Total-(Kg)","% Against Aug Line Plan","% Against total order",null],[null,"Total order in-hand qty (kg)",52329.5206,51913.9416,104243.4622,0.502,1,null],[null,"PFP dyeing done qty (kg)",51049.0428,5347,56396.0428,0.9755,0.541,null],[null,"PFP Dyeing pending qty (kg)",1280.4778,46566.9416,47847.4194,0.0245,0.459,null],[null,"PFP balance qty to be sent (kg)",1280.4778,46566.9416,47847.4194,0.0245,0.459,null],[null,"Printing done qty (kg)",46630.0428,3587,50217.0428,0.8911,0.4817,null],[null,"Waiting for printing at AOP mill (kg)",4419,1760,6179,null,null,null],[null,"Received total qty up to date (kg)",43570.0428,3135,46705.0428,0.8326,0.448,null],[null,"RFD complete qty up to date (kg)",40492.0428,1288,41780.0428,0.7738,0.4008,null],[null,"RFD balance qty (kg)",11837.4778,50625.9416,62463.4194,0.2262,0.5992,null],[null,"AOP WIP at (SQ Hues QA) qty-(kg)",3078,1847,4925,0.0588,0.0472,null],[null,null,null,null,null,null,null,null]]},{"name":"AOP DASHBOARD (OCT'26)","rows":[[null,null,null,null,null,null,null,null],[null,null,null,null,null,"Report Date:","2026-10-27",null],[null,"Category","Oct Line Plan","Without Oct Plan","Total-(Kg)","% Against Oct Line Plan","% Against total order",null],[null,"Total order in-hand qty ",50177.1373,45509.0328,95686.1701,0.5244,1,null],[null,"Total PFP RFD done qty ",47861.7476,4314.7226,52176.4702,0.9539,0.5453,null],[null,"Total PFP send qty in AOP Mill",47861.7476,4314.7226,52176.4702,0.9539,0.5453,null],[null,"Total PFP balance qty to be send",2315.3897,41194.3102,43509.6999,0.0461,0.4547,null],[null,"PFP RFD balance qty ",2315.3897,41194.3102,43509.6999,0.0461,0.4547,null],[null,"PFP ready to send",0,0,0,0,null,null],[null,"Printing done qty ",36136.7476,2497,38633.7476,0.7202,0.4038,null],[null,"Wait for printing  (AOP mill)",11725.0,1817.7226,13542.7226,null,null,null],[null,"Received total qty up to date ",32313.7476,2418,34731.7476,0.644,0.363,null],[null,"WIP at AOP Mill",3823.0,2418,6241.0,0.0762,0.0652,null],[null,"Ready to collect (AOP Mill)",0,2418,2418,0,0.0253,null],[null,"RFD complete qty up to date (After AOP)",28853.7476,950,29803.7476,0.575,0.3115,null],[null,"Total RFD balance qty ",21323.3897,44559.0328,65882.4225,0.425,0.6885,null],[null,"AOP WIP at (SQ Hues-QA) qty-",3460,637,4097,0.069,0.0428,null],[null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null]]}];
+const SEED_FILE = "AOP_WIP.xlsx";
+
+/* ============ EDIT HERE: default target (used until one is saved) ============ */
+const DEFAULT_TARGET = "2026-11-07";
+/* ============================================================================ */
+
+/* ---------- site storage: own orphan branch, one commit, replaced on every save ---------- */
+const REPO={owner:"rakibislamra-design",repo:"sq-hues-tools"};
+const SITE=(()=>{const h=location.hostname;if(!/\.github\.io$/i.test(h))return null;const owner=h.split(".")[0];const seg=location.pathname.split("/").filter(Boolean);const repo=seg.length&&!/\.html?$/i.test(seg[0])?seg[0]:`${owner}.github.io`;return{owner,repo}})();
+const DATA_BRANCH="aop-data", JSON_PATH="aop-wip.json", XLS_PATH="aop-wip.xlsx";
+const getKey=()=>{try{return localStorage.getItem("sqhues.sitekey")||""}catch(e){return ""}};
+let SHA=null;
+async function resolveSha(){const S=SITE||REPO;try{const r=await fetch(`https://api.github.com/repos/${S.owner}/${S.repo}/commits/${DATA_BRANCH}?t=${Date.now()}`,{headers:{Accept:"application/vnd.github.sha"},cache:"no-store"});if(r.ok){const t=(await r.text()).trim();if(/^[0-9a-f]{40}$/.test(t))return t;}}catch(e){}return null;}
+const rawURL=(f,ref)=>{const S=SITE||REPO;return `https://raw.githubusercontent.com/${S.owner}/${S.repo}/${ref||SHA||DATA_BRANCH}/${f}`;};
+
+/* ---------- parsing (same path for saved data and an uploaded file) ---------- */
+const KEYS = [ // first match wins, so the specific patterns come first
+  ["order",/order\s*in[\s-]*hand/i], ["pfpPend",/pfp\s*(rfd\s*balance|dyeing\s*pending)/i],
+  ["pfpDone",/pfp\s*(rfd|dyeing)\s*done/i], ["sent",/pfp\s*send/i], ["pfpBal",/pfp\s*balance/i],
+  ["ready",/ready\s*to\s*send/i], ["printed",/printing\s*done/i], ["waitPrint",/wait/i],
+  ["received",/received/i], ["wipAop",/wip\s*at\s*aop/i], ["collect",/ready\s*to\s*collect/i],
+  ["rfd",/rfd\s*complete/i], ["rfdBal",/rfd\s*balance/i], ["wipQa",/hues/i]
+];
+const toNum = v => { const n = typeof v==="number" ? v : parseFloat(String(v??"").replace(/,/g,"")); return isFinite(n) ? n : 0; };
+const isNum = v => typeof v==="number" || (typeof v==="string" && /^-?[\d,.]+$/.test(v.trim()) && v.trim()!=="");
+const ymd = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+function toDate(v){
+  if (v instanceof Date && !isNaN(v)) return v;
+  if (typeof v==="number" && v>30000 && v<80000) return new Date(Math.round((v-25569)*864e5));
+  if (typeof v==="string" && /^\d{4}-\d{2}-\d{2}/.test(v)) return new Date(v.slice(0,10)+"T00:00:00");
+  return null;
+}
+function parseSheet(name, rows){
+  let r0=-1, c0=-1;
+  for (let r=0; r<rows.length && r0<0; r++) (rows[r]||[]).forEach((v,c)=>{ if(r0<0 && typeof v==="string" && /order\s*in[\s-]*hand/i.test(v)){r0=r;c0=c;} });
+  if (r0<0) return null;
+  const hdr = rows[r0-1]||[];
+  const clean = s => String(s??"").replace(/\s+/g," ").trim();
+  let date=null;
+  for (let r=0; r<=r0 && !date; r++) for (const v of (rows[r]||[])) { const d=toDate(v); if(d){date=d;break;} }
+  const lines=[];
+  for (let r=r0; r<rows.length; r++){
+    const row=rows[r]||[], lab=row[c0];
+    if (typeof lab!=="string" || !lab.trim()) break;
+    if (!isNum(row[c0+1]) && !isNum(row[c0+2])) break;
+    const k = (KEYS.find(([,re])=>re.test(lab))||[null])[0];
+    lines.push({label:clean(lab).replace(/[-\s]+$/,""), key:k, a:toNum(row[c0+1]), b:toNum(row[c0+2])});
+  }
+  const map={}; lines.forEach(l=>{ if(l.key && !(l.key in map)) map[l.key]=l; });
+  const planLabel = clean(hdr[c0+1]) || "Line Plan";
+  const otherLabel = clean(hdr[c0+2]) || "Without Line Plan";
+  const m = name.match(/\(([^)]+)\)/);
+  return {name, short: m ? m[1] : name, planLabel, otherLabel, date, lines, map};
+}
+const parseAll = list => list.map(s=>parseSheet(s.name,s.rows)).filter(Boolean);
+// keep only what the dashboard needs: dates as local yyyy-mm-dd, numbers to 4 dp, trailing blanks dropped
+function compactRows(rows){
+  const out=rows.slice(0,80).map(r=>{ const a=(r||[]).slice(0,12).map(v=>v instanceof Date?ymd(v):typeof v==="number"?Math.round(v*1e4)/1e4:(v===""?null:v));
+    while(a.length&&a[a.length-1]==null)a.pop(); return a; });
+  while(out.length&&!out[out.length-1].length)out.pop(); return out;
+}
+
+/* ---------- state ---------- */
+let SNAP = null;                                  // what is on the site (or just uploaded)
+let MONTHS = parseAll(SEED), idx = MONTHS.length-1, view = "total", source = SEED_FILE + " (sample)";
+let TARGET = DEFAULT_TARGET;
+
+/* ---------- helpers ---------- */
+const $ = id => document.getElementById(id);
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const fmt = n => Math.abs(n)<0.5 ? "–" : Math.round(n).toLocaleString("en-US");
+const pct = (a,b) => b ? a/b*100 : 0;
+const p1 = x => x.toFixed(1)+"%";
+const esc = s => String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const has = (M,k) => k in M.map;
+const val = (M,k,v=view) => { const l=M.map[k]; if(!l) return 0; return v==="a"?l.a : v==="b"?l.b : l.a+l.b; };
+const MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const longDate = s => { const d=toDate(s); return d? d.toLocaleDateString("en-GB",{day:"2-digit",month:"long",year:"numeric"}) : "–"; };
+const stamp = iso => { const d=new Date(iso); return `${String(d.getDate()).padStart(2,"0")}-${MON[d.getMonth()]}-${String(d.getFullYear()).slice(2)} · ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`; };
+const isOwner = () => !!getKey();
+
+function drawTarget(){
+  const t=$("tgt"), txt=`(Balance Completion Target: ${longDate(TARGET)})`;
+  if(isOwner()){ if(t.tagName!=="BUTTON"){ const b=document.createElement("button"); b.type="button"; b.className="tgt"; b.id="tgt"; b.title="Change target date"; t.replaceWith(b); b.addEventListener("click",pickTarget); } }
+  else if(t.tagName==="BUTTON"){ const s=document.createElement("span"); s.className="tgt"; s.id="tgt"; t.replaceWith(s); }
+  $("tgt").textContent=txt;
+}
+function drawLast(){
+  const bar=$("lastbar");
+  if(!SNAP){ bar.hidden=true; return; }
+  const dl = SNAP.xlsx ? `<a class="dl" id="dl" href="${esc(rawURL(SNAP.xlsx))}" download="${esc(SNAP.file||XLS_PATH)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Download AOP WIP file</a>` : "";
+  bar.innerHTML=`<b>Last update</b><span>${esc(stamp(SNAP.at))}</span><span>${esc(SNAP.file||"")}</span>${dl}`;
+  bar.hidden=false;
+  const a=$("dl"); if(a) a.addEventListener("click",async ev=>{ ev.preventDefault(); const t=a.lastChild.textContent; a.lastChild.textContent="Downloading…";
+    try{ const r=await fetch(rawURL(SNAP.xlsx)+"?ts="+Date.now(),{cache:"no-store"}); if(!r.ok)throw 0; const u=URL.createObjectURL(await r.blob()), x=document.createElement("a"); x.href=u; x.download=SNAP.file||XLS_PATH; document.body.appendChild(x); x.click(); setTimeout(()=>{URL.revokeObjectURL(u);x.remove()},4000); }
+    catch(e){ location.href=rawURL(SNAP.xlsx); } finally{ a.lastChild.textContent=t; } });
+}
+function applyRole(){ $("dropzone").hidden=!isOwner(); drawTarget(); }
+
+function render(){
+  const M = MONTHS[idx]; if(!M) return;
+  const ord = val(M,"order");
+  const vName = {total:"Total", a:M.planLabel, b:M.otherLabel}[view];
+
+  // header controls
+  $("month").innerHTML = MONTHS.map((m,i)=>`<option value="${i}" ${i===idx?"selected":""}>${esc(m.short)}</option>`).join("");
+  $("seg").innerHTML = [["total","Total"],["a",M.planLabel],["b",M.otherLabel]]
+    .map(([v,l])=>`<button id="v-${v}" data-v="${v}" aria-pressed="${v===view}">${esc(l)}</button>`).join("");
+  $("rdate").textContent = "Report date · " + (M.date ? M.date.toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"}) : "–");
+
+  // days left to target and kg/day needed for the RFD balance (latest month only)
+  const td=toDate(TARGET), today=new Date(); today.setHours(0,0,0,0);
+  const left=$("left");
+  if(td && idx===MONTHS.length-1){
+    const days=Math.round((td-today)/864e5), bal=Math.max(val(M,"rfdBal"),0);
+    left.hidden=false; left.classList.toggle("warn",days<0);
+    left.textContent = days<0 ? `Target passed ${-days} day${days===-1?"":"s"} ago · ${fmt(bal)} kg open`
+      : days===0 ? `Target is today · ${fmt(bal)} kg open`
+      : `${days} day${days===1?"":"s"} left · ${fmt(bal/days)} kg/day needed`;
+  } else left.hidden=true;
+
+  // KPIs
+  const pick = (...ks)=>ks.find(k=>has(M,k));
+  const kp = [["Total order","order","var(--purple)"],["PFP sent to AOP",pick("sent","pfpDone"),"var(--purple-2)"],
+    ["Printing done","printed","var(--blue)"],["Received from AOP","received","var(--tan)"],
+    ["RFD complete","rfd","var(--blue)"],["RFD balance","rfdBal","var(--red)"]];
+  $("kpis").innerHTML = kp.map(([lab,k,c])=>{
+    const v=val(M,k), p=pct(v,ord);
+    const meta = k==="order" ? `${esc(M.planLabel)} ${fmt(val(M,"order","a"))} · Other ${fmt(val(M,"order","b"))}` : `${p1(p)} of order`;
+    return `<div class="kpi"><div class="lab">${lab}</div><div class="val num" style="color:${c}">${fmt(v)}<small>kg</small></div>
+      <div class="meta">${meta}</div><div class="track"><i style="width:${Math.min(Math.max(p,0),100)}%;background:${c}"></i></div></div>`;
+  }).join("");
+
+  // Flow (only steps present in this sheet)
+  const steps=[["Order","order","In hand","var(--purple)"],["PFP RFD","pfpDone","Fabric ready","var(--purple-2)"],["Sent to AOP","sent","At print mill","var(--purple-2)"],
+    ["Printed","printed","AOP done","var(--blue)"],["Received","received","Back in house","var(--tan)"],["RFD done","rfd","After AOP","var(--blue)"]].filter(s=>has(M,s[1]));
+  let h="", prev=null;
+  steps.forEach(([lab,k,sub,c])=>{
+    const v=val(M,k), p=pct(v,ord);
+    if(prev!==null && prev-v>=0.5) h+=`<div class="drop num">▼ ${fmt(prev-v)} kg not yet moved on</div>`;
+    h+=`<div class="frow"><div class="name">${lab}<span>${sub}</span></div>
+      <div class="bar"><i style="width:${Math.min(Math.max(p,0),100)}%;background:${c}"></i>${p>=9?`<b>${p1(p)}</b>`:""}</div>
+      <div class="q num">${fmt(v)}<span>${p<9?p1(p)+" · ":""}kg</span></div></div>`;
+    prev=v;
+  });
+  $("flow").innerHTML=h;
+  $("flowhint").textContent=`${vName} · bars scaled to order quantity (${fmt(ord)} kg). Red notes show quantity still waiting between steps.`;
+
+  // Rings
+  const ring=(p,c,t)=>{const r=38,C=2*Math.PI*r,off=C*(1-Math.min(Math.max(p,0),100)/100);
+    return `<div class="ring"><svg viewBox="0 0 92 92" role="img" aria-label="${t.replace('<br>',' ')} ${p1(p)}">
+      <circle cx="46" cy="46" r="${r}" fill="none" stroke="${css('--sunk')}" stroke-width="9"/>
+      <circle cx="46" cy="46" r="${r}" fill="none" stroke="${c}" stroke-width="9" stroke-linecap="round" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}" transform="rotate(-90 46 46)"/>
+      <text x="46" y="51" text-anchor="middle" font-family="Archivo, Arial, sans-serif" font-weight="700" font-size="16" fill="${css('--ink')}">${Math.round(p)}%</text></svg><div class="t">${t}</div></div>`;};
+  $("rings").innerHTML =
+    ring(pct(val(M,pick("sent","pfpDone")),ord),css("--purple"),"PFP sent<br>to AOP")+
+    ring(pct(val(M,"printed"),ord),css("--blue"),"Printing<br>done")+
+    ring(pct(val(M,"rfd"),ord),css("--tan"),"RFD<br>complete");
+
+  // Balance
+  const parts=[["PFP still to send","pfpBal","var(--purple-3)"],["Waiting for printing","waitPrint","var(--purple-2)"],
+    ["WIP at AOP mill","wipAop","var(--tan)"],["Ready to collect","collect","var(--tan-2)"],["WIP at Hues-QA","wipQa","var(--blue-2)"]].filter(p=>has(M,p[1]));
+  const tot=parts.reduce((s,[,k])=>s+Math.max(val(M,k),0),0);
+  $("balhint").textContent=`${fmt(tot)} kg in the pipeline · RFD balance ${fmt(val(M,"rfdBal"))} kg`;
+  $("stack").innerHTML=parts.map(([l,k,c])=>`<i title="${l}" style="width:${pct(Math.max(val(M,k),0),tot)}%;background:${c}"></i>`).join("");
+  $("legend").innerHTML=parts.map(([l,k,c])=>{const v=val(M,k);
+    return `<div class="lg"><span class="sw" style="background:${c}"></span><span>${l}</span><span class="v num">${fmt(v)}</span><span class="p num">${p1(pct(Math.max(v,0),tot))}</span></div>`;}).join("");
+
+  // Trend
+  const tp = MONTHS.map(m=>pct(val(m,"rfd","a"),val(m,"order","a")));
+  $("trend").innerHTML = MONTHS.map((m,i)=>
+    `<button class="tb ${i===idx?"on":""}" data-i="${i}" aria-label="${esc(m.short)} ${p1(tp[i])}">
+      <div class="col"><i style="height:${Math.max(Math.min(tp[i],100),1)}%"><em>${Math.round(tp[i])}%</em></i></div>
+      <span>${esc(m.short.replace(/'?\d{2}$/,""))}</span></button>`).join("");
+
+  // Checks
+  const checks=[];
+  const chk=(k,a,b,txt)=>{ if(!has(M,k)||!has(M,a)||!has(M,b)) return;
+    for (const [v,lab] of [["a",M.planLabel],["b",M.otherLabel]]){ const exp=val(M,a,v)-val(M,b,v), got=val(M,k,v);
+      if(Math.abs(exp-got)>1) checks.push({k,v,txt:`${lab} · ${txt} shows ${fmt(got)} but ${M.map[a].label} − ${M.map[b].label} = ${fmt(exp)}`}); } };
+  chk("wipAop","printed","received","WIP at AOP Mill");
+  chk("wipQa","received","rfd","AOP WIP at Hues-QA");
+  chk("rfdBal","order","rfd","RFD balance");
+  const flagged=new Set(checks.map(c=>c.k));
+
+  // Table
+  const totOrd=val(M,"order"), aOrd=val(M,"order","a");
+  const pb=p=>`<span class="pb"><s><i style="width:${Math.min(Math.max(p,0),100)}%"></i></s><span class="num">${p1(p)}</span></span>`;
+  let t=`<thead><tr><th>Category</th><th>${esc(M.planLabel)}</th><th>${esc(M.otherLabel)}</th><th>Total</th><th>% vs ${esc(M.planLabel)}</th><th>% vs total order</th></tr></thead><tbody>`;
+  M.lines.forEach(l=>{
+    const s=l.a+l.b, cls=l.key==="rfdBal"?"alert":(l.key==="received"||l.key==="rfd")?"key":"";
+    const pa=l.key==="order"?pct(l.a,totOrd):pct(l.a,aOrd);
+    t+=`<tr class="${cls}"><td>${esc(l.label)}${flagged.has(l.key)?'<span class="pill">check</span>':""}</td>
+      <td class="num">${fmt(l.a)}</td><td class="num">${fmt(l.b)}</td><td class="num">${fmt(s)}</td><td>${pb(pa)}</td><td>${pb(pct(s,totOrd))}</td></tr>`;
+  });
+  $("tbl").innerHTML=t+"</tbody>";
+  $("tblhint").textContent=`Kg · ${M.name}`;
+  $("note").innerHTML=`<span>Source: ${esc(source)} · sheet "${esc(M.name)}" · ${MONTHS.length} monthly sheets loaded.</span>`+
+    (checks.length?`<span><b>Data check:</b> ${checks.map(c=>esc(c.txt)).join(" · ")}</span>`:"<span>Data check: all balances add up.</span>");
+}
+
+function useSnap(j, keepPos){
+  if(!j||j.v!==1||!Array.isArray(j.sheets)) return false;
+  const parsed=parseAll(j.sheets); if(!parsed.length) return false;
+  const cur=keepPos&&MONTHS[idx]?MONTHS[idx].name:null;
+  SNAP=j; MONTHS=parsed; source=j.file||XLS_PATH; TARGET=j.target||TARGET;
+  const k=cur?parsed.findIndex(m=>m.name===cur):-1; idx=k>=0?k:parsed.length-1;
+  drawLast(); drawTarget(); render(); return true;
+}
+
+/* ---------- GitHub save (orphan commit → previous version dropped, size stays flat) ---------- */
+async function gh(key,method,path,body){
+  const r=await fetch(`https://api.github.com/repos/${SITE.owner}/${SITE.repo}${path}`,{method,headers:{"Authorization":"Bearer "+key,"Accept":"application/vnd.github+json","Content-Type":"application/json"},body:body?JSON.stringify(body):undefined});
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok){ const e=new Error(r.status===401?"key not accepted (expired?)":r.status===403?"key has no write access":r.status===404?"not found for this key":(j.message||"GitHub error "+r.status)); e.status=r.status; throw e; }
+  return j;
+}
+function b64bytes(bytes){ let bin=""; for(let i=0;i<bytes.length;i+=0x8000) bin+=String.fromCharCode.apply(null,bytes.subarray(i,i+0x8000)); return btoa(bin); }
+const chip=$("save"); let liveTimer=null;
+function setChip(cls,txt){ chip.hidden=false; chip.className="save"+(cls?" "+cls:""); chip.textContent=txt; }
+async function commitSnap(snap, xbytes){
+  const key=getKey();
+  if(!SITE){ setChip("","Not saved · auto-save works on the GitHub site only"); return; }
+  if(!key) return;
+  setChip("","Saving to site…");
+  try{
+    const json={path:JSON_PATH,mode:"100644",type:"blob",content:JSON.stringify(snap)};
+    let tree;
+    if(xbytes){
+      const bx=await gh(key,"POST","/git/blobs",{content:b64bytes(xbytes),encoding:"base64"});
+      tree=await gh(key,"POST","/git/trees",{tree:[{path:XLS_PATH,mode:"100644",type:"blob",sha:bx.sha},json]});
+    }else{
+      let base=null; try{ const ref=await gh(key,"GET",`/git/ref/heads/${DATA_BRANCH}`); const c=await gh(key,"GET",`/git/commits/${ref.object.sha}`); base=c.tree.sha; }catch(e){ if(e.status!==404) throw e; }
+      tree=await gh(key,"POST","/git/trees",base?{base_tree:base,tree:[json]}:{tree:[json]});
+    }
+    const commit=await gh(key,"POST","/git/commits",{message:`AOP WIP update ${snap.at.slice(0,10)} (latest only)`,tree:tree.sha,parents:[]});
+    try{ await gh(key,"PATCH",`/git/refs/heads/${DATA_BRANCH}`,{sha:commit.sha,force:true}); }
+    catch(e){ if(e.status===404||e.status===422) await gh(key,"POST","/git/refs",{ref:`refs/heads/${DATA_BRANCH}`,sha:commit.sha}); else throw e; }
+    SHA=commit.sha; drawLast(); watchLive(snap.at, commit.sha);
+  }catch(e){ setChip("bad","✕ Not saved to site: "+e.message); }
+}
+function watchLive(at, sha){
+  clearInterval(liveTimer); const t0=Date.now();
+  const tick=async()=>{
+    const sec=Math.round((Date.now()-t0)/1000);
+    try{ const r=await fetch(rawURL(JSON_PATH,sha)+"?ts="+Date.now(),{cache:"no-store"}); if(r.ok){ const j=await r.json(); if(j.at===at){ clearInterval(liveTimer); setChip("live","● Live on site now"); return; } } }catch(e){}
+    if(sec>300){ clearInterval(liveTimer); setChip("","✓ Saved · it will show for everyone shortly"); return; }
+    setChip("",`✓ Saved · going live… ${Math.floor(sec/60)}:${String(sec%60).padStart(2,"0")}`);
+  };
+  tick(); liveTimer=setInterval(tick,6000);
+}
+
+/* ---------- events ---------- */
+$("month").addEventListener("change",e=>{idx=+e.target.value;render();});
+$("seg").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;view=b.dataset.v;render();});
+$("trend").addEventListener("click",e=>{const b=e.target.closest(".tb");if(!b)return;idx=+b.dataset.i;render();});
+
+const msg=$("msg");
+function loadFile(f){
+  if(!f||!isOwner()) return;
+  if(!/\.(xlsx|xlsm|xls)$/i.test(f.name)){ msg.innerHTML=`<b>${esc(f.name)}</b> is not an Excel file. Choose the AOP WIP .xlsx file.`; return; }
+  if(typeof XLSX==="undefined"){ msg.textContent="The Excel reader did not load. Reload the page and try again."; return; }
+  msg.textContent=`Reading ${f.name}…`;
+  const rd=new FileReader();
+  rd.onload=()=>{
+    try{
+      const bytes=new Uint8Array(rd.result);
+      const wb=XLSX.read(bytes,{type:"array",cellDates:true});
+      const sheets=wb.SheetNames.filter(n=>/dashboard/i.test(n)).map(n=>({name:n,rows:compactRows(XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:null}))}));
+      const ok=sheets.filter(s=>parseSheet(s.name,s.rows));
+      if(!ok.length){ msg.innerHTML=`No "AOP DASHBOARD" sheet with a "Total order in-hand qty" row was found in <b>${esc(f.name)}</b>.`; return; }
+      const snap={v:1,tool:"aop-wip",at:new Date().toISOString(),file:f.name,target:TARGET,xlsx:XLS_PATH,sheets:ok};
+      view="total"; useSnap(snap,false);
+      msg.innerHTML=`Loaded <b>${esc(f.name)}</b> · ${ok.length} monthly sheets · showing ${esc(MONTHS[idx].short)}`;
+      commitSnap(snap, bytes.length<20*1048576?bytes:null);
+    }catch(err){ msg.innerHTML=`Could not read <b>${esc(f.name)}</b>. Save it as .xlsx in Excel and try again.`; }
+  };
+  rd.readAsArrayBuffer(f);
+}
+$("file").addEventListener("change",e=>{loadFile(e.target.files[0]);e.target.value="";});
+const ov=$("overlay"), dz=$("dropzone"); let depth=0;
+window.addEventListener("dragenter",e=>{if(!isOwner()||![...e.dataTransfer.types].includes("Files"))return;e.preventDefault();depth++;ov.hidden=false;dz.classList.add("over");});
+window.addEventListener("dragover",e=>{e.preventDefault();});
+window.addEventListener("dragleave",e=>{depth=Math.max(depth-1,0);if(!depth){ov.hidden=true;dz.classList.remove("over");}});
+function hideOv(){depth=0;ov.hidden=true;dz.classList.remove("over");}
+window.addEventListener("drop",e=>{e.preventDefault();hideOv();loadFile(e.dataTransfer.files[0]);});
+window.addEventListener("dragend",hideOv);
+
+// target date (owner): click the title text, or use ⚙
+function setTarget(v){
+  if(!v||v===TARGET) return; TARGET=v; drawTarget(); render();
+  if(SNAP){ SNAP={...SNAP,target:v}; commitSnap(SNAP,null); }
+  else commitSnap({v:1,tool:"aop-wip",at:new Date().toISOString(),file:"",target:v,xlsx:null,sheets:[]},null);
+}
+function pickTarget(){ const i=$("tgtIn"); i.value=TARGET; try{ i.showPicker(); }catch(e){ $("gearBtn").click(); $("tgtSet").focus(); } }
+$("tgtIn").addEventListener("change",e=>setTarget(e.target.value));
+
+// settings
+$("gearBtn").addEventListener("click",()=>{ const d=$("setDlg"); d.hidden=!d.hidden; if(!d.hidden){ $("siteKey").value=getKey(); $("tgtSet").value=TARGET;
+  $("setSt").textContent=!SITE?"Auto-save works on the GitHub site only.":getKey()?`Auto-save is ON for ${SITE.owner}/${SITE.repo}`:"Auto-save is off"; $("siteKey").focus(); } });
+$("setClose").addEventListener("click",()=>{$("setDlg").hidden=true});
+$("keySave").addEventListener("click",()=>{ const v=$("siteKey").value.trim();
+  if(v){ try{localStorage.setItem("sqhues.sitekey",v)}catch(e){} }
+  applyRole();
+  if(!getKey()){ $("setSt").textContent="Paste the key first."; return; }
+  setTarget($("tgtSet").value);
+  $("setSt").textContent=SITE?`✓ Saved · auto-save is ON for ${SITE.owner}/${SITE.repo}`:"✓ Saved (auto-save runs on the GitHub site)"; });
+$("keyRemove").addEventListener("click",()=>{ try{localStorage.removeItem("sqhues.sitekey")}catch(e){} $("siteKey").value=""; $("setSt").textContent="Key removed · auto-save is off"; applyRole(); });
+document.addEventListener("keydown",e=>{ if(e.key==="Escape") $("setDlg").hidden=true; });
+
+matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change",render);
+new MutationObserver(render).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
+
+/* ---------- start: show sample at once, then the last saved update from the site ---------- */
+applyRole(); render();
+(async()=>{
+  SHA=await resolveSha();
+  try{
+    const r=await fetch(rawURL(JSON_PATH)+"?ts="+Date.now(),{cache:"no-store"});
+    if(r.ok){ const j=await r.json(); if(!useSnap(j,false) && j && j.target){ TARGET=j.target; drawTarget(); render(); } }
+  }catch(e){}
+})();
+</script>
+</body>
+</html>
