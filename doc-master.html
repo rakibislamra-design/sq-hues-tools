@@ -157,6 +157,114 @@ h1{font:700 clamp(22px,2.6vw,30px)/1.1 var(--disp);margin:2px 0 4px;letter-spaci
 .btable tbody tr:nth-child(even){background:var(--q5)}
 .btable tfoot td{font-weight:700;border-top:2px solid var(--q40)}
 .btable .z{color:var(--q40)}
+/* FOC · Hanger · PFP tracker (AOP WIP Status look) */
+#lp{--tan:#B7A19B;--tan2:#DED5D0;--blue2:#A3ABBF;--sunk:var(--q5);margin-top:22px;display:grid;gap:14px}
+#lp .num{font-variant-numeric:tabular-nums}
+#lp .lph{display:grid;gap:12px;background:var(--q);color:#fff;border-radius:10px;padding:14px 18px}
+#lp .lph-top{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px}
+#lp .lph h2{font:700 1.35rem/1.2 var(--disp);margin:0}
+#lp .lph .sub{font-size:.8rem;color:#fff;opacity:.85;margin-top:2px}
+#lp .ctl{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+#lp .chipd{font:500 .78rem var(--mono);background:rgba(255,255,255,.14);padding:6px 10px;border-radius:6px}
+#lp .seg{display:inline-flex;background:rgba(255,255,255,.14);border-radius:8px;padding:3px;gap:2px;flex-wrap:wrap}
+#lp .seg button{all:unset;cursor:pointer;font-size:.8rem;font-weight:600;padding:6px 12px;border-radius:6px;opacity:.85}
+#lp .seg button[aria-pressed="true"]{background:var(--card);color:var(--q);opacity:1}
+#lp .seg button:focus-visible,#lp .lph select:focus-visible,#lp .lph input:focus-visible{outline:2px solid #fff;outline-offset:2px}
+#lp .lph select,#lp .lph input{font:600 .8rem var(--sans);padding:6px 8px;border-radius:6px;border:0;background:var(--card);color:var(--q);max-width:200px}
+#lp .lph input{font-weight:500;width:210px}
+#lp .fl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:.78rem}
+#lp .fl .x{display:inline-flex;align-items:center;gap:4px;background:rgba(255,255,255,.18);border-radius:999px;padding:3px 4px 3px 10px;font-weight:600}
+#lp .fl .x button{all:unset;cursor:pointer;padding:0 6px;font-size:14px}
+#lp .kp{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}
+#lp .k{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:grid;gap:4px;cursor:pointer;text-align:left;font:inherit;color:inherit}
+#lp .k:hover{border-color:var(--q40)}
+#lp .k[aria-pressed="true"]{border-color:var(--q);box-shadow:inset 0 0 0 1px var(--q)}
+#lp .k .lab{font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+#lp .k .val{font:700 1.6rem/1.1 var(--disp)}
+#lp .k .val small{font:600 .75rem var(--sans);color:var(--muted);margin-left:3px}
+#lp .k .km{font-size:.74rem;color:var(--muted)}
+#lp .trk{height:5px;background:var(--sunk);border-radius:3px;overflow:hidden;margin-top:4px}
+#lp .trk i{display:block;height:100%;border-radius:3px}
+#lp .g1{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);gap:14px}
+#lp .g2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2.2fr);gap:14px}
+#lp .pn{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;min-width:0}
+#lp .pn h3{font:700 .95rem var(--disp);margin:0 0 2px;color:var(--q)}
+#lp .pn .hint{font-size:.74rem;color:var(--muted);margin:0 0 12px}
+#lp .side{display:grid;gap:14px;min-width:0;align-content:start}
+#lp .flow{display:grid;gap:9px}
+#lp .fr{all:unset;display:grid;grid-template-columns:120px minmax(0,1fr) 112px;align-items:center;gap:10px;cursor:pointer;border-radius:6px}
+#lp .fr:focus-visible{outline:2px solid var(--q);outline-offset:2px}
+#lp .fr .nm{font-size:.82rem;font-weight:500}
+#lp .fr .nm span{display:block;font-size:.68rem;color:var(--muted);font-weight:400}
+#lp .fr[aria-pressed="true"] .nm{color:var(--q);font-weight:700}
+#lp .bar{height:22px;background:var(--sunk);border-radius:5px;position:relative;overflow:hidden;display:flex}
+#lp .bar i{display:block;height:100%;transition:width .5s ease}
+#lp .bar i:first-child{border-radius:5px 0 0 5px}
+#lp .bar b{position:absolute;left:8px;top:50%;transform:translateY(-50%);font:600 .72rem var(--mono);color:#fff}
+#lp .fr .q{text-align:right;font:600 .95rem var(--disp)}
+#lp .fr .q span{display:block;font:400 .68rem var(--sans);color:var(--muted)}
+#lp .rings{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;text-align:center}
+#lp .ring{display:grid;justify-items:center;gap:4px}
+#lp .ring svg{width:92px;height:92px}
+#lp .ring .t{font-size:.74rem;color:var(--muted);line-height:1.25}
+#lp .stack{display:flex;height:26px;border-radius:6px;overflow:hidden;background:var(--sunk);margin-bottom:10px}
+#lp .stack i{display:block;height:100%;transition:width .5s ease}
+#lp .legend{display:grid;gap:6px}
+#lp .lg{display:grid;grid-template-columns:12px minmax(0,1fr) auto auto;gap:8px;align-items:center;font-size:.8rem}
+#lp .lg .sw{width:12px;height:12px;border-radius:3px;margin:0}
+#lp .lg .v{font:600 .9rem var(--disp)}
+#lp .lg .p{font-size:.72rem;color:var(--muted);min-width:44px;text-align:right}
+#lp .due{display:flex;align-items:flex-end;gap:6px;height:170px;padding-top:18px}
+#lp .tb{flex:1;display:grid;grid-template-rows:1fr auto;gap:4px;height:100%;min-width:0;cursor:pointer;background:none;border:0;padding:0;font:inherit;color:inherit}
+#lp .tb .col{position:relative;display:flex;align-items:flex-end;height:100%}
+#lp .tb .col i{display:block;width:100%;background:var(--q20);border-radius:4px 4px 0 0;position:relative;min-height:2px}
+#lp .tb .col i em{position:absolute;top:-16px;left:50%;transform:translateX(-50%);font:500 .66rem var(--mono);font-style:normal;color:var(--muted);white-space:nowrap}
+#lp .tb.od .col i{background:var(--red)}
+#lp .tb.td .col i{background:var(--blue)}
+#lp .tb[aria-pressed="true"] .col i{outline:2px solid var(--q);outline-offset:1px}
+#lp .tb[aria-pressed="true"] span{color:var(--q);font-weight:700}
+#lp .tb span{font-size:.68rem;color:var(--muted);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#lp .tw{overflow:auto;max-height:520px}
+#lp table{width:100%;border-collapse:collapse;font-size:.8rem;min-width:900px}
+#lp th{position:sticky;top:0;background:var(--card);font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);text-align:right;padding:6px 8px;border-bottom:1px solid var(--line);font-weight:600;cursor:pointer;white-space:nowrap;user-select:none}
+#lp th.l,#lp td.l{text-align:left}
+#lp td{padding:5px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+#lp td.w{white-space:normal;min-width:150px;max-width:240px}
+#lp tr.alert td.pl,#lp td.bad{color:var(--red);font-weight:600}
+#lp .z{color:var(--q40)}
+#lp .tg{display:inline-block;font:600 .66rem var(--mono);padding:2px 7px;border-radius:99px;color:#fff}
+#lp .note{font-size:.72rem;color:var(--muted)}
+#lp .empty{background:var(--card);border:1px dashed var(--q40);border-radius:10px;padding:16px;color:var(--muted);font-size:13.5px}
+@media (max-width:1000px){#lp .kp{grid-template-columns:repeat(3,minmax(0,1fr))}#lp .g1,#lp .g2{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:560px){#lp .kp{grid-template-columns:repeat(2,minmax(0,1fr))}#lp .fr{grid-template-columns:84px minmax(0,1fr) 84px}#lp .lph h2{font-size:1.15rem}#lp .lph input{width:100%}}
+@media (prefers-reduced-motion:reduce){#lp .bar i,#lp .stack i{transition:none}}
+/* tracker as its own view (#tracker) + summary cards on the main page */
+:root{--tan:#B7A19B;--tan2:#DED5D0;--blue2:#A3ABBF}
+body.tv .wrap>*:not(.nav):not(#lp):not(.pop):not(.tip){display:none!important}
+body:not(.tv) #lp{display:none!important}
+#lp .back{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-size:.8rem;font-weight:700;background:var(--card);color:var(--q);border-radius:6px;padding:6px 12px}
+#lp .back:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.nav .crumb a{color:#fff;text-decoration:none;border-bottom:1px dashed rgba(255,255,255,.6)}
+.lps{margin-top:8px}
+.lps .cards3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+@media (max-width:900px){.lps .cards3{grid-template-columns:1fr}}
+.lps .tcard{all:unset;box-sizing:border-box;display:grid;gap:8px;background:var(--card);border:1px solid var(--line);border-top:4px solid var(--tc);border-radius:12px;padding:14px 16px;cursor:pointer;min-width:0}
+.lps .tcard:hover{border-color:var(--tc);box-shadow:0 4px 14px rgba(35,27,32,.08)}
+.lps .tcard:focus-visible{outline:2px solid var(--q);outline-offset:2px}
+.lps .tt{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.lps .tt b{font:700 17px var(--disp);color:var(--tc)}
+.lps .tt span{font-size:12.5px;color:var(--muted);white-space:nowrap}
+.lps .tv2{font:700 26px/1.1 var(--disp);font-variant-numeric:tabular-nums}
+.lps .tv2 small{font:600 13px var(--sans);color:var(--muted);margin-left:4px}
+.lps .tm{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;font-size:12px;color:var(--muted)}
+.lps .tm b{display:block;font:700 15px var(--disp);color:var(--fg);font-variant-numeric:tabular-nums}
+.lps .tm .r b{color:var(--red)}
+.lps .mini{display:flex;height:8px;border-radius:4px;overflow:hidden;background:var(--q5)}
+.lps .mini i{display:block;height:100%}
+.lps .ml{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:11.5px;color:var(--muted)}
+.lps .ml i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:4px}
+.lps .go{margin-top:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.lps .go .btn{text-decoration:none}
 .tip{position:fixed;pointer-events:none;background:var(--fg);color:var(--bg);font-size:12.5px;padding:6px 9px;border-radius:6px;opacity:0;transition:opacity .1s;z-index:10;white-space:nowrap}
 .tip.show{opacity:1}
 
@@ -261,7 +369,7 @@ h1{font:700 clamp(22px,2.6vw,30px)/1.1 var(--disp);margin:2px 0 4px;letter-spaci
 <div class="wrap">
   <nav class="nav" aria-label="Site">
     <a class="home" href="index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h5v-6h4v6h5V9.5"/></svg>Home</a>
-    <div class="crumb">SQ Hues Tools <span>›</span> <span>Master File</span></div>
+    <div class="crumb" id="crumb">SQ Hues Tools <span>›</span> <span>Master File</span></div>
     <a class="all" href="index.html">All tools →</a>
   </nav>
 
@@ -379,6 +487,31 @@ h1{font:700 clamp(22px,2.6vw,30px)/1.1 var(--disp);margin:2px 0 4px;letter-spaci
 
   </section>
 
+  <section id="lp" aria-label="FOC, Hanger and PFP tracker">
+    <div class="lph">
+      <div class="lph-top">
+        <div><h2>FOC · Hanger · PFP tracker</h2><div class="sub">WIP batches only · no CLOSED / Final Reject / PO PENDING / RFD DONE · click any tile, bar or day to filter</div></div>
+        <div class="ctl"><a class="back" href="#">← Master File</a><div class="seg" role="group" aria-label="Type" id="lpSeg"></div><div class="chipd" id="lpAsOf">As of –</div></div>
+      </div>
+      <div class="fl" id="lpFl"></div>
+    </div>
+    <div id="lpBody">
+      <div class="kp" id="lpK" aria-label="Headline figures"></div>
+      <div class="g1" style="margin-top:14px">
+        <section class="pn"><h3>Where the batches are</h3><p class="hint" id="lpFlowHint"></p><div class="flow" id="lpFlow"></div></section>
+        <div class="side">
+          <section class="pn"><h3>Health check</h3><p class="hint">Share of WIP kg that is on track</p><div class="rings" id="lpRings"></div></section>
+          <section class="pn"><h3>Where the kg sits</h3><p class="hint" id="lpBalHint"></p><div class="stack" id="lpStack"></div><div class="legend" id="lpLegend"></div></section>
+        </div>
+      </div>
+      <div class="g2" style="margin-top:14px">
+        <section class="pn"><h3>RFD plan · next 7 days</h3><p class="hint">Batches by RFD plan date · red = date passed, not RFD yet</p><div class="due" id="lpDue"></div></section>
+        <section class="pn"><h3>Batches</h3><p class="hint" id="lpTblHint"></p><div class="tw"><table id="lpTable"></table></div></section>
+      </div>
+      <div class="note" id="lpNote" style="margin-top:10px"></div>
+    </div>
+    <div class="empty" id="lpEmpty" hidden>This tracker fills in after an update is run with the Line Plan-FOC-AOP-Hanger file in box 2.</div>
+  </section>
   <section class="na" id="na">
     <div class="dhead">
       <h2 class="sec">New articles · Fabric/Yarn</h2>
@@ -390,6 +523,12 @@ h1{font:700 clamp(22px,2.6vw,30px)/1.1 var(--disp);margin:2px 0 4px;letter-spaci
     </div>
     <p class="dsub" id="naSub"></p>
     <div id="naList"></div>
+  </section>
+  <section class="lps" id="lpSum">
+    <div class="dhead"><h2 class="sec">FOC · Hanger · PFP</h2><span class="tag" id="lpSumTag"></span></div>
+    <p class="dsub">WIP batches from the Line Plan file · click a card for its details</p>
+    <div class="cards3" id="lpCards"></div>
+    <div class="go"><a class="btn" href="#tracker">Open FOC · Hanger · PFP tracker →</a><span class="msg" id="lpSumMsg"></span></div>
   </section>
   <div class="pop" id="pop" role="dialog" hidden></div>
   <div class="tip" id="tip" role="tooltip"></div>
@@ -2717,6 +2856,14 @@ async function updateLinePlan(lpBytes, docBytes, opts = {}) {
     const rfdCol = [ci(cfg.rfdPlan)];      // RFD Plan (FOC Q was headed 'Rfd Okan')
     const comCol = [...hdr].find(([c, h]) => /^comments?$/i.test(h) && tmpl.has(c));
     let done = 0, kept = 0, zeros = 0, rfdSet = 0; const why = new Set();
+    // dashboard fields, found by header name
+    const H = {}; for (const [c, h] of hdr) { const k = h.toLowerCase();
+      const f = k === 'ageing' ? 'age' : k === 'location' ? 'pos' : k === 'customer' ? 'cust' : k === 'batch no' ? 'batch' : k === 'shade' ? 'shade' : k === 'fabric/yarn' ? 'fab'
+        : k === 'qty kg' ? 'kg' : /^dyeing date$/.test(k) ? 'dye' : /^finish(ing)? date$/.test(k) ? 'fin' : k === 'rfd date' ? 'rfd' : /^(ld s(t)?atus)$/.test(k) ? 'ld'
+        : /^(h\/s|heatset status|hs satatus|hs status)$/.test(k) ? 'hs' : k === 'comments' ? 'com' : k === 'responsible' ? 'resp' : /^hanger requirements?$/.test(k) ? 'req' : null;
+      if (f && !(f in H)) H[f] = c; }
+    H.plan = rfdCol[0];
+    const dash = (report.dash || (report.dash = { asOf: today, rows: [] })).rows, TYPE = { Hanger: 'Hanger', FOC: 'FOC', 'PFP Plan': 'PFP' }[cfg.name];
     const ta = stripHidden(((old.rows.get(3) || [' r="3"'])[0]));
     for (let r = 3; r <= n; r++) {
       const cells = new Map(), vals = new Map();
@@ -2728,6 +2875,12 @@ async function updateLinePlan(lpBytes, docBytes, opts = {}) {
         // the last date in Comments is the RFD plan; no date in the comment -> keep the carried plan
         const d = lastCommentDate(vals.get(comCol[0]), today); if (d !== null) { vals.set(rfdCol[0], d); rfdSet++; }
       }
+      { const g = c => { if (c === undefined) return null; let v; if (vals.has(c)) v = vals.get(c); else { try { v = own(c, r); } catch (e) { v = null; } }
+          return v === undefined || isErr(v) || (v && v.formula) || v === '' ? null : v; };
+        const num = v => typeof v === 'number' && isFinite(v) ? Math.round(v * 100) / 100 : null, day = v => typeof v === 'number' && v > 30000 ? Math.floor(v) : null;
+        const txt = v => v === null ? null : String(v).trim() || null;
+        dash.push([TYPE, txt(g(H.pos)), txt(g(H.cust)), txt(g(H.batch)), txt(g(H.shade)), txt(g(H.fab)), num(g(H.kg)), num(g(H.age)), day(g(H.plan)), day(g(H.dye)), day(g(H.fin)), day(g(H.rfd)),
+          txt(g(H.ld)), txt(g(H.hs)), txt(g(H.com)), txt(g(H.resp)), txt(g(H.req))]); }
       for (let c = 1; c <= lastCol; c++) {
         const s = String(r === n ? lastSt.get(c) : canon.get(c)), ref = cl(c) + r;
         if (left.has(c)) cells.set(c, fcellXml(ref, s, left.get(c)(r, c).replace(/^=/, '')));
@@ -2908,6 +3061,7 @@ function finished(bytes,rep,secs,add,lp){
   if(rep.warnings&&rep.warnings.length)parts.push(rep.warnings.join(' '));
   note(parts.join(' · '));
   if(rep.summary){localSummary=true;useSummary(rep.summary,'From this update');useNewArt(rep.newArt);}
+  if(rep.linePlan&&rep.linePlan.dash){localLp=true;useLp(rep.linePlan.dash);}
   saveLocal();                                   // auto-download with the report date
   if(lpBlob)setTimeout(saveLp,700);
   if(cfg.token&&$('autoPub').checked)publish();
@@ -2944,7 +3098,7 @@ async function resolveSha(){
   return null;
 }
 const fmtWhen=iso=>{const d=new Date(iso),h=d.getHours();return `${pad(d.getDate())}-${MON[d.getMonth()]}-${String(d.getFullYear()).slice(2)} · ${h%12||12}:${pad(d.getMinutes())} ${h<12?'AM':'PM'}`;};
-let latest=null,localSummary=false;
+let latest=null,localSummary=false,localLp=false;
 async function fetchLatest(){curSha=await resolveSha();const r=await fetch(rawUrl('latest.json'),{cache:'no-store'});if(!r.ok)throw new Error('none');return r.json();}
 async function loadLatest(){
   const w=$('lastWhen'),inf=$('lastInfo'),b=$('lastDl');
@@ -2953,6 +3107,7 @@ async function loadLatest(){
 }
 function showLatest(){
   if(latest.summary&&!localSummary){useSummary(latest.summary,'Last updated '+fmtWhen(latest.updated));useNewArt(latest.newArt);}
+  if(!localLp)useLp(latest.lpDash);
   $('lastWhen').textContent=fmtWhen(latest.updated);
   $('lastInfo').textContent=latest.reportDate?`Report date ${latest.reportDate}`:'';
   $('lastDl').hidden=false;
@@ -3004,7 +3159,8 @@ async function publish(){
     const lpGh=lpB?await gh('/git/blobs',{method:'POST',body:JSON.stringify({content:b64(lpB),encoding:'base64'})}):null;
     const lpOld=!lpB&&latest&&latest.linePlan&&latest.linePlan.sha?latest.linePlan:null;
     const d=rdate();
-    const meta={linePlan:lpGh?{name:lpName(),size:lpB.length,sha:lpGh.sha}:lpOld,summary:lastReport&&lastReport.summary,newArt:lastReport&&lastReport.newArt,updated:new Date().toISOString(),reportDate:`${pad(d.getDate())}-${MON[d.getMonth()]}-${String(d.getFullYear()).slice(2)}`,name:outName(),size:bytes.length,rows:lastReport&&lastReport.rows,ld:lastReport&&lastReport.ld,fixSlips:true,additional:addB&&lastReport&&lastReport.additional?{name:addName(),size:addB.length,total:lastReport.additional.total,orders:lastReport.additional.orders}:null};
+    const lpDash=lpGh&&lastReport&&lastReport.linePlan?lastReport.linePlan.dash:(lpOld&&latest?latest.lpDash:null);
+    const meta={lpDash,linePlan:lpGh?{name:lpName(),size:lpB.length,sha:lpGh.sha}:lpOld,summary:lastReport&&lastReport.summary,newArt:lastReport&&lastReport.newArt,updated:new Date().toISOString(),reportDate:`${pad(d.getDate())}-${MON[d.getMonth()]}-${String(d.getFullYear()).slice(2)}`,name:outName(),size:bytes.length,rows:lastReport&&lastReport.rows,ld:lastReport&&lastReport.ld,fixSlips:true,additional:addB&&lastReport&&lastReport.additional?{name:addName(),size:addB.length,total:lastReport.additional.total,orders:lastReport.additional.orders}:null};
     const tree=await gh('/git/trees',{method:'POST',body:JSON.stringify({tree:[
       {path:DATA_FILE,mode:'100644',type:'blob',sha:blob.sha},
       ...(addBlobGh?[{path:ADD_FILE,mode:'100644',type:'blob',sha:addBlobGh.sha}]:[]),
@@ -3240,6 +3396,115 @@ function drawNa(){
 $('tabWait').addEventListener('click',()=>{naTab='wait';drawNa();});
 $('tabStart').addEventListener('click',()=>{naTab='start';drawNa();});
 function useNewArt(n){newArt=n||null;drawNa();}
+/* ---------- FOC · Hanger · PFP tracker ---------- */
+// row: [type,pos,cust,batch,shade,fab,kg,age,plan,dye,fin,rfd,ld,hs,com,resp,req]
+let lpData=null;const LPF={type:'All',stage:null,cust:'',resp:'',q:'',due:null,flag:null,sort:'age',dir:-1};
+const STAGES=[['QAD','QA check','var(--q)'],['Finishing','In finishing','var(--q60)'],['Dyeing','In dyeing','var(--blue)'],['Knitting','Greige / knitting','var(--tan)'],['Outside','Outside mill','var(--blue2)'],['Other','No position','var(--q20)']];
+const stageOf=p=>{p=String(p||'').toLowerCase();if(p.startsWith('qad'))return 'QAD';if(p.startsWith('outside'))return 'Outside';if(p==='finishing')return 'Finishing';if(p==='dyeing')return 'Dyeing';if(p==='knitting')return 'Knitting';return 'Other';};
+const TCOL={FOC:'var(--q)',Hanger:'var(--blue)',PFP:'var(--tan)'};
+const serD=v=>{const d=new Date(Date.UTC(1899,11,30)+v*864e5);return `${d.getUTCDate()}-${MON[d.getUTCMonth()]}`;};
+const lpFlags={
+  old:{t:'Ageing > 15 days',f:r=>r[7]!==null&&r[7]>15},
+  late:{t:'RFD plan passed',f:(r,a)=>r[8]!==null&&r[8]<a},
+  noplan:{t:'No RFD plan',f:r=>r[8]===null},
+  ld:{t:'LD to confirm',f:r=>/tbc/i.test(r[12]||'')},
+  hs:{t:'H/S not OK',f:r=>!/ok/i.test(r[13]||'')},
+};
+function useLp(d){lpData=d&&d.rows&&d.rows.length?d:null;drawLp();}
+function lpRows(skip){const a=lpData.asOf;return lpData.rows.filter(r=>(LPF.type==='All'||r[0]===LPF.type)&&(skip==='stage'||!LPF.stage||stageOf(r[1])===LPF.stage)&&(!LPF.cust||r[2]===LPF.cust)&&(!LPF.resp||r[15]===LPF.resp)
+  &&(skip==='due'||LPF.due===null||(LPF.due==='od'?r[8]!==null&&r[8]<a:r[8]===a+LPF.due))&&(skip==='flag'||!LPF.flag||lpFlags[LPF.flag].f(r,a))
+  &&(!LPF.q||r.slice(1,6).concat([r[14]]).some(v=>v&&String(v).toLowerCase().includes(LPF.q))));}
+const lpKg=rs=>rs.reduce((s,r)=>s+(r[6]||0),0),lpFmt=n=>Math.abs(n)<0.5?'–':Math.round(n).toLocaleString('en-US'),lpP=(a,b)=>b?a/b*100:0,lpP1=x=>x.toFixed(1)+'%';
+function drawLp(){
+  const has=!!lpData;$('lpBody').hidden=!has;$('lpEmpty').hidden=has;
+  drawLpSum();
+  if(!has){$('lpSeg').innerHTML='';$('lpFl').innerHTML='';$('lpAsOf').textContent='As of –';return;}
+  const a=lpData.asOf,all=lpData.rows;
+  $('lpAsOf').textContent='As of '+serD(a);
+  $('lpSeg').innerHTML=['All','FOC','Hanger','PFP'].map(t=>`<button type="button" data-t="${t}" aria-pressed="${LPF.type===t}">${t} <span class="num">${t==='All'?all.length:all.filter(r=>r[0]===t).length}</span></button>`).join('');
+  // filter line (in the header band)
+  const base=all.filter(r=>LPF.type==='All'||r[0]===LPF.type);
+  const sel=(k,i,lbl)=>`<select data-k="${k}" aria-label="${lbl}"><option value="">${lbl}: all</option>${[...new Set(base.map(r=>r[i]).filter(Boolean))].sort().map(v=>`<option${v===LPF[k]?' selected':''}>${esc(v)}</option>`).join('')}</select>`;
+  const chips=[];if(LPF.stage)chips.push(['stage',LPF.stage]);if(LPF.due!==null)chips.push(['due',LPF.due==='od'?'RFD plan passed':'RFD plan '+serD(a+LPF.due)]);if(LPF.flag)chips.push(['flag',lpFlags[LPF.flag].t]);
+  $('lpFl').innerHTML=sel('cust',2,'Customer')+sel('resp',15,'Responsible')+`<input type="search" id="lpQ" placeholder="Search batch, shade, comment…" value="${esc(LPF.q)}" aria-label="Search">`
+    +chips.map(([k,t])=>`<span class="x">${esc(t)}<button type="button" data-x="${k}" aria-label="Remove ${esc(t)} filter">×</button></span>`).join('');
+  const rows=lpRows(),wkg=lpKg(rows);
+  // KPI tiles
+  const fr=lpRows('flag'),fkg=lpKg(fr),cnt=f=>fr.filter(r=>lpFlags[f].f(r,a));
+  const tiles=[[null,'WIP batches',fr.length,`${lpFmt(fkg)} kg`,'var(--q)',100],
+    ...[['old','var(--red)'],['late','var(--red)'],['noplan','var(--q60)'],['ld','var(--tan)'],['hs','var(--blue)']].map(([f,c])=>{const rs=cnt(f),k=lpKg(rs);return [f,lpFlags[f].t,rs.length,`${lpFmt(k)} kg · ${lpP1(lpP(k,fkg))} of kg`,c,lpP(k,fkg)];})];
+  $('lpK').innerHTML=tiles.map(([f,lab,n,meta,c,p])=>`<button type="button" class="k" data-f="${f||''}" aria-pressed="${f?LPF.flag===f:!LPF.flag&&!LPF.stage&&LPF.due===null}"><span class="lab">${lab}</span><span class="val num" style="color:${c}">${n.toLocaleString('en-US')}<small>batches</small></span><span class="km num">${meta}</span><span class="trk"><i style="width:${Math.min(p,100)}%;background:${c}"></i></span></button>`).join('');
+  // flow by position (stacked by type)
+  const sr=lpRows('stage'),skg=lpKg(sr),types=LPF.type==='All'?['FOC','Hanger','PFP']:[LPF.type];
+  const st=STAGES.map(([s,sub,c])=>{const rs=sr.filter(r=>stageOf(r[1])===s);return {s,sub,c,n:rs.length,kg:lpKg(rs),by:types.map(t=>lpKg(rs.filter(r=>r[0]===t)))};}).filter(x=>x.n);
+  const mx=Math.max(1,...st.map(x=>x.kg));
+  $('lpFlow').innerHTML=st.map(x=>{const p=lpP(x.kg,skg);return `<button type="button" class="fr" data-s="${x.s}" aria-pressed="${LPF.stage===x.s}"><span class="nm">${x.s}<span>${x.sub}</span></span>
+    <span class="bar">${x.by.map((v,i)=>v?`<i style="width:${(100*v/mx).toFixed(2)}%;background:${types.length>1?TCOL[types[i]]:x.c}" title="${types[i]} ${lpFmt(v)} kg"></i>`:'').join('')}${100*x.kg/mx>=14?`<b>${lpP1(p)}</b>`:''}</span>
+    <span class="q num">${lpFmt(x.kg)} kg<span>${x.n} batches${100*x.kg/mx<14?' · '+lpP1(p):''}</span></span></button>`;}).join('')||'<p class="hint">No batches.</p>';
+  $('lpFlowHint').textContent=`${LPF.type==='All'?'FOC, Hanger and PFP':LPF.type} · ${lpFmt(skg)} kg in WIP · bars scaled to the biggest stage${types.length>1?' · colours = FOC / Hanger / PFP':''}`;
+  // rings
+  const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim()||v;
+  const ring=(p,c,t)=>{const r=38,C=2*Math.PI*r,off=C*(1-Math.min(Math.max(p,0),100)/100);
+    return `<div class="ring"><svg viewBox="0 0 92 92" role="img" aria-label="${t.replace('<br>',' ')} ${lpP1(p)}"><circle cx="46" cy="46" r="${r}" fill="none" stroke="${css('--q5')}" stroke-width="9"/><circle cx="46" cy="46" r="${r}" fill="none" stroke="${c}" stroke-width="9" stroke-linecap="round" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}" transform="rotate(-90 46 46)"/><text x="46" y="51" text-anchor="middle" font-family="Space Grotesk, Arial, sans-serif" font-weight="700" font-size="16" fill="${css('--fg')}">${Math.round(p)}%</text></svg><div class="t">${t}</div></div>`;};
+  const onTime=rows.filter(r=>r[8]!==null&&r[8]>=a),ldOk=rows.filter(r=>!/tbc/i.test(r[12]||'')),hsOk=rows.filter(r=>/ok/i.test(r[13]||''));
+  $('lpRings').innerHTML=ring(lpP(lpKg(onTime),wkg),css('--q'),'RFD plan<br>on time')+ring(lpP(lpKg(ldOk),wkg),css('--blue'),'LD<br>OK')+ring(lpP(lpKg(hsOk),wkg),'#B7A19B','Heat set<br>OK');
+  // kg by type
+  const parts=['FOC','Hanger','PFP'].map(t=>[t,lpKg(rows.filter(r=>r[0]===t)),rows.filter(r=>r[0]===t).length]).filter(x=>x[2]);
+  $('lpBalHint').textContent=`${lpFmt(wkg)} kg · ${rows.length} batches after filters`;
+  $('lpStack').innerHTML=parts.map(([t,k])=>`<i title="${t}" style="width:${lpP(k,wkg)}%;background:${TCOL[t]}"></i>`).join('');
+  $('lpLegend').innerHTML=parts.map(([t,k,n])=>`<div class="lg"><span class="sw" style="background:${TCOL[t]}"></span><span>${t} <span style="color:var(--muted);font-size:.72rem">· ${n} batches</span></span><span class="v num">${lpFmt(k)}</span><span class="p num">${lpP1(lpP(k,wkg))}</span></div>`).join('');
+  // RFD plan days
+  const dr=lpRows('due'),days=[['od','Late'],...[0,1,2,3,4,5,6,7].map(k=>[k,k===0?'Today':serD(a+k)])];
+  const dv=days.map(([k])=>{const rs=dr.filter(r=>k==='od'?r[8]!==null&&r[8]<a:r[8]===a+k);return {n:rs.length,kg:lpKg(rs)};}),dm=Math.max(1,...dv.map(x=>x.n));
+  $('lpDue').innerHTML=days.map(([k,l],i)=>`<button type="button" class="tb${k==='od'?' od':k===0?' td':''}" data-k="${k}" aria-pressed="${LPF.due===k}" aria-label="${l}: ${dv[i].n} batches, ${lpFmt(dv[i].kg)} kg" title="${l}: ${dv[i].n} batches · ${lpFmt(dv[i].kg)} kg"><div class="col"><i style="height:${Math.max(100*dv[i].n/dm,1).toFixed(0)}%"><em>${dv[i].n||''}</em></i></div><span>${l}</span></button>`).join('');
+  // table
+  const cols=[['type','Type',0,'l'],['stage','Position',1,'l'],['cust','Customer',2,'l'],['batch','Batch No',3,'l'],['shade','Shade',4,'l'],['kg','Kg',6,''],['age','Ageing',7,''],['plan','RFD plan',8,''],['dye','Dyed',9,''],['fin','Finished',10,''],['ld','LD',12,'l'],['hs','H/S',13,'l'],['com','Comments',14,'l w'],['resp','Responsible',15,'l']];
+  const si=cols.find(c=>c[0]===LPF.sort)[2];
+  const sorted=rows.slice().sort((x,y)=>{const p=x[si],q=y[si];if(p===q)return 0;if(p===null)return 1;if(q===null)return -1;return (typeof p==='number'?p-q:String(p).localeCompare(String(q)))*LPF.dir;});
+  const LIM=400,show=sorted.slice(0,LIM),dt=v=>v===null?'<span class="z">–</span>':serD(v);
+  let h='<thead><tr>'+cols.map(c=>`<th class="${c[3].split(' ')[0]}" data-s="${c[0]}" aria-sort="${LPF.sort===c[0]?(LPF.dir>0?'ascending':'descending'):'none'}">${c[1]}${LPF.sort===c[0]?(LPF.dir>0?' ▲':' ▼'):''}</th>`).join('')+'</tr></thead><tbody>';
+  for(const r of show)h+=`<tr class="${r[8]!==null&&r[8]<a?'alert':''}"><td class="l"><span class="tg" style="background:${TCOL[r[0]]}">${r[0]}</span></td><td class="l">${esc(r[1]||'–')}</td><td class="l">${esc(r[2]||'')}</td><td class="l">${esc(r[3]||'')}</td><td class="l">${esc(r[4]||'')}</td><td class="num">${lpFmt(r[6]||0)}</td><td class="num${r[7]>15?' bad':''}">${r[7]===null?'–':Math.round(r[7])}</td><td class="num pl">${dt(r[8])}</td><td class="num">${dt(r[9])}</td><td class="num">${dt(r[10])}</td><td class="l${/tbc/i.test(r[12]||'')?' bad':''}">${esc(r[12]||'')}</td><td class="l${r[13]&&!/ok/i.test(r[13])?' bad':''}">${esc(r[13]||'')}</td><td class="l w">${esc(r[14]||'')}</td><td class="l">${esc(r[15]||'')}</td></tr>`;
+  $('lpTable').innerHTML=h+'</tbody>';
+  $('lpTblHint').textContent=`${rows.length} batches · ${lpFmt(wkg)} kg${rows.length>LIM?` · showing the first ${LIM}`:''} · click a column to sort · red RFD plan = date passed`;
+  $('lpNote').textContent=`Source: Line Plan-FOC-AOP-Hanger file, refreshed with the DOC update of ${serD(a)} · Hanger / FOC by Workorder Category, PFP by Aop · Ageing = days since order date.`;
+}
+$('lpSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;LPF.type=b.dataset.t;LPF.cust='';LPF.resp='';try{history.replaceState(null,'','#tracker'+(b.dataset.t==='All'?'':'/'+b.dataset.t.toLowerCase()));}catch(err){}drawLp();});
+/* summary cards on the main page */
+function drawLpSum(){
+  const box=$('lpCards');if(!box)return;
+  if(!lpData){box.innerHTML='<div class="empty" style="grid-column:1/-1">Fills in after an update is run with the Line Plan-FOC-AOP-Hanger file in box 2.</div>';$('lpSumTag').textContent='';return;}
+  const a=lpData.asOf;$('lpSumTag').textContent='As of '+serD(a);
+  box.innerHTML=['FOC','Hanger','PFP'].map(t=>{const rs=lpData.rows.filter(r=>r[0]===t),kg=lpKg(rs);
+    const late=rs.filter(r=>r[8]!==null&&r[8]<a),old=rs.filter(r=>r[7]!==null&&r[7]>15),nop=rs.filter(r=>r[8]===null);
+    const st=STAGES.map(([s,,c])=>[s,c,lpKg(rs.filter(r=>stageOf(r[1])===s))]).filter(x=>x[2]>0);
+    return `<a class="tcard" href="#tracker/${t.toLowerCase()}" style="--tc:${TCOL[t]}" aria-label="Open ${t} details"><div class="tt"><b>${t}</b><span>Details →</span></div>
+      <div class="tv2">${rs.length.toLocaleString('en-US')}<small>batches · ${lpFmt(kg)} kg</small></div>
+      <div class="tm"><div class="r"><b>${late.length}</b>RFD plan passed</div><div><b>${old.length}</b>Ageing &gt; 15 d</div><div><b>${nop.length}</b>No RFD plan</div></div>
+      <div class="mini">${st.map(([s,c,k])=>`<i style="width:${lpP(k,kg)}%;background:${c}" title="${s} ${lpFmt(k)} kg"></i>`).join('')}</div>
+      <div class="ml">${st.map(([s,c,k])=>`<span><i style="background:${c}"></i>${s} ${lpFmt(k)}</span>`).join('')}</div></a>`;}).join('');
+}
+/* views: main page  ⇄  #tracker[/foc|/hanger|/pfp] */
+function route(){
+  const m=/^#tracker(?:\/(\w+))?/i.exec(location.hash),tv=!!m;
+  document.body.classList.toggle('tv',tv);
+  $('crumb').innerHTML=tv?'SQ Hues Tools <span>›</span> <a href="#">Master File</a> <span>›</span> <span>FOC · Hanger · PFP tracker</span>':'SQ Hues Tools <span>›</span> <span>Master File</span>';
+  document.title=tv?'FOC · Hanger · PFP tracker':'Master File';
+  if(tv){const t={foc:'FOC',hanger:'Hanger',pfp:'PFP'}[(m[1]||'').toLowerCase()]||'All';Object.assign(LPF,{type:t,stage:null,cust:'',resp:'',q:'',due:null,flag:null});drawLp();scrollTo(0,0);}
+  else if(route.was)requestAnimationFrame(()=>{const s=$('lpSum');if(s)s.scrollIntoView({block:'start'});});
+  route.was=tv;
+}
+addEventListener('hashchange',route);
+$('lpFl').addEventListener('change',e=>{const s=e.target.closest('select');if(!s)return;LPF[s.dataset.k]=s.value;drawLp();});
+$('lpFl').addEventListener('click',e=>{const b=e.target.closest('[data-x]');if(!b)return;LPF[b.dataset.x]=null;drawLp();});
+$('lpFl').addEventListener('input',e=>{if(e.target.id!=='lpQ')return;const q=e.target;LPF.q=q.value.trim().toLowerCase();clearTimeout(q._t);q._t=setTimeout(()=>{drawLp();const n=$('lpQ');n.focus();n.setSelectionRange(n.value.length,n.value.length);},250);});
+$('lpK').addEventListener('click',e=>{const b=e.target.closest('.k');if(!b)return;const f=b.dataset.f;if(!f){LPF.flag=null;LPF.stage=null;LPF.due=null;}else LPF.flag=LPF.flag===f?null:f;drawLp();});
+$('lpFlow').addEventListener('click',e=>{const b=e.target.closest('.fr');if(!b)return;LPF.stage=LPF.stage===b.dataset.s?null:b.dataset.s;drawLp();});
+$('lpDue').addEventListener('click',e=>{const b=e.target.closest('.tb');if(!b)return;const k=b.dataset.k==='od'?'od':+b.dataset.k;LPF.due=LPF.due===k?null:k;drawLp();});
+$('lpTable').addEventListener('click',e=>{const th=e.target.closest('th');if(!th)return;const k=th.dataset.s;if(LPF.sort===k)LPF.dir=-LPF.dir;else{LPF.sort=k;LPF.dir=['kg','age'].includes(k)?-1:1;}drawLp();});
+route();
+new MutationObserver(()=>lpData&&drawLp()).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+drawLp();
+
 drawNa();
 $('ghCheck').addEventListener('click',async()=>{
   const m=$('ghMsg'),tok=$('ghToken').value.trim(),o=$('ghOwner').value.trim(),r=$('ghRepo').value.trim();
