@@ -2458,8 +2458,11 @@ function wipRows(vals280, last280, cfg) {
     if (!pick(row) || LP_NOT_WIP.has(normV(row.get(ci('BB'))).replace(/\s+/g, ' '))) continue;
     seen.add(b); out.push(r);
   }
-  const pos = r => String(vals280.get(r).get(ci('BB')) ?? '').trim().toLowerCase();
-  return out.sort((a, b) => (pos(a) === pos(b) ? 0 : !pos(a) ? 1 : !pos(b) ? -1 : pos(b).localeCompare(pos(a))) || a - b);
+  // QAD (Inhouse, Outside) → Finishing → Dyeing → Knitting → Outside (dyeing, knitting) → anything else
+  const RANK = ['qad-inhouse', 'qad-outside', 'qad', 'finishing', 'dyeing', 'knitting', 'outside dyeing', 'outside knitting'];
+  const rank = r => { const p = String(vals280.get(r).get(ci('BB')) ?? '').replace(/\s+/g, ' ').trim().toLowerCase(); const i = RANK.indexOf(p);
+    return i >= 0 ? i : p.startsWith('qad') ? 2.5 : p.startsWith('outside') ? 7.5 : p ? 8 : 9; };
+  return out.sort((a, b) => rank(a) - rank(b) || a - b);
 }
 // (older) rows a DOC pivot (Hanger / Foc / PFP) shows after refresh: same filters, same row order
 async function docPivotRows(zip, W, sheetName, vals280, last280) {
@@ -2537,6 +2540,18 @@ function lpStyleBook(st) {
       if (id >= 164) { if (nf.has(code)) nid = nf.get(code); else { nid = ++maxId; nf.set(code, nid); newNf.push(`<numFmt numFmtId="${nid}" formatCode="${code}"/>`); } }
       const s = nid ? add(`<xf numFmtId="${nid}" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>`) : 0;
       fmtCache.set(k, s); return s;
+    },
+    rightEdge(sid) {          // same look + thin right border (closing edge of the list)
+      const x = xfs[sid] || xfs[0], bid = +((/borderId="(\d+)"/.exec(x) || [0, 0])[1]);
+      let b = borders[bid] || '<border><left/><right/><top/><bottom/><diagonal/></border>';
+      if (/<right\b[^>]*style="/.test(b)) return sid;
+      const thin = '<right style="thin"><color indexed="64"/></right>';
+      b = /<right\b[^>]*\/>/.test(b) ? b.replace(/<right\b[^>]*\/>/, thin) : /<right\b[^>]*>[\s\S]*?<\/right>/.test(b) ? b.replace(/<right\b[^>]*>[\s\S]*?<\/right>/, thin) : b.replace(/(<left\b[^>]*\/>|<left\b[^>]*>[\s\S]*?<\/left>)/, '$1' + thin);
+      if (b === '<border/>') b = '<border><left/>' + thin + '<top/><bottom/><diagonal/></border>';
+      let nb = borders.indexOf(b); if (nb < 0) { borders.push(b); nb = borders.length - 1; }
+      let nx = /borderId="/.test(x) ? x.replace(/borderId="\d+"/, `borderId="${nb}"`) : x.replace(/^<xf\b/, `<xf borderId="${nb}"`);
+      if (!/applyBorder=/.test(nx)) nx = nx.replace(/^<xf\b/, '<xf applyBorder="1"');
+      return add(nx);
     },
     boxed(sid) {
       const x = xfs[sid] || xfs[0];
@@ -2696,7 +2711,8 @@ async function updateLinePlan(lpBytes, docBytes, opts = {}) {
       for (let r = 3; r < Math.max(oldLast, 4); r++) { const x = old.get(r, c); if (!x) continue; const s = +(styleOf(x) || 0); cnt.set(s, (cnt.get(s) || 0) + 1); }
       let best = 0, bn = -1; for (const [s, k] of cnt) if (k > bn) { bn = k; best = s; }
       canon.set(c, best);
-      const lx = oldLast > 3 ? old.get(oldLast, c) : null; lastSt.set(c, lx ? +(styleOf(lx) || 0) : best);   // closing (bottom) row look                   // exactly the look the list already has (borders, fonts, wrap, formats)
+      const lx = oldLast > 3 ? old.get(oldLast, c) : null; lastSt.set(c, lx ? +(styleOf(lx) || 0) : best);   // closing (bottom) row look
+      if (c === lastCol) { canon.set(c, SB.rightEdge(canon.get(c))); lastSt.set(c, SB.rightEdge(lastSt.get(c))); }   // thin border on the right edge                   // exactly the look the list already has (borders, fonts, wrap, formats)
     }
     const rfdCol = [ci(cfg.rfdPlan)];      // RFD Plan (FOC Q was headed 'Rfd Okan')
     const comCol = [...hdr].find(([c, h]) => /^comments?$/i.test(h) && tmpl.has(c));
