@@ -72,6 +72,7 @@ h1{font:700 clamp(22px,2.6vw,30px)/1.1 var(--disp);margin:2px 0 4px;letter-spaci
 .taps li.got{color:var(--fg);font-weight:600}
 .taps li .c{display:inline-block;width:14px;color:var(--q40)}
 .taps li.got .c{color:var(--blue)}
+.taps li.opt{grid-column:1/-1}
 .side{cursor:default}
 .side:hover{border-color:var(--line)}
 .side label{display:block;color:var(--muted);font-size:13.5px}
@@ -316,7 +317,7 @@ h1{font:700 clamp(22px,2.6vw,30px)/1.1 var(--disp);margin:2px 0 4px;letter-spaci
       <input type="file" id="pickDoc" accept=".xlsx" hidden>
     </div>
     <div class="card" id="boxTaps" tabindex="0" role="button" aria-label="Choose the six TAPS exports">
-      <div class="lbl">2 · TAPS exports (all six)</div>
+      <div class="lbl">2 · TAPS exports (all six) + Line Plan file</div>
       <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span>
       <ul class="taps" id="taps"></ul>
       <div class="meta" id="tapsMeta"></div>
@@ -334,6 +335,7 @@ h1{font:700 clamp(22px,2.6vw,30px)/1.1 var(--disp);margin:2px 0 4px;letter-spaci
     <button class="btn" id="go" type="button" disabled>Run update</button>
     <button class="btn" id="dlBtn" type="button" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 20h14"/></svg>Updated DOC</button>
     <button class="btn light" id="addLocal" type="button" disabled>Additional Req</button>
+    <button class="btn light" id="lpLocal" type="button" hidden>Line Plan file</button>
     <button class="btn light" id="pubBtn" type="button" disabled>Save to site</button>
     <span class="msg" id="msg"></span>
     <span class="pill" id="pill"></span>
@@ -2392,9 +2394,371 @@ async function additionalXlsx(rows0, title) {
   return z.generateAsync({ type: 'uint8array', compression: 'DEFLATE', compressionOptions: { level: 6 } });
 }
 
+/* ============================================================================
+   Line Plan-FOC-AOP-Hanger file — refreshed from the freshly built DOC
+   280 → copied whole; Hanger / FOC / PFP Plan → rows from the DOC Hanger / Foc / PFP pivots,
+   left formulas kept live, row-1 'qq' formulas worked out and pasted as values, boxed,
+   old manual inputs carried by Batch No (the 'Hanger (2)' step), zeros cleared,
+   last date in Comments → RFD Date; pivots refresh on open.
+   ========================================================================== */
+const LP_SHEETS = [
+  { name: 'Hanger', doc: 'Hanger', paste: 'E', key: 'F', rfdPlan: 'Q' },
+  { name: 'FOC', doc: 'Foc', paste: 'E', key: 'F', rfdPlan: 'Q' },
+  { name: 'PFP Plan', doc: 'PFP', paste: 'D', key: 'E', rfdPlan: 'P' },
+];
+const LP_SRC_COLS = ['E', 'H', 'L', 'N'];          // 280 Customer, Batch No, Shade, Fabric/Yarn (pivot columns D:G / C:F)
+const MON3 = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+// last date written in a comment: "DYE-27/10, DL-2ND/NOV" -> 2 Nov ; year = the one nearest to today
+function lastCommentDate(txt, today) {
+  if (typeof txt !== 'string' || !txt) return null;
+  const re = /(\d{1,2})\s*(?:st|nd|rd|th)?\s*[\/.\-]\s*(\d{1,2}|[A-Za-z]{3,9})(?![\d\/])/gi;
+  let m, last = null;
+  while ((m = re.exec(txt))) {
+    const d = +m[1]; let mo = /^\d+$/.test(m[2]) ? +m[2] : MON3.indexOf(m[2].slice(0, 3).toLowerCase()) + 1;
+    if (d >= 1 && d <= 31 && mo >= 1 && mo <= 12) last = [d, mo];
+  }
+  if (!last) return null;
+  const t = new Date(Date.UTC(1899, 11, 30) + today * 864e5), y = t.getUTCFullYear();
+  let best = null;
+  for (const yy of [y - 1, y, y + 1]) {
+    const dt = Date.UTC(yy, last[1] - 1, last[0]); if (new Date(dt).getUTCDate() !== last[0]) continue;
+    const s = Math.round((dt - Date.UTC(1899, 11, 30)) / 864e5);
+    if (best === null || Math.abs(s - today) < Math.abs(best - today)) best = s;
+  }
+  return best;
+}
+const sstOf = xml => [...(xml || '').matchAll(/<si>([\s\S]*?)<\/si>/g)].map(m => unx([...m[1].matchAll(/<t[^>]*>([\s\S]*?)<\/t>/g)].map(x => x[1]).join('')));
+async function wbIndex(zip) {
+  const wbx = await zip.file('xl/workbook.xml').async('string'), rels = await zip.file('xl/_rels/workbook.xml.rels').async('string');
+  const relmap = {}; for (const m of rels.matchAll(/<Relationship\b[^>]*>/g)) { const id = /Id="([^"]+)"/.exec(m[0])[1], t = /Target="([^"]+)"/.exec(m[0])[1]; relmap[id] = t.replace(/^\/?xl\//, ''); }
+  const sheets = [...wbx.matchAll(/<sheet\b[^>]*?name="([^"]+)"[^>]*?r:id="([^"]+)"[^>]*\/>/g)].map(m => ({ name: unx(m[1]), path: 'xl/' + relmap[m[2]] }));
+  const pathOf = {}, indexOf = {}; sheets.forEach((s, i) => { pathOf[s.name] = s.path; indexOf[s.name] = i; });
+  const sst = zip.file('xl/sharedStrings.xml') ? sstOf(await zip.file('xl/sharedStrings.xml').async('string')) : [];
+  return { wbx, rels, sheets, pathOf, indexOf, sst };
+}
+const relTargets = async (zip, part) => {
+  const rp = part.replace(/([^/]+)$/, '_rels/$1.rels'); if (!zip.file(rp)) return [];
+  const base = part.replace(/[^/]+$/, '');
+  return [...(await zip.file(rp).async('string')).matchAll(/Target="([^"]+)"/g)].map(m => {
+    const segs = (base + m[1]).split('/'), out = []; for (const s of segs) { if (s === '..') out.pop(); else if (s !== '.') out.push(s); } return out.join('/'); });
+};
+const normV = v => v === null || v === undefined ? '' : typeof v === 'number' ? numStr(v) : typeof v === 'boolean' ? (v ? 'true' : 'false') : isErr(v) ? v.err : String(v).trim().toLowerCase();
+
+// rows a DOC pivot (Hanger / Foc / PFP) shows after refresh: same filters, same row order
+async function docPivotRows(zip, W, sheetName, vals280, last280) {
+  const sn = Object.keys(W.pathOf).find(n => n.toLowerCase() === sheetName.toLowerCase());
+  if (!sn) throw new Error(`DOC has no "${sheetName}" sheet`);
+  const pt = (await relTargets(zip, W.pathOf[sn])).find(p => /pivotTables\/pivotTable\d+\.xml$/.test(p));
+  if (!pt) throw new Error(`DOC "${sn}" has no pivot`);
+  const ptx = await zip.file(pt).async('string');
+  const cdp = (await relTargets(zip, pt)).find(p => /pivotCacheDefinition\d+\.xml$/.test(p));
+  const cdx = await zip.file(cdp).async('string');
+  const src = /<worksheetSource\b[^>]*ref="([A-Z]+)(\d+):[^"]*"[^>]*sheet="([^"]+)"/.exec(cdx);
+  if (!src || src[3] !== '280' || src[1] !== 'A') throw new Error(`DOC "${sn}" pivot does not read 280 from column A`);
+  const cfs = [...cdx.matchAll(/<cacheField\b[^>]*?(?:\/>|>([\s\S]*?)<\/cacheField>)/g)].map(m => {
+    const si = /<sharedItems\b[^>]*?(?:\/>|>([\s\S]*?)<\/sharedItems>)/.exec(m[1] || '');
+    return si && si[1] ? [...si[1].matchAll(/<(s|n|d|b|e|m)\b([^>]*?)\/?>/g)].map(x => x[1] === 'm' ? '' : (v => x[1] === 'n' ? normV(parseFloat(v)) : normV(v))(unx((/\bv="([^"]*)"/.exec(x[2]) || [0, ''])[1]))) : [];
+  });
+  const pfs = [...ptx.matchAll(/<pivotField\b([^>]*?)(?:\/>|>([\s\S]*?)<\/pivotField>)/g)].map(m => ({ at: m[1], items: [...(m[2] || '').matchAll(/<item\b([^>]*?)\/>/g)].map(x => x[1]) }));
+  const fieldsOf = tag => { const m = new RegExp(`<${tag}\\b[^>]*>([\\s\\S]*?)</${tag}>`).exec(ptx); return m ? [...m[1].matchAll(/<(?:field|pageField)\b[^>]*?\b(?:x|fld)="(-?\d+)"/g)].map(x => +x[1]).filter(x => x >= 0) : []; };
+  const rowF = fieldsOf('rowFields'), pageF = fieldsOf('pageFields');
+  const filt = [];
+  for (const f of new Set([...rowF, ...pageF])) {
+    const items = pfs[f].items.filter(a => /\bx="\d+"/.test(a)); if (!items.some(a => /\bh="1"/.test(a))) continue;
+    filt.push({ f, show: new Set(items.filter(a => !/\bh="1"/.test(a)).map(a => cfs[f][+/\bx="(\d+)"/.exec(a)[1]])) });
+  }
+  // manual order = the pivot field's item list (new items go after, in data order)
+  const order = rowF.map(f => { const pos = new Map();
+    for (const a of pfs[f].items) { const xm = /\bx="(\d+)"/.exec(a); if (xm) { const v = cfs[f][+xm[1]]; if (v !== undefined && !pos.has(v)) pos.set(v, pos.size); } }
+    for (const v of cfs[f]) if (!pos.has(v)) pos.set(v, pos.size);
+    return { f, sort: (/sortType="(\w+)"/.exec(pfs[f].at) || [])[1], pos }; });
+  const first = +src[2] + 1, seen = new Map();
+  for (let r = first; r <= last280; r++) {
+    const row = vals280.get(r); if (!row) continue;
+    const get = f => row.get(f + 1);
+    if (!filt.every(x => x.show.has(normV(get(x.f))))) continue;
+    if (LP_SRC_COLS.every(c => get(ci(c) - 1) === null || get(ci(c) - 1) === undefined || get(ci(c) - 1) === '')) continue;
+    const k = rowF.map(f => normV(get(f))).join('\u0001'); if (!seen.has(k)) seen.set(k, r);
+  }
+  const recs = [...seen.values()];
+  for (const o of order) if (!o.sort) { let n = o.pos.size; for (const r of recs) { const v = normV(vals280.get(r).get(o.f + 1)); if (!o.pos.has(v)) o.pos.set(v, n++); } }
+  const cmpV = (a, b) => { if (a === b) return 0; if (a === null || a === '' || a === undefined) return 1; if (b === null || b === '' || b === undefined) return -1;
+    if (typeof a === 'number' && typeof b === 'number') return a - b; if (typeof a === 'number') return -1; if (typeof b === 'number') return 1;
+    return String(a).toLowerCase().localeCompare(String(b).toLowerCase()); };
+  recs.sort((ra, rb) => {
+    for (const o of order) {
+      const a = vals280.get(ra).get(o.f + 1), b = vals280.get(rb).get(o.f + 1); let d;
+      if (o.sort === 'ascending') d = cmpV(a, b); else if (o.sort === 'descending') d = -cmpV(a, b);
+      else d = o.pos.get(normV(a)) - o.pos.get(normV(b));
+      if (d) return d;
+    }
+    return ra - rb;
+  });
+  return recs;
+}
+
+// styles of the Line Plan file: number formats for the copied 280, boxed (thin border) look for list rows
+function lpStyleBook(st) {
+  let numM = /<numFmts count="\d+">([\s\S]*?)<\/numFmts>/.exec(st);
+  const nf = new Map(); let maxId = 163;
+  if (numM) for (const m of numM[1].matchAll(/<numFmt numFmtId="(\d+)" formatCode="([^"]*)"\/>/g)) { nf.set(m[2], +m[1]); maxId = Math.max(maxId, +m[1]); }
+  const newNf = [];
+  const bm = /<borders count="(\d+)">([\s\S]*?)<\/borders>/.exec(st);
+  const borders = bm[2].match(/<border\b[^>]*\/>|<border\b[^>]*>[\s\S]*?<\/border>/g);
+  const xm = /<cellXfs count="(\d+)">([\s\S]*?)<\/cellXfs>/.exec(st);
+  const xfs = xm[2].match(/<xf\b[^>]*\/>|<xf\b[^>]*>[\s\S]*?<\/xf>/g);
+  const index = new Map(); xfs.forEach((x, i) => { if (!index.has(x)) index.set(x, i); });
+  const add = x => { if (index.has(x)) return index.get(x); xfs.push(x); index.set(x, xfs.length - 1); return xfs.length - 1; };
+  let box = borders.findIndex(b => ['left', 'right', 'top', 'bottom'].every(s => new RegExp(`<${s} style="thin"`).test(b)));
+  if (box < 0) { borders.push('<border><left style="thin"><color indexed="64"/></left><right style="thin"><color indexed="64"/></right><top style="thin"><color indexed="64"/></top><bottom style="thin"><color indexed="64"/></bottom><diagonal/></border>'); box = borders.length - 1; }
+  const fmtCache = new Map();
+  return {
+    // plain cell with this number format (id < 164 built-in, else by code)
+    fmt(id, code) {
+      const k = id + '|' + code; if (fmtCache.has(k)) return fmtCache.get(k);
+      let nid = id;
+      if (id >= 164) { if (nf.has(code)) nid = nf.get(code); else { nid = ++maxId; nf.set(code, nid); newNf.push(`<numFmt numFmtId="${nid}" formatCode="${code}"/>`); } }
+      const s = nid ? add(`<xf numFmtId="${nid}" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>`) : 0;
+      fmtCache.set(k, s); return s;
+    },
+    boxed(sid) {
+      const x = xfs[sid] || xfs[0];
+      let nx = /borderId="/.test(x) ? x.replace(/borderId="\d+"/, `borderId="${box}"`) : x.replace(/^<xf\b/, `<xf borderId="${box}"`);
+      if (!/applyBorder=/.test(nx)) nx = nx.replace(/^<xf\b/, '<xf applyBorder="1"');
+      return add(nx);
+    },
+    save() {
+      let s = st;
+      if (newNf.length) s = numM ? s.replace(numM[0], `<numFmts count="${nf.size}">${numM[1]}${newNf.join('')}</numFmts>`) : s.replace(/(<styleSheet\b[^>]*>)/, `$1<numFmts count="${newNf.length}">${newNf.join('')}</numFmts>`);
+      return s.replace(bm[0], `<borders count="${borders.length}">${borders.join('')}</borders>`).replace(xm[0], `<cellXfs count="${xfs.length}">${xfs.join('')}</cellXfs>`);
+    },
+  };
+}
+
+async function updateLinePlan(lpBytes, docBytes, opts = {}) {
+  const log = opts.onProgress || (() => {});
+  const today = opts.today !== undefined ? opts.today : (() => { const d = new Date(); return Math.round((Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) - Date.UTC(1899, 11, 30)) / 864e5); })();
+  const report = { sheets: {}, warnings: [] };
+  log(1, 'Line Plan: opening files');
+  const dz = await JSZip.loadAsync(docBytes), lz = await JSZip.loadAsync(lpBytes);
+  const D = await wbIndex(dz), L = await wbIndex(lz);
+  if (!D.pathOf['280']) throw new Error('DOC has no 280 sheet');
+  for (const s of ['280', ...LP_SHEETS.map(x => x.name)]) if (!L.pathOf[s]) throw new Error(`Line Plan file has no "${s}" sheet`);
+
+  // ---- DOC 280 values (+ number format per cell)
+  log(8, 'Line Plan: reading DOC 280');
+  const d280 = new Sheet(await dz.file(D.pathOf['280']).async('string'));
+  const dst = await dz.file('xl/styles.xml').async('string');
+  const dNf = new Map([...dst.matchAll(/<numFmt numFmtId="(\d+)" formatCode="([^"]*)"\/>/g)].map(m => [+m[1], m[2]]));
+  const dXf = (/<cellXfs count="\d+">([\s\S]*?)<\/cellXfs>/.exec(dst)[1].match(/<xf\b[^>]*\/>|<xf\b[^>]*>[\s\S]*?<\/xf>/g)).map(x => +((/numFmtId="(\d+)"/.exec(x) || [0, 0])[1]));
+  const vals280 = new Map(), fmt280 = new Map(); let last280 = 0, maxC = 0;
+  for (const [r, [, cells]] of d280.rows) {
+    const m = new Map(), f = new Map();
+    for (const [c, x] of cells) {
+      let v = cellValue(x, D.sst); if (v === '' || v === undefined) v = null;
+      if (v === null) continue;
+      m.set(c, v); const s = +(styleOf(x) || 0); f.set(c, dXf[s] || 0); if (c > maxC) maxC = c;
+    }
+    if (m.size) { vals280.set(r, m); fmt280.set(r, f); if (r > last280) last280 = r; }
+  }
+
+  // ---- Line Plan 280 = DOC 280 (values, number formats), whole sheet
+  log(20, 'Line Plan: copying 280');
+  let lst = await lz.file('xl/styles.xml').async('string');
+  const SB = lpStyleBook(lst);
+  const l280 = new Sheet(await lz.file(L.pathOf['280']).async('string'));
+  const rowAttr = r => { const o = l280.rows.get(r); return o ? stripHidden(o[0]).replace(/\s(s|customFormat)="[^"]*"/g, '') : ` r="${r}"`; };
+  const newRows = new Map();
+  for (const r of [...vals280.keys()].sort((a, b) => a - b)) {
+    const cells = new Map(), fm = fmt280.get(r);
+    for (const [c, v] of vals280.get(r)) { const id = fm.get(c); cells.set(c, cellXml(cl(c) + r, id ? String(SB.fmt(id, dNf.get(id) || '')) : null, v)); }
+    newRows.set(r, [rowAttr(r).replace(/\s*\br="\d+"/, '').replace(/^/, ` r="${r}"`), cells]);
+  }
+  l280.rows = newRows;
+  l280.tail = l280.tail.replace(/<autoFilter\b[^>]*?(?:\/>|>[\s\S]*?<\/autoFilter>)/, `<autoFilter ref="A2:${cl(maxC)}${last280}"/>`).replace(/<sortState\b[\s\S]*?<\/sortState>/g, '');
+  setDimension(l280);
+  lz.file(L.pathOf['280'], l280.serialize());
+  let wbx = L.wbx;
+  const setFilterName = (name, ref) => {
+    const q = /[^A-Za-z0-9_]/.test(name) || /^\d/.test(name) ? `'${name.replace(/'/g, "''")}'` : name;
+    const [a, b] = ref.split(':'); const abs = `$${/[A-Z]+/.exec(a)[0]}$${/\d+/.exec(a)[0]}:$${/[A-Z]+/.exec(b)[0]}$${/\d+/.exec(b)[0]}`;
+    wbx = wbx.replace(new RegExp(`(<definedName name="_xlnm._FilterDatabase" localSheetId="${L.indexOf[name]}" hidden="1">)[^<]*(</definedName>)`), (m, a1, a2) => a1 + esc(q) + '!' + abs + a2);
+  };
+  setFilterName('280', `A2:${cl(maxC)}${last280}`);
+  report.rows280 = last280 - 2;
+
+  // ---- lookups used by the row-1 formulas
+  const colIdx = new Map();
+  const bwlp = L.pathOf['Batch Wise Line Plan'] ? new Sheet(await lz.file(L.pathOf['Batch Wise Line Plan']).async('string')) : null;
+  const lpVal = (sh, c, r) => { const v = cellValue(sh.get(r, c), L.sst); return v === '' ? null : v; };
+
+  let pct = 30;
+  for (const cfg of LP_SHEETS) {
+    log(pct, `Line Plan: ${cfg.name}`); pct += 20;
+    const path = L.pathOf[cfg.name];
+    const xml = await lz.file(path).async('string');
+    const old = new Sheet(xml), sh = new Sheet(xml);
+    const P = ci(cfg.paste), K = ci(cfg.key);
+    // header / templates / left formulas
+    const hdr = new Map(); for (const [c, x] of (old.rows.get(2) || ['', new Map()])[1]) { const v = cellValue(x, L.sst); if (v !== null && v !== '') hdr.set(c, String(v).replace(/\s+/g, ' ').trim()); }
+    const lastCol = Math.max(...hdr.keys());
+    const tmpl = new Map();
+    for (const [c, x] of (old.rows.get(1) || ['', new Map()])[1]) {
+      if (c <= P + 3) continue; const v = cellValue(x, L.sst);
+      if (typeof v === 'string' && /^qq/i.test(v.trim())) tmpl.set(c, '=' + v.trim().slice(2).replace(/qq/gi, '='));
+    }
+    if (!tmpl.size) throw new Error(`${cfg.name}: no qq formulas in row 1`);
+    const masters = sharedMasters(old), left = new Map();
+    for (const [c, x] of (old.rows.get(3) || ['', new Map()])[1]) if (!tmpl.has(c) && (c < P || c > P + 3) && /<f[\s>\/]/.test(x)) { const f = formulaAt(old, 3, c, masters); if (f) left.set(c, formulaGen(f, 3, c)); }
+    for (const [c, x] of (old.rows.get(1) || ['', new Map()])[1]) if (c < P && !left.has(c)) { const v = cellValue(x, L.sst); if (typeof v === 'string' && /^qq/i.test(v.trim())) left.set(c, formulaGen(v.trim().slice(2).replace(/qq/gi, '='), 3, c)); }
+    const lastT = Math.max(...tmpl.keys());
+    const carry = []; for (let c = lastT + 1; c <= lastCol; c++) if (!left.has(c) && !tmpl.has(c)) carry.push(c);
+    // old list = the 'Hanger (2)' copy
+    let oldLast = 2; const oldByKey = new Map();
+    for (const [r, [, cells]] of old.rows) if (r >= 3) { const k = cellValue(cells.get(K), L.sst); if (k !== null && k !== '') { oldLast = Math.max(oldLast, r); const kk = normV(k); if (!oldByKey.has(kk)) oldByKey.set(kk, r); } }
+    // new list from the DOC pivot
+    const recs = await docPivotRows(dz, D, cfg.doc, vals280, last280);
+    const n = 2 + recs.length;
+    const rowVals = new Map();     // r -> Map(col -> value) for paste / carry columns
+    recs.forEach((rr, i) => { const r = 3 + i, m = new Map(), src = vals280.get(rr);
+      LP_SRC_COLS.forEach((c, j) => { const v = src.get(ci(c)); m.set(P + j, v === undefined ? null : v); });
+      const orow = oldByKey.get(normV(m.get(K)));
+      for (const c of carry) m.set(c, orow ? lpVal(old, c, orow) : null);
+      rowVals.set(r, m); });
+    // formula evaluation (row-1 formulas -> values; left formulas evaluated only to feed them)
+    const shName = cfg.name, oldName = `${cfg.name} (2)`;
+    const gens = new Map([...tmpl].map(([c, f]) => [c, formulaGen(f, 3, c)]));
+    const memo = new Map(), busy = new Set();
+    const own = (c, r) => {
+      if (r < 3 || r > n) return r >= 3 ? null : lpVal(old, c, r);
+      const k = c * 1e6 + r; if (memo.has(k)) return memo.get(k);
+      let v;
+      if (gens.has(c) || left.has(c)) { if (busy.has(k)) throw new Error('circular'); busy.add(k); v = xlEval((gens.get(c) || left.get(c))(r, c).replace(/^=?/, '='), mkCtx(r)); busy.delete(k); }
+      else v = rowVals.get(r).has(c) ? rowVals.get(r).get(c) : null;
+      memo.set(k, v); return v;
+    };
+    const sheetVal = (name, c, r) => {
+      if (name === null || name === shName) return own(c, r);
+      if (name === oldName) return lpVal(old, c, r);
+      if (name === '280') { const m = vals280.get(r); const v = m ? m.get(c) : undefined; return v === undefined ? null : v; }
+      if (name === 'Batch Wise Line Plan' && bwlp) return lpVal(bwlp, c, r);
+      throw new Error('sheet ' + name);
+    };
+    const colMap = (name, c) => {
+      const k = name + '|' + c; if (colIdx.has(k) && name !== shName) return colIdx.get(k);
+      const m = new Map(); let rows;
+      if (name === null || name === shName) rows = [...Array(n - 2).keys()].map(i => i + 3);
+      else if (name === oldName) rows = [...old.rows.keys()].sort((a, b) => a - b);
+      else if (name === '280') rows = [...vals280.keys()].sort((a, b) => a - b);
+      else if (name === 'Batch Wise Line Plan' && bwlp) rows = [...bwlp.rows.keys()].sort((a, b) => a - b);
+      else throw new Error('sheet ' + name);
+      for (const r of rows) { const v = sheetVal(name, c, r); if (v === null) continue; const t = normV(v); if (!m.has(t)) m.set(t, r); }
+      if (name !== shName && name !== null) colIdx.set(name === oldName ? k + '#' + cfg.name : k, m);
+      return m;
+    };
+    const mkCtx = r => {
+      const ctx = {
+        today,
+        cell: (sheet, c, row) => sheetVal(sheet, ci(c), row),
+        match: (rg, key) => {
+          if (!rg || !rg.range) throw new Error('range');
+          if (key && key.range) key = sheetVal(key.sheet, ci(key.c1), r);          // F:F as lookup value = this row
+          if (isErr(key)) return key;
+          const rr = colMap(rg.sheet, ci(rg.c1)).get(normV(key));
+          return rr === undefined || rr < (rg.r1 || 1) ? ERR('#N/A') : rr - (rg.r1 || 1) + 1;
+        },
+        index: (rg, k, c) => sheetVal(rg.sheet, ci(rg.c1) + c - 1, (rg.r1 || 1) + k - 1),
+        vlookup: (rg, key, c) => { const k = ctx.match(rg, key); if (isErr(k)) return k; return sheetVal(rg.sheet, ci(rg.c1) + c - 1, (rg.r1 || 1) + k - 1); },
+      };
+      return ctx;
+    };
+    // look of each column (most common style in the old rows), boxed
+    const canon = new Map();
+    for (let c = 1; c <= lastCol; c++) {
+      const cnt = new Map();
+      for (let r = 3; r <= oldLast; r++) { const x = old.get(r, c); if (!x) continue; const s = +(styleOf(x) || 0); cnt.set(s, (cnt.get(s) || 0) + 1); }
+      let best = 0, bn = -1; for (const [s, k] of cnt) if (k > bn) { bn = k; best = s; }
+      canon.set(c, SB.boxed(best));
+    }
+    const rfdCol = [ci(cfg.rfdPlan)];      // RFD Plan (FOC Q was headed 'Rfd Okan')
+    const comCol = [...hdr].find(([c, h]) => /^comments?$/i.test(h) && tmpl.has(c));
+    let done = 0, kept = 0, zeros = 0, rfdSet = 0; const why = new Set();
+    const ta = stripHidden(((old.rows.get(3) || [' r="3"'])[0]));
+    for (let r = 3; r <= n; r++) {
+      const cells = new Map(), vals = new Map();
+      for (const c of tmpl.keys()) {
+        try { let v = own(c, r); if (v === 0 || v === '' ) { if (v === 0) zeros++; v = null; } vals.set(c, v); done++; }
+        catch (e) { vals.set(c, { formula: gens.get(c)(r, c) }); kept++; why.add(cl(c) + ': ' + e.message); }
+      }
+      if (rfdCol && comCol) {
+        // the last date in Comments is the RFD plan; no date in the comment -> keep the carried plan
+        const d = lastCommentDate(vals.get(comCol[0]), today); if (d !== null) { vals.set(rfdCol[0], d); rfdSet++; }
+      }
+      for (let c = 1; c <= lastCol; c++) {
+        const s = String(canon.get(c)), ref = cl(c) + r;
+        if (left.has(c)) cells.set(c, fcellXml(ref, s, left.get(c)(r, c).replace(/^=/, '')));
+        else if (vals.has(c)) { const v = vals.get(c);
+          if (opts.debugFormulas && !(v && v.formula)) { (report.debug || (report.debug = {}))[cfg.name + '!' + ref] = v; cells.set(c, fcellXml(ref, s, gens.get(c) ? gens.get(c)(r, c).replace(/^=/, '') : '""')); }
+          else cells.set(c, v && v.formula ? fcellXml(ref, s, v.formula.replace(/^=/, '')) : cellXml(ref, s, v)); }
+        else { const v = rowVals.get(r).get(c); cells.set(c, cellXml(ref, s, v === undefined ? null : v)); }
+      }
+      // keep anything the user has to the right of the list
+      const o = sh.rows.get(r); if (o) for (const [c, x] of o[1]) if (c > lastCol) cells.set(c, x);
+      sh.rows.set(r, [(o ? stripHidden(o[0]) : ta.replace(/\s*\br="\d+"/, ' r="' + r + '"')).replace(/\br="\d+"/, `r="${r}"`), cells]);
+    }
+    for (let r = n + 1; r <= oldLast; r++) sh.rows.delete(r);
+    { const [, hc] = sh.row(2); const x = hc.get(rfdCol[0]); const h = String(cellValue(x, L.sst) || '').replace(/\s+/g, ' ').trim();
+      if (!/^rfd plan$/i.test(h)) hc.set(rfdCol[0], cellXml(cl(rfdCol[0]) + 2, styleOf(x), 'RFD Plan')); }
+    // filter, names, conditional formats follow the new last row
+    const fref = `A2:${cl(lastCol)}${Math.max(n, 3)}`;
+    for (const v of sh.rows.values()) v[0] = stripHidden(v[0]);
+    sh.tail = sh.tail.replace(/<autoFilter ref="[^"]+"[^>]*?(?:\/>|>[\s\S]*?<\/autoFilter>)/, `<autoFilter ref="${fref}"/>`).replace(/<sortState\b[\s\S]*?<\/sortState>/g, '');
+    sh.tail = sh.tail.replace(/(<conditionalFormatting\b[^>]*?sqref=")([^"]+)"/g, (m, a, ref) => a + ref.split(' ').map(ar => {
+      const q = /^([A-Z]+)(\d+)(?::([A-Z]+)(\d+))?$/.exec(ar); if (!q || !q[3]) return ar;
+      let r1 = +q[2], r2 = +q[4]; if (r2 === oldLast && r1 >= 2 && r1 <= 3) r2 = Math.max(n, r1); if (r1 === oldLast + 1 && r2 > oldLast) r1 = n + 1;
+      return `${q[1]}${r1}:${q[3]}${r2}`; }).join(' ') + '"');
+    sh.tail = sh.tail.replace(/<x14:conditionalFormatting\b[\s\S]*?<\/x14:conditionalFormatting>/g, blk => blk.replace(/(<xm:sqref>)([^<]+)(<\/xm:sqref>)/, (m, a, ref, b) => a + ref.split(' ').map(ar => {
+      const q = /^([A-Z]+)(\d+):([A-Z]+)(\d+)$/.exec(ar); if (!q) return ar; let r1 = +q[2], r2 = +q[4];
+      if (r2 === oldLast && r1 <= 3) r2 = Math.max(n, r1); if (r1 === oldLast + 1 && r2 > oldLast) r1 = n + 1; return `${q[1]}${r1}:${q[3]}${r2}`; }).join(' ') + b));
+    setDimension(sh);
+    lz.file(path, sh.serialize());
+    setFilterName(cfg.name, fref);
+    const newKeys = new Set(recs.map(rr => normV(vals280.get(rr).get(ci('H')))));
+    report.sheets[cfg.name] = { before: oldByKey.size, after: recs.length, added: [...newKeys].filter(k => !oldByKey.has(k)).length, dropped: [...oldByKey.keys()].filter(k => !newKeys.has(k)).length,
+      formulas: `${cl(Math.min(...tmpl.keys()))}:${cl(lastT)}`, values: done, keptAsFormula: kept, notes: [...why].slice(0, 4), zerosCleared: zeros, rfdFromComments: rfdSet,
+      rfdCol: rfdCol ? cl(rfdCol[0]) : null, commentsCol: comCol ? cl(comCol[0]) : null, carried: carry.map(cl) };
+    await tick();
+  }
+  lz.file('xl/styles.xml', SB.save());
+
+  // ---- pivots refresh on open (only those whose source sheet is in the file), formulas recalc on open
+  log(92, 'Line Plan: pivots refresh on open');
+  let nRef = 0;
+  for (const p of Object.keys(lz.files)) {
+    if (!/^xl\/pivotCache\/pivotCacheDefinition\d+\.xml$/.test(p)) continue;
+    const x = await lz.file(p).async('string'); const s = /<worksheetSource\b[^>]*\bsheet="([^"]+)"/.exec(x);
+    if (!s || !L.pathOf[unx(s[1])]) continue;
+    const tag = /<pivotCacheDefinition\b[^>]*>/.exec(x)[0];
+    lz.file(p, x.replace(tag, () => tag.replace(/\srefreshOnLoad="[^"]*"/, '').replace(/(\/?)>$/, ' refreshOnLoad="1"$1>'))); nRef++;
+  }
+  report.pivotsRefresh = nRef;
+  wbx = /<calcPr\b/.test(wbx) ? wbx.replace(/<calcPr\b([^>]*?)\/>/, (m, a) => `<calcPr${a.replace(/\sfullCalcOnLoad="[^"]*"/, '')} fullCalcOnLoad="1"/>`) : wbx.replace('</workbook>', '<calcPr fullCalcOnLoad="1"/></workbook>');
+  lz.file('xl/workbook.xml', wbx);
+  if (lz.file('xl/calcChain.xml')) {
+    lz.remove('xl/calcChain.xml');
+    lz.file('xl/_rels/workbook.xml.rels', L.rels.replace(/<Relationship\b[^>]*calcChain[^>]*\/>/, ''));
+    const ct = await lz.file('[Content_Types].xml').async('string'); lz.file('[Content_Types].xml', ct.replace(/<Override PartName="\/xl\/calcChain.xml"[^>]*\/>/, ''));
+  }
+  log(96, 'Line Plan: saving');
+  const bytes = await lz.generateAsync({ type: 'uint8array', compression: 'DEFLATE', compressionOptions: { level: 6 } });
+  log(100, 'Line Plan: done');
+  return { bytes, report };
+}
+
 /* --------------------------------------------- file-name auto detection */
 function detect(name) {
   const n = name.toLowerCase();
+  if (n.endsWith('.xlsx') && /line[\s_-]*plan|hanger/.test(n)) return 'lineplan';
   if (n.endsWith('.xlsx') && /doc|280\s*\+\s*217|217\s*\+\s*280/.test(n)) return 'master';
   if (!/\.xls$/.test(n) && !n.endsWith('.xlsx')) return null;
   if (/dye[\s_-]*q/.test(n)) return 'dyeq';
@@ -2407,7 +2771,7 @@ function detect(name) {
   return null;
 }
 
-root.DocBuilder = { build, detect, additionalCalc, additionalXlsx, _test: { formulaGen, calc280, SEARCH, CONCAT, T, ldKey } };
+root.DocBuilder = { build, detect, additionalCalc, additionalXlsx, linePlan: updateLinePlan, lastCommentDate, _test: { formulaGen, calc280, SEARCH, CONCAT, T, ldKey } };
 })(typeof self !== 'undefined' ? self : globalThis);
 </script>
 <script>
@@ -2417,7 +2781,7 @@ const LIBS=['https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js
 const TAPS=[['s217','217.xls'],['s280','280.xls'],['dyeq','Inside Dye Q.xls'],['knitq','Knit Q.xls'],['heatset','Heatset.xls'],['lot','Lot.xls']];
 const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const $=id=>document.getElementById(id);
-const files={};let outBlob=null,addBlob=null,busy=false,lastReport=null;
+const files={};let outBlob=null,addBlob=null,lpBlob=null,busy=false,lastReport=null;
 const coreText=$('core-src').textContent;(0,eval)(coreText);
 const fmt=b=>b>1048576?(b/1048576).toFixed(1)+' MB':Math.max(1,Math.round(b/1024))+' KB';
 const pad=n=>String(n).padStart(2,'0');
@@ -2439,8 +2803,10 @@ function render(){
   const ul=$('taps');ul.innerHTML='';let got=0,size=0;
   for(const [k,label] of TAPS){const f=files[k];const li=document.createElement('li');if(f){li.className='got';got++;size+=f.size;li.title=f.name;}
     const c=document.createElement('span');c.className='c';c.textContent=f?'●':'○';li.appendChild(c);li.appendChild(document.createTextNode(label));ul.appendChild(li);}
+  {const f=files.lineplan,li=document.createElement('li');li.className='opt'+(f?' got':'');if(f)li.title=f.name;
+    const c=document.createElement('span');c.className='c';c.textContent=f?'●':'○';li.appendChild(c);li.appendChild(document.createTextNode('Line Plan-FOC-AOP-Hanger (optional)'));ul.appendChild(li);}
   $('boxTaps').classList.toggle('done',got===6);
-  $('tapsMeta').textContent=got?`✓ ${got} of 6 uploaded · ${fmt(size)}`:'';
+  $('tapsMeta').textContent=got?`✓ ${got} of 6 uploaded${files.lineplan?' + Line Plan file':''} · ${fmt(size+(files.lineplan?files.lineplan.size:0))}`:(files.lineplan?'✓ Line Plan file added':'');
   $('go').disabled=busy||!m||got<6;
   if(!busy&&!outBlob)$('msg').textContent=!m&&got<6?`DOC file and ${6-got} TAPS file(s) still needed`:!m?'DOC file still needed':got<6?`${6-got} TAPS file(s) still needed`:'Ready.';
 }
@@ -2449,7 +2815,7 @@ function addFiles(list){
   const bad=[];
   for(const f of list){const k=DocBuilder.detect(f.name);if(k)files[k]=f;else bad.push(f.name);}
   outBlob=null;$('dlBtn').disabled=true;$('pubBtn').disabled=true;render();
-  if(bad.length)note('Not recognised: '+bad.join(', ')+' — the name must contain 217, 280, Dye Q, Knit Q, Heatset or Lot.',true);
+  if(bad.length)note('Not recognised: '+bad.join(', ')+' — the name must contain 217, 280, Dye Q, Knit Q, Heatset, Lot or Line Plan.',true);
 }
 function wire(box,input,onFiles){
   box.addEventListener('click',()=>input.click());
@@ -2465,29 +2831,34 @@ wire($('boxTaps'),$('pickTaps'),addFiles);
 /* ---------- run ---------- */
 function todaySerial(){const d=new Date();return Math.round((Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())-Date.UTC(1899,11,30))/864e5);}
 function progress(p,m){$('prog').classList.add('show');$('bar').style.width=Math.max(1,Math.min(100,p)).toFixed(1)+'%';$('pText').textContent=p>=100?'Done · ready to download':m;$('pPct').textContent=Math.round(p)+'%';}
-async function readAll(){const b={sources:{}};b.master=new Uint8Array(await files.master.arrayBuffer());for(const [k] of TAPS)b.sources[k]=new Uint8Array(await files[k].arrayBuffer());return b;}
+async function readAll(){const b={sources:{}};b.master=new Uint8Array(await files.master.arrayBuffer());for(const [k] of TAPS)b.sources[k]=new Uint8Array(await files[k].arrayBuffer());if(files.lineplan)b.lineplan=new Uint8Array(await files.lineplan.arrayBuffer());return b;}
+// Line Plan-FOC-AOP-Hanger: refreshed from the DOC just built (same run)
+async function withLinePlan(f,r,today,prog){if(!f.lineplan)return r;try{const lp=await DocBuilder.linePlan(f.lineplan,r.bytes,{today,onProgress:(p,m)=>prog(97+p*0.03,m)});r.lpBytes=lp.bytes;r.report.linePlan=lp.report;}catch(e){r.report.warnings.push('Line Plan file not updated: '+(e&&e.message||e));}return r;}
 function makeWorker(){
   const glue=`importScripts(${LIBS.map(u=>JSON.stringify(u)).join(',')});\n${coreText}\n
-self.onmessage=async e=>{try{const r=await DocBuilder.build(e.data.files,{today:e.data.today,fixSlips:e.data.fix,onProgress:(p,m)=>self.postMessage({t:'p',p,m})});
-self.postMessage({t:'done',bytes:r.bytes,addBytes:r.addBytes,report:r.report},[r.bytes.buffer].concat(r.addBytes?[r.addBytes.buffer]:[]));}catch(err){self.postMessage({t:'err',m:String(err&&err.message||err)});}};`;
+const prog=(p,m)=>self.postMessage({t:'p',p,m});
+self.onmessage=async e=>{try{const lpIn=e.data.files.lineplan;const r=await DocBuilder.build(e.data.files,{today:e.data.today,fixSlips:e.data.fix,onProgress:(p,m)=>prog(e.data.files.lineplan?p*0.97:p,m)});
+if(lpIn){try{const lp=await DocBuilder.linePlan(lpIn,r.bytes,{today:e.data.today,onProgress:(p,m)=>prog(97+p*0.03,m)});r.lpBytes=lp.bytes;r.report.linePlan=lp.report;}catch(err){r.report.warnings.push('Line Plan file not updated: '+(err&&err.message||err));}}
+self.postMessage({t:'done',bytes:r.bytes,addBytes:r.addBytes,lpBytes:r.lpBytes,report:r.report},[r.bytes.buffer].concat(r.addBytes?[r.addBytes.buffer]:[]).concat(r.lpBytes?[r.lpBytes.buffer]:[]));}catch(err){self.postMessage({t:'err',m:String(err&&err.message||err)});}};`;
   return new Worker(URL.createObjectURL(new Blob([glue],{type:'text/javascript'})));
 }
 async function run(){
   busy=true;outBlob=null;render();note('');pill('');$('dlBtn').disabled=true;$('pubBtn').disabled=true;$('msg').textContent='Working…';
   const t0=performance.now();progress(1,'Loading files');
   const fix=true,today=todaySerial();
-  const done=(bytes,rep,add)=>{busy=false;finished(bytes,rep,(performance.now()-t0)/1000,add);render();};
+  const done=(bytes,rep,add,lp)=>{busy=false;finished(bytes,rep,(performance.now()-t0)/1000,add,lp);render();};
   const fail=m=>{busy=false;render();$('msg').textContent='';$('prog').classList.remove('show');note('Could not update: '+m,true);};
-  const fallback=async()=>{try{const r=await DocBuilder.build(await readAll(),{today,fixSlips:fix,onProgress:progress});done(r.bytes,r.report,r.addBytes);}catch(e){fail(String(e&&e.message||e));}};
+  const fallback=async()=>{try{const f=await readAll();const r=await withLinePlan(f,await DocBuilder.build(f,{today,fixSlips:fix,onProgress:progress}),today,progress);done(r.bytes,r.report,r.addBytes,r.lpBytes);}catch(e){fail(String(e&&e.message||e));}};
   let w=null;try{w=makeWorker();}catch(e){}
   if(!w)return fallback();
   const bufs=await readAll();
-  w.onmessage=e=>{const d=e.data;if(d.t==='p')progress(d.p,d.m);else{w.terminate();d.t==='done'?done(d.bytes,d.report,d.addBytes):fail(d.m);}};
+  w.onmessage=e=>{const d=e.data;if(d.t==='p')progress(d.p,d.m);else{w.terminate();d.t==='done'?done(d.bytes,d.report,d.addBytes,d.lpBytes):fail(d.m);}};
   w.onerror=e=>{e.preventDefault();w.terminate();fallback();};
-  w.postMessage({files:bufs,today,fix},[bufs.master.buffer,...Object.values(bufs.sources).map(b=>b.buffer)]);
+  w.postMessage({files:bufs,today,fix},[bufs.master.buffer,...Object.values(bufs.sources).map(b=>b.buffer)].concat(bufs.lineplan?[bufs.lineplan.buffer]:[]));
 }
 function saveLocal(){if(!outBlob)return;const a=document.createElement('a');a.href=URL.createObjectURL(outBlob);a.download=outName();document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},4000);}
-function finished(bytes,rep,secs,add){
+function finished(bytes,rep,secs,add,lp){
+  lpBlob=lp?new Blob([lp],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}):null;$('lpLocal').hidden=!lpBlob;
   outBlob=new Blob([bytes],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});lastReport=rep;
   addBlob=add?new Blob([add],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}):null;$('addLocal').disabled=!addBlob;
   progress(100,'');
@@ -2499,15 +2870,21 @@ function finished(bytes,rep,secs,add){
   if(rep.combo)parts.push(`Body/Gusset: Dye Q B ${rep.combo.dq.B} · G ${rep.combo.dq.G} · ${rep.combo.twoBatch} combos · ${(rep.combo.mc||{})['Need Batch Plan']||0} need batch plan`);
   if(rep.dyeqValueCols)parts.push(`Dye Q ${rep.dyeqValueCols.cols[0]}:${rep.dyeqValueCols.cols[rep.dyeqValueCols.cols.length-1]} worked out and pasted as values`+(rep.dyeqValueCols.keptAsFormula?` (${rep.dyeqValueCols.keptAsFormula} cells kept as formula: ${rep.dyeqValueCols.notes.join('; ')})`:''));
   parts.push(`${rep.pivotTables} pivots refresh on open`);
+  if(rep.linePlan){const L=rep.linePlan.sheets,s=Object.entries(L).map(([n,v])=>`${n} ${v.after} rows (+${v.added} / −${v.dropped}${v.rfdFromComments?`, ${v.rfdFromComments} RFD dates from comments`:''}${v.keptAsFormula?`, ${v.keptAsFormula} cells kept as formula`:''})`);parts.push('Line Plan file: 280 copied · '+s.join(' · '));}
   if(rep.warnings&&rep.warnings.length)parts.push(rep.warnings.join(' '));
   note(parts.join(' · '));
   if(rep.summary){localSummary=true;useSummary(rep.summary,'From this update');useNewArt(rep.newArt);}
   saveLocal();                                   // auto-download with the report date
+  if(lpBlob)setTimeout(saveLp,700);
   if(cfg.token&&$('autoPub').checked)publish();
 }
 $('go').addEventListener('click',run);
 $('dlBtn').addEventListener('click',saveLocal);
 const addName=(d=rdate())=>`DOC Additional Req ${pad(d.getDate())}-${MON[d.getMonth()]}-${d.getFullYear()}.xlsx`;
+const ORD=d=>d+(d%10===1&&d!==11?'st':d%10===2&&d!==12?'nd':d%10===3&&d!==13?'rd':'th');
+const lpName=(d=rdate())=>`Line Plan-Foc-Aop-Hanger List ${ORD(d.getDate())} ${MON[d.getMonth()]}.xlsx`;
+function saveLp(){if(!lpBlob)return;const a=document.createElement('a');a.href=URL.createObjectURL(lpBlob);a.download=lpName();document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},4000);}
+$('lpLocal').addEventListener('click',saveLp);
 $('addLocal').addEventListener('click',()=>{if(!addBlob)return;const a=document.createElement('a');a.href=URL.createObjectURL(addBlob);a.download=addName();document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},4000);});
 
 function isAdmin(){return !!(cfg&&cfg.token);}
