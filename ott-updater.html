@@ -357,7 +357,7 @@ td.fail.hov:hover{background:var(--red-soft)}
       <label class="f" for="runDate">Report date (used in file name)
         <input type="date" id="runDate">
       </label>
-      <label class="f" for="kpkFrom" title="M &amp; S - T61 (KPK) lines without PO: RFD qty from DOC sheet 280 is counted from this RFD date onward">KPK black/white · count RFD from
+      <label class="f" for="kpkFrom" title="M &amp; S - T61 (KPK) lines without PO: RFD qty from DOC sheet 280 is counted from this RFD date onward">KPK no-PO lines · count RFD from
         <input type="date" id="kpkFrom">
       </label>
       <div><div class="tag">Output</div><div class="outname" id="outName">—</div></div>
@@ -481,7 +481,7 @@ td.fail.hov:hover{background:var(--red-soft)}
         <tr class="own"><td>M</td><td>RFD qty: Step 2 sets <code>=L</code>, Step 3 fills Psbl to RFD, oldest agreed date first<span class="tagw">TOOL</span></td></tr>
         <tr><td>O</td><td>Recovered qty<span class="tagf">KEY</span></td></tr>
         <tr><td>P</td><td>Balance = M − L + O (keep the formula)</td></tr>
-        <tr><td>Q</td><td>PO<span class="tagf">KEY</span>. <b>KPK</b> lines (buyer "M &amp; S - T61 (KPK)" or "T61-KPK") with no PO are KPK black/white: M comes from DOC sheet 280 (RFD Qty Mtr, RFD date on/after the KPK date, Sri Lanka POs and AOP shades skipped, 120 gsm gusset / 140 gsm body), oldest date first</td></tr>
+        <tr><td>Q</td><td>PO<span class="tagf">KEY</span>. <b>KPK buyer lines with no PO</b> (buyer "M &amp; S - T61 (KPK)" or "T61-KPK") are matched by buyer, colour and body/gusset: M comes from DOC sheet 280 (RFD Qty Mtr, RFD date on/after the KPK date, Sri Lanka POs and AOP shades skipped, 120 gsm gusset / 140 gsm body), oldest date first</td></tr>
         <tr><td>S</td><td>Agreed RFD date: a real date, or <code>TBC</code></td></tr>
         <tr><td>AJ AK AL</td><td>Taps key parts. AM joins them as AJ &amp; AL &amp; AK, so they must match DOC 217 <code>AP</code> exactly<span class="tagf">KEY</span></td></tr>
         <tr class="own"><td>AM</td><td>Key <code>=TRIM(AJ)&amp;TRIM(AL)&amp;TRIM(AK)</code><span class="tagw">TOOL</span></td></tr>
@@ -600,12 +600,12 @@ function rawVal(t,inner,sst){
   return Number(v);
 }
 
-/* ---------- KPK black/white: RFD pool from DOC sheet 280 ----------
-   Customer (E) = M & S - T61 (KPK) · Customer PO (F) without "Sri Lanka" · Shade (L) has Black/White, not AOP ·
+/* ---------- KPK no-PO lines: RFD pool from DOC sheet 280 (by body/gusset + colour) ----------
+   Customer (E) = M & S - T61 (KPK) · Customer PO (F) without "Sri Lanka" · Shade (L) colour name, not AOP ·
    Fabric/Yarn (N) -120- = gusset, -140- = body · RFD Date (U) on/after the chosen date · qty = RFD Qty Mtr (AC) */
 const KPK_BUYER=/^\s*M\s*&\s*S\s*-\s*T61\s*\(KPK\)\s*$/i;
-const KPK_FP=/KPK/i;   // Fabric Plan buyer name for KPK lines: "M & S - T61 (KPK)" or "T61-KPK" (Sri Lanka excluded)
-const kpkColour=s=>/black/i.test(s)?"Black":/white/i.test(s)?"White":null;
+const KPK_FP=/KPK/i;   // Fabric Plan buyer for the no-PO rule: "M & S - T61 (KPK)" or "T61-KPK" (not Sri Lanka)
+const kpkColour=s=>{const k=String(s).toLowerCase().replace(/aop(-g)?/g," ").replace(/[^a-z ]+/g," ").replace(/\s+/g," ").trim(); return k?k.replace(/\b\w/g,c=>c.toUpperCase()):null};   // "Black 10005" -> "Black", "64270 PINK" -> "Pink"
 async function readKPK(zip,fromSer){
   const path=await sheetPath(zip,"280");
   const ssf=zip.file("xl/sharedStrings.xml"); const sst=ssf?parseSST(await ssf.async("string")):[];
@@ -615,7 +615,7 @@ async function readKPK(zip,fromSer){
   let m; while((m=rowRe.exec(xml))){ if(!m[2]||+m[1]<3) continue; const v={}; let c; cRe.lastIndex=0;
     while((c=cRe.exec(m[2]))){ if(!want.has(c[1])) continue; const tm=/\bt="(\w+)"/.exec(c[2]); v[c[1]]=rawVal(tm?tm[1]:null,c[3]||null,sst); }
     if(!KPK_BUYER.test(String(v.E??""))) continue;
-    const shade=String(v.L??""); if(/aop/i.test(shade)) continue;   // solid Black / White only, AOP shades are not KPK black/white
+    const shade=String(v.L??""); if(/aop/i.test(shade)) continue;   // solid shades only, AOP shades excluded
     const col=kpkColour(shade); if(!col) continue;
     if(/sri\s*-?\s*lanka/i.test(String(v.F??""))){ skippedSL++; continue; }
     const fab=/-140-/.test(String(v.N??""))?"140":/-120-/.test(String(v.N??""))?"120":null; if(!fab) continue;
@@ -793,10 +793,12 @@ async function run(){
       Mf.set(r, mi.f && /^\$?L\$?\d+$/.test(mi.f.trim()) ? "L"+mi.f.replace(/\$/g,"").slice(1) : null);
       Mv.set(r, mi.v);
     }
-    // KPK black/white lines (no PO): filled from sheet 280, kept out of steps 2 and 3
-    const kpk=new Map(); for(const r of rows){ if(!KPK_FP.test(buyer.get(r))||/sri\s*-?\s*lanka/i.test(buyer.get(r))||String(val(r,"Q").v??"").trim()!=="") continue;
+    // KPK no-PO lines: filled from sheet 280, kept out of steps 2 and 3
+    // rule: KPK buyer with PO/PRPO (col Q) blank -> sheet 280 match by buyer + colour + body/gusset; everything else -> normal steps 2 and 3
+    const kpk=new Map(), kpkNoMatch=[]; for(const r of rows){ const b=buyer.get(r); if(!KPK_FP.test(b)||/sri\s*-?\s*lanka/i.test(b)||String(val(r,"Q").v??"").trim()!=="") continue;
       const art=String(val(r,"I").v??""), col=kpkColour(String(val(r,"J").v??"")), fab=/140\s*gsm/i.test(art)?"140":/120\s*gsm/i.test(art)?"120":null;
-      if(col&&fab) kpk.set(r,fab+"|"+col); }
+      if(col&&fab) kpk.set(r,fab+"|"+col); else kpkNoMatch.push(r); }
+    const noPO=new Set([...kpk.keys(),...kpkNoMatch]);
     const mval=r=>{const f=Mf.get(r); if(f){return L.get(+f.slice(1))??num(val(+f.slice(1),"L").v)} return num(Mv.get(r))};
     const P=r=>(mval(r)-L.get(r))+O.get(r);
     const Mbefore=new Map(rows.map(r=>[r,mval(r)]));
@@ -815,12 +817,12 @@ async function run(){
     setStep("taps","run");await tick();
     const mWrite=new Map(); // r -> {f} or {v}
     let step2=0; const step2Rows=new Set(), step2New=new Set();
-    for(const r of rows){ if(kpk.has(r)) continue; const ao=AO.get(r); if(isNum(ao)&&ao<=20){ if(Math.abs(mval(r)-L.get(r))>EPS){ step2++; step2New.add(r); } Mf.set(r,"L"+r); mWrite.set(r,{f:"L"+r}); step2Rows.add(r);} }
+    for(const r of rows){ if(noPO.has(r)) continue; const ao=AO.get(r); if(isNum(ao)&&ao<=20){ if(Math.abs(mval(r)-L.get(r))>EPS){ step2++; step2New.add(r); } Mf.set(r,"L"+r); mWrite.set(r,{f:"L"+r}); step2Rows.add(r);} }
     setStep("taps","done");
 
     /* step 3 */
     setStep("alloc","run");status("Allocating Psbl to RFD…");await tick();
-    const groups=new Map(); for(const r of rows){if(kpk.has(r))continue;const g=norm(key.get(r)); if(!groups.has(g))groups.set(g,[]); groups.get(g).push(r)}
+    const groups=new Map(); for(const r of rows){if(noPO.has(r))continue;const g=norm(key.get(r)); if(!groups.has(g))groups.set(g,[]); groups.get(g).push(r)}
     // fill order inside each group: oldest Agreed RFD date (col S) first; TBC / blank last; ties keep sheet order
     { const dk=r=>{const v=val(r,"S").v; return isNum(v)?v:Infinity}; for(const rs of groups.values()) rs.sort((a,b)=>(dk(a)-dk(b))||(a-b)); }
     const AU=g=>{const rs=groups.get(g);let s=0;for(const r of rs)s+=-P(r);const ao=AO.get(rs[0]);if(!isNum(ao))return false;return s>ao+EPS?s-ao:false};
@@ -844,7 +846,7 @@ async function run(){
     const open=[...groups.keys()].filter(g=>{const a=AU(g);return a!==false&&a>EPS&&groups.get(g).some(r=>P(r)< -EPS)}).length;
     setStep("alloc","done");
 
-    /* KPK black/white: pour each 280 RFD pool into its rows, oldest Agreed RFD date first, each up to L − O */
+    /* KPK no-PO: pour each 280 RFD pool into its rows, oldest Agreed RFD date first, each up to L − O */
     const kpkReport=[], kpkLeft=new Map();
     { const by=new Map(); for(const [r,k] of kpk){ if(!by.has(k))by.set(k,[]); by.get(k).push(r) }
       const dk=r=>{const v=val(r,"S").v; return isNum(v)?v:Infinity};
@@ -936,7 +938,7 @@ async function run(){
     const logBlob=buildLog(report,buyers,{fp:fpFile.name,doc:docFile.name,date:d,kpk:kpkReport,kpkFrom:$("kpkFrom").value});
     prog(98,"Building the update log…");
     outputs={ott:ottBlob,log:logBlob,ottName:outNames().ott,logName:outNames().log};
-    render({kpk:{rows:kpkReport.length,before:kpkReport.reduce((s,x)=>s+x.before,0),after:kpkReport.reduce((s,x)=>s+x.after,0),pool:[...KP.pool.values()].reduce((a,b)=>a+b,0),left:kpkLeft,skippedSL:KP.skippedSL,from:$("kpkFrom").value},rows:rows.length,step2,report,nGroups,added,totBefore,totAfter,buyers,anChanged,anComparable,open,docRows:D.rows});
+    render({kpk:{noMatch:kpkNoMatch.map(r=>`row ${r} ${buyer.get(r)} · ${String(val(r,"J").v??"")}`),rows:kpkReport.length,before:kpkReport.reduce((s,x)=>s+x.before,0),after:kpkReport.reduce((s,x)=>s+x.after,0),pool:[...new Set(kpk.values())].reduce((a,k)=>a+(KP.pool.get(k)||0),0),left:kpkLeft,skippedSL:KP.skippedSL,from:$("kpkFrom").value},rows:rows.length,step2,report,nGroups,added,totBefore,totAfter,buyers,anChanged,anComparable,open,docRows:D.rows});
     setViewer(false);
     autoSave();
     status(`Done · ${rows.length.toLocaleString()} plan rows processed.`);
@@ -977,10 +979,10 @@ function buildLog(report,buyers,meta){
   const styles=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="1"><numFmt numFmtId="164" formatCode="#,##0.00"/></numFmts><fonts count="5"><font><sz val="10"/><name val="Calibri"/><family val="2"/></font><font><b/><sz val="13"/><color rgb="FF664356"/><name val="Calibri"/><family val="2"/></font><font><i/><sz val="9"/><color rgb="FF929597"/><name val="Calibri"/><family val="2"/></font><font><b/><sz val="10"/><color rgb="FFFFFFFF"/><name val="Calibri"/><family val="2"/></font><font><b/><sz val="10"/><color rgb="FF664356"/><name val="Calibri"/><family val="2"/></font></fonts><fills count="4"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF664356"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFE6DFE1"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="thin"><color rgb="FF000000"/></left><right style="thin"><color rgb="FF000000"/></right><top style="thin"><color rgb="FF000000"/></top><bottom style="thin"><color rgb="FF000000"/></bottom><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="9"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="0" fontId="3" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1"/><xf numFmtId="164" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"/><xf numFmtId="0" fontId="4" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1"/><xf numFmtId="164" fontId="4" fillId="3" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1"/><xf numFmtId="1" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center"/></xf></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
   z.file("[Content_Types].xml",`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet3.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`);
   z.file("_rels/.rels",`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`);
-  z.file("xl/workbook.xml",`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><bookViews><workbookView/></bookViews><sheets><sheet name="Allocation Log" sheetId="1" r:id="rId1"/><sheet name="Buyer Summary" sheetId="2" r:id="rId2"/><sheet name="KPK Black-White" sheetId="3" r:id="rId4"/></sheets><definedNames><definedName name="_xlnm._FilterDatabase" localSheetId="0" hidden="1">'Allocation Log'!$A$3:$H$${Math.max(4,report.length+3)}</definedName><definedName name="_xlnm._FilterDatabase" localSheetId="1" hidden="1">'Buyer Summary'!$A$3:$G$${Math.max(4,buyers.length+3)}</definedName></definedNames><calcPr calcId="191029" fullCalcOnLoad="1"/></workbook>`);
+  z.file("xl/workbook.xml",`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><bookViews><workbookView/></bookViews><sheets><sheet name="Allocation Log" sheetId="1" r:id="rId1"/><sheet name="Buyer Summary" sheetId="2" r:id="rId2"/><sheet name="KPK No-PO" sheetId="3" r:id="rId4"/></sheets><definedNames><definedName name="_xlnm._FilterDatabase" localSheetId="0" hidden="1">'Allocation Log'!$A$3:$H$${Math.max(4,report.length+3)}</definedName><definedName name="_xlnm._FilterDatabase" localSheetId="1" hidden="1">'Buyer Summary'!$A$3:$G$${Math.max(4,buyers.length+3)}</definedName></definedNames><calcPr calcId="191029" fullCalcOnLoad="1"/></workbook>`);
   z.file("xl/_rels/workbook.xml.rels",`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/><Relationship Id="rId4" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet3.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`);
   const kp=meta.kpk||[], kfd=meta.kpkFrom?new Date(meta.kpkFrom+"T00:00:00"):null;
-  const s3=sheet("KPK Black/White – RFD from DOC sheet 280 into M",sub+(kfd?` | RFD counted from ${kfd.getDate()} ${MON[kfd.getMonth()]} ${kfd.getFullYear()}`:"")+" | oldest agreed date first",
+  const s3=sheet("KPK no-PO lines – RFD from DOC sheet 280 into M",sub+(kfd?` | RFD counted from ${kfd.getDate()} ${MON[kfd.getMonth()]} ${kfd.getFullYear()}`:"")+" | oldest agreed date first",
     ["Row","Fabric","Colour","Agreed RFD Date","Req Qty L","M before","M after"],[8,14,10,15,13,13,13],
     kp.map(x=>[x.row,x.fab,x.col,isFinite(x.date)?(()=>{const t=new Date(Date.UTC(1899,11,30)+x.date*864e5);return `${String(t.getUTCDate()).padStart(2,"0")}-${MON[t.getUTCMonth()]}-${String(t.getUTCFullYear()).slice(2)}`})():"TBC",x.L,x.before,x.after]),new Set([0,4,5,6]),new Set([4,5,6]));
   z.file("xl/styles.xml",styles); z.file("xl/worksheets/sheet1.xml",s1); z.file("xl/worksheets/sheet2.xml",s2); z.file("xl/worksheets/sheet3.xml",s3);
@@ -1041,7 +1043,8 @@ function render(R){
   else if(R.anComparable) flags.push(`<div class="flag good">DOC is a newer copy. Tps Rfd Qty changed on ${R.anChanged.toLocaleString()} of ${R.rows.toLocaleString()} rows.</div>`);
   if(R.open) flags.push(`<div class="flag warn">${R.open} group(s) still have Psbl to RFD left after 10 passes. Check them in the log.</div>`);
   if(R.kpk&&R.kpk.rows){ const fd=new Date(R.kpk.from+"T00:00:00"); const left=[...R.kpk.left].map(([k,v])=>`${k.replace("|"," gsm ")} ${fmt(v)} m`).join(", ");
-    flags.push(`<div class="flag good"><b>KPK black/white</b>&nbsp;· ${R.kpk.rows} lines filled from sheet 280 (RFD from ${fd.getDate()} ${MON[fd.getMonth()]}${R.kpk.skippedSL?`, ${R.kpk.skippedSL} Sri Lanka PO rows skipped`:""}): ${fmt(R.kpk.pool)} m RFD · M ${fmt(R.kpk.before)} → ${fmt(R.kpk.after)} m${left?` · more than the plan, left over: ${esc(left)}`:""}.</div>`); }
+    flags.push(`<div class="flag good"><b>KPK no-PO lines</b>&nbsp;· ${R.kpk.rows} lines filled from sheet 280 (RFD from ${fd.getDate()} ${MON[fd.getMonth()]}${R.kpk.skippedSL?`, ${R.kpk.skippedSL} Sri Lanka PO rows skipped`:""}): ${fmt(R.kpk.pool)} m RFD · M ${fmt(R.kpk.before)} → ${fmt(R.kpk.after)} m${left?` · more than the plan, left over: ${esc(left)}`:""}.</div>`); }
+  if(R.kpk&&R.kpk.noMatch&&R.kpk.noMatch.length) flags.push(`<div class="flag warn"><b>${R.kpk.noMatch.length} KPK line(s) with no PO</b>&nbsp;have no 120/140 gsm or colour to match, so sheet 280 can't fill them. M left as it was: ${esc(R.kpk.noMatch.slice(0,6).join("; "))}${R.kpk.noMatch.length>6?" …":""}</div>`);
   const top=R.buyers.slice().sort((a,b)=>b.added-a.added)[0];
   if(top&&R.added>0&&top.added/R.added>0.6) flags.push(`<div class="flag warn">${esc(top.buyer)} takes ${Math.round(top.added/R.added*100)}% of the allocated qty (${fmt(top.added)} m). Check its groups in the log before sharing.</div>`);
   $("flags").innerHTML=flags.join("");
