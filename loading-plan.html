@@ -254,7 +254,7 @@ header{gap:6px 6px!important}
 #cm .cmx b{font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #cm .cmc{width:24px!important;height:24px;justify-content:center!important;padding:0!important;font-size:18px;line-height:1;color:var(--muted)}
 #cm .cmc:hover{background:var(--s-red-bg)!important;color:#AF4F5A}
-#cm .cmd{color:#AF4F5A;font-weight:700}
+#cm .cmd{color:#AF4F5A;font-weight:700}#cm .cmp{color:#664356!important;font-weight:700}
 #cm .cmd:hover{background:var(--s-red-bg)!important}
 .tact{margin-left:10px;font:700 12px var(--f-ui);border:1px solid var(--qp-line);background:var(--s-pick);color:#664356;border-radius:4px;padding:2px 8px;cursor:pointer}
 #cm em{font-style:normal;font-size:11px;color:var(--s-ac)}
@@ -491,7 +491,7 @@ header.fover::after{background:rgba(239,230,235,.92)}
       <button class="qi" data-act="export"><span>⤓</span>Export File<em>Loading plan with your plan</em></button>
       <button class="qi" data-act="update"><span>⟳</span>Update File<em>Loading plan + DOC 280+217 + Line Plan</em></button>
       <div class="qsep"></div><a class="qi" href="index.html"><span>←</span>SQ Hues Tools</a>
-      <div class="qver">Version 01 Nov 18:09</div>
+      <div class="qver">Version 01 Nov 18:26</div>
     </div>
   </div>
   <div class="hcol">
@@ -1523,7 +1523,8 @@ function groupCols(letters,on){
   store.set('mclp-ugrp',UG); store.set('mclp-grp',GOPEN); COLSEL.clear(); build(); applyCols(); draw();
   toast(on?`Grouped ${idx[idx.length-1]-idx[0]+1} column${idx[idx.length-1]>idx[0]?'s':''}. Use − / + above to hide or show.`:`Ungrouped ${idx.length} column${idx.length>1?'s':''}.`);
 }
-const visCols=()=>COLS.filter(c=>!c.grp||GOPEN[c.grp]);
+let VCC=null, VCK='';
+const visCols=()=>{ const k=COLS.length+'|'+JSON.stringify(GOPEN); if(VCC&&VCK===k&&VCC.src===COLS) return VCC; VCC=COLS.filter(c=>!c.grp||GOPEN[c.grp]); VCC.src=COLS; VCK=k; return VCC; };
 function applyCols(){ document.documentElement.style.setProperty('--cols',visCols().map(c=>(COLWM[c.k]||c.w0)+'px').join(' ')); }
 function cellText(L,x){
   if(L==='A') return BMC[x.b]||x.mc0||'';
@@ -1571,13 +1572,15 @@ function wrongMc(c){ if(!c) return null; const a=c.auto; if(a&&a!=='NBP') return
 function line(x,c){ const wm=wrongMc(c);
   const qtip=wm?(wm==='over'?'Combo '+fmt(Math.round(c.q))+' kg is over the '+c.mc+' kg machine':'Combo '+fmt(Math.round(c.q))+' kg suits the '+wm+' kg MC, not '+c.mc+' kg — right-click › Send to MC'):'';
   let h=`<div class="ln xl" data-b="${esc(x.b)}">`;
-  for(const col of visCols()){ const L=col.k; const v=cellText(L,x);
+  const vc=visCols();
+  for(let ci=0;ci<vc.length;ci++){ const col=vc[ci]; const L=col.k; const v=cellText(L,x);
     if(L==='Q'||L==='R'){ const k=L==='Q'?'rmk':'hold'; h+=`<span><input class="ed" data-b="${esc(x.b)}" data-k="${k}" value="${esc(x[k])}" title="${esc(x[k])}" aria-label="${esc(col.h)}"></span>`; continue; }
     if(L==='BH'){ h+=LDAY[x.b]?`<span class="ldy" title="Load ${dshort(LDAY[x.b].d)} · ${LDAY[x.b].k} kg MC · ${capOf(LDAY[x.b].k).m} MC × ${capOf(LDAY[x.b].k).b}/day">${v}</span>`:'<span></span>'; continue; }
     let cls=col.num?'n':'';
     if(L==='A') cls='mcc'+(x.pd?' mcg':''); else if(L==='C') cls='ptc'; else if(L==='D') cls='bn'; else if(L==='I') cls=x.kn==='KBL'?'kblc':'b'; else if(L==='J'||DATEF[L]) cls='ctr';
     if(L==='K'){ h+=`<span class="n${wm?' wrongq':''}" title="${esc(qtip)}">${esc(v)}</span>`; continue; }
-    h+=`<span${cls?` class="${cls}"`:''} title="${esc(v)}">${esc(v)}</span>`; }
+    if(v===''||v==null){ h+=cls?`<span class="${cls}"></span>`:'<span></span>'; continue; }
+    const ev=esc(v); h+=`<span${cls?` class="${cls}"`:''}${ev.length>12?` title="${ev}"`:''}>${ev}</span>`; }   // tooltip only where text may be cut
   return h+'</div>';
 }
 // Hold = anything in R (Hold remarks) or HOLD written in AZ (Remarks)
@@ -1637,11 +1640,19 @@ function draw(){
   const sums={}; const shownIds=[...new Set([...a,...b])];
   for(const id of shownIds){ const c=C.get(id); for(const x of c.p) for(const col of vc){ if(col.k!=='K') continue; const v=parseFloat(String(cellText(col.k,x)).replace(/,/g,'')); if(isFinite(v)) sums[col.k]=(sums[col.k]||0)+v; } }
   // subtotals sit in the outline row above the headers
-  $('list').innerHTML=head.replace(/<!--S:(\w+)-->/g,(m,k)=>sums[k]!=null?`<em class="gsum" title="Subtotal of the rows shown">${fmt(Math.round(sums[k]))}</em>`:'')
-    +(a.length?a.map((id,i)=>box(C.get(id),sl(id),i%2)).join(''):'<div class="empty">Click a combo below to plan it. Press Refresh to move ticked combos up here.</div>')
-    +`<div class="dv">Not planned · ${b.filter(id=>!ids.includes(id)).length}</div>`+(b.length?(()=>{const cnt={};let last=null;return b.map((id,i)=>{const c=C.get(id);const s0=sl(id);let ns='';if(!s0){cnt[c.mc]=(cnt[c.mc]||0)+1;ns=cnt[c.mc];}
-      let hd=''; if(cur==='ALL'&&c.mc!==last){ last=c.mc; hd=`<div class="dv mcg">${esc(NAME(c.mc))} · ${b.filter(x=>C.get(x).mc===c.mc&&!sl(x)).length} not planned</div>`; }
-      return hd+box(c,s0,i%2,ns);}).join('');})():'<div class="empty">No other combos match these filters.</div>');
+  // rows are built and added in pieces: the first screenful at once, the rest right after (keeps clicks quick on big lists)
+  const P=[];
+  if(a.length) a.forEach((id,i)=>P.push({id,f:()=>box(C.get(id),sl(id),i%2)})); else P.push({f:()=>'<div class="empty">Click a combo below to plan it. Press Refresh to move ticked combos up here.</div>'});
+  { const nNP=b.filter(id=>!ids.includes(id)).length; P.push({f:()=>`<div class="dv">Not planned · ${nNP}</div>`}); }
+  if(b.length){ const cnt={}, perMc={}; for(const x of b){ if(!sl(x)){ const m=C.get(x).mc; perMc[m]=(perMc[m]||0)+1; } } let last=null;
+    b.forEach((id,i)=>{ const c=C.get(id); const s0=sl(id); let ns=''; if(!s0){cnt[c.mc]=(cnt[c.mc]||0)+1;ns=cnt[c.mc];}
+      let hd=''; if(cur==='ALL'&&c.mc!==last){ last=c.mc; hd=`<div class="dv mcg">${esc(NAME(c.mc))} · ${perMc[c.mc]||0} not planned</div>`; }
+      P.push({id,f:()=>hd+box(c,s0,i%2,ns)}); }); }
+  else P.push({f:()=>'<div class="empty">No other combos match these filters.</div>'});
+  const LST2=$('list'); const tok=draw._tok=(draw._tok||0)+1; const part=(x,y)=>{ let h=''; for(let k=x;k<Math.min(y,P.length);k++) h+=P[k].f(); return h; };
+  let upto=160; if(draw._anc){ const k=P.findIndex(p=>p.id===draw._anc[0]); if(k>=0) upto=Math.max(upto,k+120); }
+  LST2.innerHTML=head.replace(/<!--S:(\w+)-->/g,(m,k)=>sums[k]!=null?`<em class="gsum" title="Subtotal of the rows shown">${fmt(Math.round(sums[k]))}</em>`:'')+part(0,upto);
+  if(upto<P.length){ let at=upto; const step=()=>{ if(tok!==draw._tok) return; LST2.insertAdjacentHTML('beforeend',part(at,at+300)); at+=300; if(at<P.length) setTimeout(step,0); }; setTimeout(step,0); }
   if(draw._anc){ const an=draw._anc; draw._anc=null; const fix=()=>{ const el=$('list').querySelector(`.cb[data-id="${CSS.escape(an[0])}"]`); if(el){ const d=el.getBoundingClientRect().top-an[1]; if(Math.abs(d)>0.5) $('list').scrollTop+=d; } }; fix(); requestAnimationFrame(()=>{fix(); requestAnimationFrame(fix);}); }
 }
 
@@ -1764,7 +1775,8 @@ function openFilter(key,anchor){
   $('fpNone').onclick=()=>boxes().forEach(b=>{if(!b.parentElement.hidden)b.checked=false;});
   $('fpX').onclick=()=>{fp.hidden=true;}; $('fpXx').onclick=()=>{fp.hidden=true;};
   $('fpClr').onclick=()=>{delete FILT[key];saveF();fp.hidden=true;refreshView();};
-  $('fpOk').onclick=()=>{const on=boxes().filter(b=>b.checked).map(b=>b.value); if(on.length===vals.length) delete FILT[key]; else FILT[key]=on; saveF(); fp.hidden=true; refreshView();};
+  $('fpOk').onclick=()=>{const q=$('fpq').value.trim(); const on=boxes().filter(b=>b.checked&&(!q||!b.parentElement.hidden)).map(b=>b.value); if(!on.length){ toast('Nothing ticked — tick at least one value.'); return; } if(on.length===vals.length) delete FILT[key]; else FILT[key]=on; saveF(); fp.hidden=true; refreshView();};
+  $('fpq').onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); $('fpOk').click(); } };
   $('fpq').focus();
 }
 $('list').addEventListener('click',e=>{const h=e.target.closest('.hd b[data-f]');if(!h)return;e.stopPropagation();
@@ -1906,7 +1918,8 @@ let VMODE='list';
 const GRP=[['FOC','#F3D9C9'],['Hanger','#E9DDF0'],['Line Plan','#D6E6F2'],['AOP','#F6E7BF'],['Urgent','#F2D3D6'],['Other','#E3E9DF'],['Rest','#EFECED']];
 S.cap=S.cap||{}; S.bstart=S.bstart||''; S.hol=S.hol||'';
 const capOf=k=>Object.assign({m:1,b:2},S.cap[k]||{});
-function bDays(n0){const out=[];const d=new Date((S.bstart||addDays(0))+'T00:00:00');let guard=0;while(out.length<n0&&guard++<400){const iso=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');out.push({iso,off:S.hol!==''&&d.getDay()===+S.hol,lab:d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})});d.setDate(d.getDate()+1);}return out;}
+const BDC={}; function bDays(n0){ const key=(S.bstart||'')+'|'+S.hol+'|'+addDays(0)+'|'+n0; if(BDC[key]) return BDC[key]; return BDC[key]=bDays0(n0); }
+function bDays0(n0){const out=[];const d=new Date((S.bstart||addDays(0))+'T00:00:00');let guard=0;while(out.length<n0&&guard++<400){const iso=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');out.push({iso,off:S.hol!==''&&d.getDay()===+S.hol,lab:d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})});d.setDate(d.getDate()+1);}return out;}
 let SIDE=null; let BINFO={}; let BQ=''; let BG=new Set();  // board search text, groups switched off
 function drawBoard(){
   BINFO={};
@@ -2116,7 +2129,7 @@ function openCM(id,x,y){
   const c=C.get(id); if(!c) return; const wm=wrongMc(c);
   const cm=$('cm');
   const grp=SELSET.has(id)&&SELSET.size>1?[...SELSET].filter(x=>C.has(x)):[id]; cm.dataset.ids=JSON.stringify(grp);
-  cm.innerHTML=`<div class="cmx"><b>${grp.length>1?grp.length+' combos selected':esc(c.body.b.replace(/^SQHUE-FY\d\d-\d\d-/,''))}</b><button class="cmc" title="Close" aria-label="Close">×</button></div><button class="cmd" data-act="del">🗑 Delete from plan${grp.length>1?' ('+grp.length+')':''}</button>${grp.some(id=>PIN[id])?`<button class="cmd" data-act="unpin">📌 Unpin — let Auto-order place ${grp.length>1?'them':'it'}</button>`:''}<div class="cmh">Send to MC <span class="mut">· ${grp.length>1?grp.length+' combos':fmt(Math.round(c.q))+' kg on '+c.mc+' kg'}</span></div>`+MCS.map(k=>`<button data-k="${k}" ${k===c.mc?'disabled':''}>${k} kg${k===c.auto?' <em>suits this weight</em>':''}${k===c.file&&k!==c.mc?' <em>file M/C</em>':''}${k===c.mc?' <em>current</em>':''}</button>`).join('');
+  cm.innerHTML=`<div class="cmx"><b>${grp.length>1?grp.length+' combos selected':esc(c.body.b.replace(/^SQHUE-FY\d\d-\d\d-/,''))}</b><button class="cmc" title="Close" aria-label="Close">×</button></div><button class="cmd" data-act="del">🗑 Delete from plan${grp.length>1?' ('+grp.length+')':''}</button>${(()=>{ const pl=grp.filter(id=>{const cc=C.get(id);return cc&&(S.plan[cc.mc]||[]).includes(id);}); return pl.some(id=>!PIN[id])?`<button class="cmp" data-act="pin">📌 Pin at ${pl.length>1?'their':'this'} SL — Auto-order won’t move ${pl.length>1?'them':'it'}</button>`:''; })()}${grp.some(id=>PIN[id])?`<button class="cmd" data-act="unpin">📌 Unpin — let Auto-order place ${grp.length>1?'them':'it'}</button>`:''}<div class="cmh">Send to MC <span class="mut">· ${grp.length>1?grp.length+' combos':fmt(Math.round(c.q))+' kg on '+c.mc+' kg'}</span></div>`+MCS.map(k=>`<button data-k="${k}" ${k===c.mc?'disabled':''}>${k} kg${k===c.auto?' <em>suits this weight</em>':''}${k===c.file&&k!==c.mc?' <em>file M/C</em>':''}${k===c.mc?' <em>current</em>':''}</button>`).join('');
   cm.dataset.id=id; cm.hidden=false;
   const w=cm.offsetWidth,h=cm.offsetHeight; cm.style.left=Math.min(innerWidth-w-8,x)+'px'; cm.style.top=Math.min(innerHeight-h-8,y)+'px';
 }
@@ -2125,6 +2138,7 @@ $('cm').addEventListener('click',e=>{
   if(e.target.closest('.cmc')){ $('cm').hidden=true; return; }
   const ids=JSON.parse($('cm').dataset.ids||'[]');
   if(e.target.closest('button[data-act="del"]')){ $('cm').hidden=true; deleteCombos(ids); return; }
+  if(e.target.closest('button[data-act="pin"]')){ $('cm').hidden=true; const pl=ids.filter(id=>{const cc=C.get(id);return cc&&(S.plan[cc.mc]||[]).includes(id);}); pinIds(pl); refreshView(); toast(`Pinned ${pl.length>1?pl.length+' combos':'at SL '+((S.plan[C.get(pl[0]).mc]||[]).indexOf(pl[0])+1)} — Auto-order keeps ${pl.length>1?'them':'it'} there.`); return; }
   if(e.target.closest('button[data-act="unpin"]')){ $('cm').hidden=true; for(const id of ids) delete PIN[id]; savePin(); refreshView(); toast('Unpinned — Auto-order will place '+(ids.length>1?'them':'it')+'.'); return; }
   const b=e.target.closest('button[data-k]'); if(!b||b.disabled) return; $('cm').hidden=true;
   if(ids.length>1){ for(const id of ids) if(C.has(id)&&C.get(id).mc!==b.dataset.k) sendTo(id,b.dataset.k,true); clearSel(); toast(`${ids.length} combos sent to ${b.dataset.k} kg MC.`); } else sendTo($('cm').dataset.id,b.dataset.k); });
