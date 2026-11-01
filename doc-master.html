@@ -1332,7 +1332,8 @@ function styleBook(st) {
     cache.set(k, out); return out;
   };
   const save = s => s.replace(fillsM[0], `<fills count="${fills.length}">${fills.join('')}</fills>`).replace(xm[0], `<cellXfs count="${xfs.length}">${xfs.join('')}</cellXfs>`);
-  return { kind, variant, save, get count() { return xfs.length; } };
+  const fontOf = sid => +((/fontId="(\d+)"/.exec(xfs[sid] || '') || [0, 0])[1]);
+  return { kind, variant, save, fontOf, get count() { return xfs.length; } };
 }
 // look of the existing data (rows first..last) before a paste: per column the usual plain / band style
 function canonStyles(sh, B, first, last, cols) {
@@ -1371,6 +1372,27 @@ function applyCanon(sh, canon, first, last) {
       if (x) { if (styleOf(x) !== s) { row[1].set(c, setStyleAttr(x, s === '0' ? null : s)); n++; } }
       else if (s !== '0') { row[1].set(c, `<c r="${cl(c)}${r}" s="${s}"/>`); n++; }
     }
+  }
+  return n;
+}
+// hand formatting (highlight colour, different font) stays with its record: remembered by key before the paste, put back after
+function manualStyles(sh, B, canon, first, last, keyOf) {
+  const out = new Map();
+  for (let r = first; r <= last; r++) {
+    const row = sh.rows.get(r); if (!row) continue; const k = keyOf(r); if (!k || out.has(k)) continue;
+    for (const [c, pair] of canon.cols) {
+      const x = row[1].get(c); if (!x) continue; const sid = +(styleOf(x) || 0);
+      if (sid === pair[0] || sid === pair[1]) continue;
+      if (B.kind(sid) === 'hi' || B.fontOf(sid) !== B.fontOf(pair[0])) { if (!out.has(k)) out.set(k, new Map()); out.get(k).set(c, sid); }
+    }
+  }
+  return out;
+}
+function putManual(sh, man, first, last, keyOf) {
+  let n = 0; if (!man.size) return 0;
+  for (let r = first; r <= last; r++) {
+    const m = man.get(keyOf(r)); if (!m) continue; const row = sh.rows.get(r); if (!row) continue;
+    for (const [c, sid] of m) { const x = row[1].get(c); row[1].set(c, x ? setStyleAttr(x, String(sid)) : `<c r="${cl(c)}${r}" s="${sid}"/>`); n++; }
   }
   return n;
 }
@@ -1911,17 +1933,20 @@ async function build(files, opts = {}) {
   const SB = styleBook(await rd('xl/styles.xml')); const restyled = report.restyled = {};
   note(46, 'Writing 217');
   let sh = new Sheet(await rd(pathOf['217']));
-  let oldLast = lastDataRow(sh, 1, 29, 3), canon = canonStyles(sh, SB, 3, oldLast, sheetCols(sh, 2, ci('BA'))), nl = paste(sh, d217, 3, 1, 29, oldLast);
+  const nv = v => v === null || v === undefined ? '' : String(v).trim().toLowerCase();
+  let keyOf = r => [5, 6, 7, 8].map(c => nv(cellValue(sh.get(r, c), SST))).join('|');
+  let oldLast = lastDataRow(sh, 1, 29, 3), canon = canonStyles(sh, SB, 3, oldLast, sheetCols(sh, 2, ci('BA'))), man = manualStyles(sh, SB, canon, 3, oldLast, keyOf), nl = paste(sh, d217, 3, 1, 29, oldLast);
   const f217 = []; for (let c = ci('AD'); c <= ci('BA'); c++) if (c !== ci('AM')) f217.push(c);
-  refitFormulas(sh, f217, 3, oldLast, nl); restyled['217'] = applyCanon(sh, canon, 3, nl);
+  refitFormulas(sh, f217, 3, oldLast, nl); restyled['217'] = applyCanon(sh, canon, 3, nl); report.formatKept = { '217': putManual(sh, man, 3, nl, keyOf) };
   filterRefs['217'] = resetFilter(sh, nl); trimmed['217'] = trimTail(sh, nl); report.cf217 = slimDuplicateCF(sh); boundCF(sh, nl); setDimension(sh); wr(pathOf['217'], sh.serialize()); sh = null; await tick();
 
   note(54, 'Writing 280 (A:AT data, AU:DB values, row height 15)');
-  oldLast = lastDataRow(sh280, 1, 46, 3); canon = canonStyles(sh280, SB, 3, oldLast, sheetCols(sh280, 2, extraCol)); nl = paste(sh280, d280, 3, 1, 46, oldLast);
+  keyOf = r => nv(cellValue(sh280.get(r, 8), SST));
+  oldLast = lastDataRow(sh280, 1, 46, 3); canon = canonStyles(sh280, SB, 3, oldLast, sheetCols(sh280, 2, extraCol)); man = manualStyles(sh280, SB, canon, 3, oldLast, keyOf); nl = paste(sh280, d280, 3, 1, 46, oldLast);
   for (let r = 3; r <= nl; r++) { const v = sh280.rows.get(r); v[0] = v[0].replace(/\s(ht|customHeight)="[^"]*"/g, '') + ' ht="15" customHeight="1"'; }
   if (extraCol === ci('DB')) writeValues(sh280, ci('AU'), ci('DB'), 3, c280.vals, oldLast);
   else { writeValues(sh280, ci('AU'), ci('DA'), 3, c280.vals.map(v => v.slice(0, 59)), oldLast); writeValues(sh280, extraCol, extraCol, 3, c280.vals.map(v => [v[59]]), oldLast); }
-  restyled['280'] = applyCanon(sh280, canon, 3, nl);
+  restyled['280'] = applyCanon(sh280, canon, 3, nl); report.formatKept['280'] = putManual(sh280, man, 3, nl, keyOf);
   filterRefs['280'] = resetFilter(sh280, nl); trimmed['280'] = trimTail(sh280, nl); slimDuplicateCF(sh280); boundCF(sh280, nl); setDimension(sh280); wr(pathOf['280'], sh280.serialize()); await tick();
 
   note(66, 'Writing Dye Q');
@@ -2671,7 +2696,13 @@ function lpStyleBook(st) {
   let box = borders.findIndex(b => ['left', 'right', 'top', 'bottom'].every(s => new RegExp(`<${s} style="thin"`).test(b)));
   if (box < 0) { borders.push('<border><left style="thin"><color indexed="64"/></left><right style="thin"><color indexed="64"/></right><top style="thin"><color indexed="64"/></top><bottom style="thin"><color indexed="64"/></bottom><diagonal/></border>'); box = borders.length - 1; }
   const fmtCache = new Map();
+  const fm = /<fills count="\d+">([\s\S]*?)<\/fills>/.exec(st), fills = fm ? fm[1].match(/<fill>[\s\S]*?<\/fill>|<fill\/>/g) || [] : [];
+  const redFill = f => { if (!f || !/patternType="solid"/.test(f)) return false; const fg = /<fgColor\b([^>]*)\/?>/.exec(f); if (!fg) return false;
+    const rgb = /rgb="(?:[0-9A-F]{2})?([0-9A-F]{2})([0-9A-F]{2})([0-9A-F]{2})"/i.exec(fg[1]);
+    if (rgb) { const [r, g, b] = rgb.slice(1).map(h => parseInt(h, 16)); return r >= 0xC0 && g <= 0x80 && b <= 0x80; }
+    const ix = /indexed="(\d+)"/.exec(fg[1]); return !!ix && ['2', '10', '16', '53', '60'].includes(ix[1]); };
   return {
+    isRed(sid) { const x = xfs[sid]; if (!x) return false; const f = +((/fillId="(\d+)"/.exec(x) || [0, 0])[1]); return redFill(fills[f]); },
     // plain cell with this number format (id < 164 built-in, else by code)
     fmt(id, code) {
       const k = id + '|' + code; if (fmtCache.has(k)) return fmtCache.get(k);
@@ -2680,13 +2711,20 @@ function lpStyleBook(st) {
       const s = nid ? add(`<xf numFmtId="${nid}" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>`) : 0;
       fmtCache.set(k, s); return s;
     },
-    rightEdge(sid) {          // same look + thin right border (closing edge of the list)
+    // same look apart from borders?
+    sameLook(a, b) { const k = s => (xfs[s] || xfs[0]).replace(/\s(borderId|applyBorder)="[^"]*"/g, ''); return a === b || k(a) === k(b); },
+    rightEdge(sid) { return this.edge(sid, 'right'); },
+    edge(sid, side) {          // same look + thin border on one side (closing edge of the list)
       const x = xfs[sid] || xfs[0], bid = +((/borderId="(\d+)"/.exec(x) || [0, 0])[1]);
       let b = borders[bid] || '<border><left/><right/><top/><bottom/><diagonal/></border>';
-      if (/<right\b[^>]*style="/.test(b)) return sid;
-      const thin = '<right style="thin"><color indexed="64"/></right>';
-      b = /<right\b[^>]*\/>/.test(b) ? b.replace(/<right\b[^>]*\/>/, thin) : /<right\b[^>]*>[\s\S]*?<\/right>/.test(b) ? b.replace(/<right\b[^>]*>[\s\S]*?<\/right>/, thin) : b.replace(/(<left\b[^>]*\/>|<left\b[^>]*>[\s\S]*?<\/left>)/, '$1' + thin);
-      if (b === '<border/>') b = '<border><left/>' + thin + '<top/><bottom/><diagonal/></border>';
+      if (b === '<border/>') b = '<border><left/><right/><top/><bottom/><diagonal/></border>';
+      if (new RegExp(`<${side}\\b[^>]*style="`).test(b)) return sid;
+      const thin = `<${side} style="thin"><color indexed="64"/></${side}>`;
+      const self = new RegExp(`<${side}\\b[^>]*\\/>|<${side}\\b[^>]*>[\\s\\S]*?<\\/${side}>`);
+      if (self.test(b)) b = b.replace(self, thin);
+      else { const order = ['left', 'right', 'top', 'bottom', 'diagonal'], i = order.indexOf(side); let done = false;
+        for (const nx of order.slice(i + 1)) { const re = new RegExp(`<${nx}\\b`); if (re.test(b)) { b = b.replace(re, thin + `<${nx}`); done = true; break; } }
+        if (!done) b = b.replace('</border>', thin + '</border>'); }
       let nb = borders.indexOf(b); if (nb < 0) { borders.push(b); nb = borders.length - 1; }
       let nx = /borderId="/.test(x) ? x.replace(/borderId="\d+"/, `borderId="${nb}"`) : x.replace(/^<xf\b/, `<xf borderId="${nb}"`);
       if (!/applyBorder=/.test(nx)) nx = nx.replace(/^<xf\b/, '<xf applyBorder="1"');
@@ -2785,7 +2823,7 @@ async function updateLinePlan(lpBytes, docBytes, opts = {}) {
     const lastT = Math.max(...tmpl.keys());
     const carry = []; for (let c = lastT + 1; c <= lastCol; c++) if (!left.has(c) && !tmpl.has(c)) carry.push(c);
     // old list = the 'Hanger (2)' copy
-    let oldLast = 2; const oldByKey = new Map();
+    let oldLast = 2; const oldByKey = new Map(), redOf = new Map();     // cell formatting (colour, font, …) stays with its batch
     for (const [r, [, cells]] of old.rows) if (r >= 3) { const k = cellValue(cells.get(K), L.sst); if (k !== null && k !== '') { oldLast = Math.max(oldLast, r); const kk = normV(k); if (!oldByKey.has(kk)) oldByKey.set(kk, r); } }
     // new list from the DOC pivot
     const recs = wipRows(vals280, last280, cfg);
@@ -2850,12 +2888,18 @@ async function updateLinePlan(lpBytes, docBytes, opts = {}) {
       for (let r = 3; r < Math.max(oldLast, 4); r++) { const x = old.get(r, c); if (!x) continue; const s = +(styleOf(x) || 0); cnt.set(s, (cnt.get(s) || 0) + 1); }
       let best = 0, bn = -1; for (const [s, k] of cnt) if (k > bn) { bn = k; best = s; }
       canon.set(c, best);
-      const lx = oldLast > 3 ? old.get(oldLast, c) : null; lastSt.set(c, lx ? +(styleOf(lx) || 0) : best);   // closing (bottom) row look
+      const lx = oldLast > 3 ? old.get(oldLast, c) : null, ls = lx ? +(styleOf(lx) || 0) : best;
+      lastSt.set(c, SB.sameLook(ls, best) ? ls : SB.edge(best, 'bottom'));   // closing (bottom) row look (a hand-coloured last row doesn't count)
       if (c === lastCol) { canon.set(c, SB.rightEdge(canon.get(c))); lastSt.set(c, SB.rightEdge(lastSt.get(c))); }   // thin border on the right edge                   // exactly the look the list already has (borders, fonts, wrap, formats)
     }
-    const rfdCol = [ci(cfg.rfdPlan)];      // RFD Plan (FOC Q was headed 'Rfd Okan')
+    // any cell whose look differs from its column's usual look = formatted by hand -> keep it for that batch
+    for (const [kk, r] of oldByKey) { const cells = old.rows.get(r)[1];
+      for (const [c, x] of cells) { if (c > lastCol) continue; const sid = +(styleOf(x) || 0); const usual = r === oldLast ? lastSt.get(c) : canon.get(c);
+        if (sid !== usual && !SB.sameLook(sid, canon.get(c))) { if (!redOf.has(kk)) redOf.set(kk, new Map()); redOf.get(kk).set(c, sid); } } }
+    const rfdHdr = [...hdr].find(([c, h]) => /^rfd plan$/i.test(h) && c > P + 3);
+    const rfdCol = [rfdHdr ? rfdHdr[0] : ci(cfg.rfdPlan)];      // RFD Plan (FOC Q was headed 'Rfd Okan')
     const comCol = [...hdr].find(([c, h]) => /^comments?$/i.test(h) && tmpl.has(c));
-    let done = 0, kept = 0, zeros = 0, rfdSet = 0; const why = new Set();
+    let done = 0, kept = 0, zeros = 0, rfdSet = 0, redKept = 0; const why = new Set();
     // dashboard fields, found by header name
     const H = {}; for (const [c, h] of hdr) { const k = h.toLowerCase();
       const f = k === 'ageing' ? 'age' : k === 'location' ? 'pos' : k === 'customer' ? 'cust' : k === 'batch no' ? 'batch' : k === 'shade' ? 'shade' : k === 'fabric/yarn' ? 'fab'
@@ -2881,8 +2925,10 @@ async function updateLinePlan(lpBytes, docBytes, opts = {}) {
         const txt = v => v === null ? null : String(v).trim() || null;
         dash.push([TYPE, txt(g(H.pos)), txt(g(H.cust)), txt(g(H.batch)), txt(g(H.shade)), txt(g(H.fab)), num(g(H.kg)), num(g(H.age)), day(g(H.plan)), day(g(H.dye)), day(g(H.fin)), day(g(H.rfd)),
           txt(g(H.ld)), txt(g(H.hs)), txt(g(H.com)), txt(g(H.resp)), txt(g(H.req))]); }
+      const red = redOf.get(normV(rowVals.get(r).get(K)));
       for (let c = 1; c <= lastCol; c++) {
-        const s = String(r === n ? lastSt.get(c) : canon.get(c)), ref = cl(c) + r;
+        if (red && red.has(c)) redKept++;
+        const s = String(red && red.has(c) ? red.get(c) : r === n ? lastSt.get(c) : canon.get(c)), ref = cl(c) + r;
         if (left.has(c)) cells.set(c, fcellXml(ref, s, left.get(c)(r, c).replace(/^=/, '')));
         else if (vals.has(c)) { const v = vals.get(c);
           if (opts.debugFormulas && !(v && v.formula)) { (report.debug || (report.debug = {}))[cfg.name + '!' + ref] = v; cells.set(c, fcellXml(ref, s, gens.get(c) ? gens.get(c)(r, c).replace(/^=/, '') : '""')); }
@@ -2912,7 +2958,7 @@ async function updateLinePlan(lpBytes, docBytes, opts = {}) {
     setFilterName(cfg.name, fref);
     const newKeys = new Set(recs.map(rr => normV(vals280.get(rr).get(ci('H')))));
     report.sheets[cfg.name] = { before: oldByKey.size, after: recs.length, added: [...newKeys].filter(k => !oldByKey.has(k)).length, dropped: [...oldByKey.keys()].filter(k => !newKeys.has(k)).length,
-      formulas: `${cl(Math.min(...tmpl.keys()))}:${cl(lastT)}`, values: done, keptAsFormula: kept, notes: [...why].slice(0, 4), zerosCleared: zeros, rfdFromComments: rfdSet,
+      formulas: `${cl(Math.min(...tmpl.keys()))}:${cl(lastT)}`, values: done, keptAsFormula: kept, notes: [...why].slice(0, 4), zerosCleared: zeros, rfdFromComments: rfdSet, redKept,
       rfdCol: rfdCol ? cl(rfdCol[0]) : null, commentsCol: comCol ? cl(comCol[0]) : null, carried: carry.map(cl) };
     await tick();
   }
