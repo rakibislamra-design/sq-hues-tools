@@ -31,7 +31,7 @@
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.5}
-.wrap{max-width:1120px;margin:0 auto;padding-inline:20px;padding-block:28px 64px;display:grid;gap:22px}
+.wrap{max-width:min(1760px,100%);margin:0 auto;padding-inline:clamp(16px,2.2vw,40px);padding-block:28px 64px;display:grid;gap:22px}
 header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;border-bottom:3px solid var(--q);padding-bottom:14px}
 .brand{display:flex;gap:14px;align-items:center}
 .mark{width:44px;height:44px;border-radius:10px;background:var(--q);color:#fff;display:grid;place-items:center;font:800 24px/1 var(--f-display)}
@@ -298,6 +298,12 @@ td.fail.hov:hover{background:var(--red-soft)}
   .rules.dock{transform:none;box-shadow:none;top:20px;bottom:20px;right:20px;width:330px;border:1px solid var(--line);border-radius:14px;overflow:hidden}
   body.rdock .rtab, body.rdock .rscrim{display:none}
 }
+
+/* fit to screen: nothing pushes the page sideways; wide charts/tables scroll inside their box */
+.wrap>*{min-width:0;max-width:100%}
+#dayChart{overflow-x:auto}
+.wrap table{max-width:100%}
+.wrap :is(section,div):has(> table){overflow-x:auto}
 </style>
 
 <div class="wrap">
@@ -1260,18 +1266,20 @@ function hideTip(){ $("tip").hidden=true; hideTip2(); TIP.key=null; }
 function holdTips(){ clearTimeout(TIP.t1); }
 function holdAll(){ clearTimeout(TIP.t1); clearTimeout(TIP.sw); }
 function releaseTips(){ clearTimeout(TIP.t1); TIP.t1=setTimeout(hideTip,320); }
+let LAST_DAYS_R=null;
 function drawDays(R){
+  LAST_DAYS_R=R;
   if(!DEM||!R){$("dayChart").innerHTML='<p class="status">Run the update to see daily RFD and achieve %.</p>';$("dayNote").textContent="";return}
   const by=new Map();
   for(const x of DEM){ if(!inRange(x,R))continue; if(!by.has(x.s))by.set(x.s,{s:x.s,d:0,a:0}); const o=by.get(x.s); o.d+=x.L; o.a+=x.M+x.O; }
   const days=[...by.values()].filter(o=>o.d>0).sort((a,b)=>a.s-b.s);
   if(!days.length){$("dayChart").innerHTML='<p class="status">No plan in this period.</p>';$("dayNote").textContent=R.label;return}
   const pc=o=>o.d>0?o.a/o.d*100:0, cls=p=>p>=95?"good":p>=70?"mid":"bad";
-  const colW=Math.max(34,Math.min(64,Math.floor(940/days.length))), top=30, ph=180, left=56, W=left+days.length*colW+16, H=top+ph+44;
+  const avail=Math.max(360,($("dayChart").clientWidth||940)-4), colW=Math.max(34,Math.floor((avail-56-16)/days.length)), top=30, ph=Math.round(Math.min(300,Math.max(180,window.innerHeight*0.26))), left=56, W=left+days.length*colW+16, H=top+ph+44;
   const mx=Math.max(...days.map(o=>o.a),1), step=niceStep(mx/4), yMax=Math.ceil(mx/step)*step||1, y=v=>top+ph-v/yMax*ph;
-  let g=`<svg viewBox="0 0 ${W} ${H}" style="width:${W}px;max-width:100%;min-width:${Math.min(W,520)}px" role="img" aria-label="RFD qty and achieve % by date">`;
+  let g=`<svg viewBox="0 0 ${W} ${H}" style="width:${W}px;max-width:none" role="img" aria-label="RFD qty and achieve % by date">`;
   for(let v=0;v<=yMax+1e-9;v+=step) g+=`<line x1="${left}" x2="${W-8}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text class="mut" x="${left-6}" y="${y(v)+4}" text-anchor="end">${fmtK(v)}</text>`;
-  days.forEach((o,i)=>{const x0=left+i*colW, bw=Math.max(14,colW*0.62), p=pc(o), d=sDate(o.s), cx=x0+colW/2;
+  days.forEach((o,i)=>{const x0=left+i*colW, bw=Math.max(14,Math.min(64,colW*0.62)), p=pc(o), d=sDate(o.s), cx=x0+colW/2;
     g+=`<rect class="barhov" data-pop="day|${o.s}" x="${cx-bw/2}" y="${Math.min(y(o.a),top+ph-4)}" width="${bw}" height="${Math.max(4,top+ph-y(o.a))}" rx="3" fill="var(--accent)"></rect>`;
     g+=`<text x="${cx}" y="${y(o.a)-7}" text-anchor="middle" class="pct ${cls(p)}">${Math.round(p)}%</text>`;
     g+=`<text class="mut" x="${cx}" y="${top+ph+16}" text-anchor="middle">${d.getUTCDate()}</text>`;
@@ -1527,6 +1535,9 @@ refresh();
   const chkDate=()=>{const v=$("runDate").value;if(!v)return set("date",false);const d=new Date(v+"T00:00"),t=new Date();t.setHours(0,0,0,0);set("date",d<=t)};
   $("runDate").addEventListener("change",chkDate); chkDate();
 })();
+
+/* fit to screen: redraw the date chart when the window size changes */
+(function(){let t;addEventListener("resize",()=>{clearTimeout(t);t=setTimeout(()=>{if(LAST_DAYS_R!==null)drawDays(LAST_DAYS_R)},150)})})();
 </script>
 
 </body>
