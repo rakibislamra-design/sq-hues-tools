@@ -371,6 +371,8 @@ header.fover::after{background:rgba(239,230,235,.92)}
 #rtip{position:fixed;z-index:60;pointer-events:none;background:#fff;border:1px solid #D9CBD2;border-left:3px solid #664356;border-radius:6px;box-shadow:0 6px 18px rgba(40,20,30,.16);padding:6px 10px;font:12px var(--f-ui);color:#1F1F1F;max-width:420px}
 #rtip div{display:flex;gap:10px;align-items:baseline;padding:1px 0}#rtip span{color:var(--muted);font-size:11px;min-width:76px}#rtip b{font-weight:600}#rtip b.lp{color:#664356}
 .qver{font-size:10.5px;color:var(--muted);padding:6px 10px 2px;text-align:right}
+#dlg .holdx{background:#F7E9EA;color:#8A3540;border-radius:6px;padding:7px 10px;font-size:12.5px;font-weight:600;margin:6px 0}
+#dlg button.held{opacity:.55;cursor:not-allowed;background:#EEE;color:#8A3540;border-color:#E3C8CB}
 /* quick type chips */
 .qf{display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap;margin-left:10px}
 .qfc{font:600 12px var(--f-ui);border:1px solid var(--hdr-line);background:var(--surface);color:var(--fg);border-radius:14px;padding:3px 10px;cursor:pointer;white-space:nowrap;display:inline-flex;gap:5px;align-items:baseline}
@@ -487,7 +489,7 @@ header.fover::after{background:rgba(239,230,235,.92)}
       <button class="qi" data-act="export"><span>⤓</span>Export File<em>Loading plan with your plan</em></button>
       <button class="qi" data-act="update"><span>⟳</span>Update File<em>Loading plan + DOC 280+217 + Line Plan</em></button>
       <div class="qsep"></div><a class="qi" href="index.html"><span>←</span>SQ Hues Tools</a>
-      <div class="qver">Version 28 Oct 16:54</div>
+      <div class="qver">Version 01 Nov 15:05</div>
     </div>
   </div>
   <div class="hcol">
@@ -1696,6 +1698,7 @@ function checkPlan(c){
     $('dlgW').hidden=false; $('dlgY').focus();
     $('dlgX').onclick=()=>{$('dlgW').hidden=true;}; $('dlgD').onclick=()=>{$('dlgW').hidden=true; deleteCombos([c.id]);};
     $('dlgY').onclick=()=>{$('dlgW').hidden=true; toggle(c.id,true); toast('Added to the plan.');};
+    if(kinds.has('Hold')) lockHold();
     return true;
   }
   const tbl=red?`<div class="over">Batch qty will go over the 102% Req Qty Kg. This batch is on hold.</div><table><tr><th>Batch</th><th>Part</th><th>Color</th><th>102% Req Qty Kg</th><th>In process</th><th>Already planned</th><th>This batch</th><th>Total</th><th>Over by</th></tr>${rows.map(r=>`<tr><td>${c.p.length>1?`<span class="bg ${r.x.t}">${r.x.t}</span> `:''}${esc(r.x.b)}</td><td>${r.x.t==='G'?'Gusset':'Body'}</td><td>${esc(r.x.sh||'')}</td><td>${f0(r.bal)}</td><td>${f0(r.wip)}</td><td>${f0(r.pl)}</td><td>${f0(r.x.q)}</td><td class="bad">${f0(r.tot)}</td><td class="bad">${f0(r.tot-r.bal)}</td></tr>`).join('')}</table><div class="mut" style="font-size:11px">All in kg, for the same order item; 102% Req Qty Kg is from the 280 sheet (${esc(rows[0].x.ik)}${rows.length>1?' …':''}). In process = dyed batches not yet RFD. Already planned = batches ticked in this planner. Up to 5 kg over is allowed.</div>`:'';
@@ -1704,8 +1707,13 @@ function checkPlan(c){
   $('dlgW').hidden=false; $('dlgN').focus();
   $('dlgN').onclick=()=>{$('dlgW').hidden=true;}; $('dlgX').onclick=()=>{$('dlgW').hidden=true;}; $('dlgD').onclick=()=>{$('dlgW').hidden=true; deleteCombos([c.id]);};
   $('dlgY').onclick=()=>{$('dlgW').hidden=true; toggle(c.id,true); toast(red?'Planned over the 102% Req Qty Kg.':'Planned.');};
+  if(kinds.has('Hold')) lockHold();
   return true;
 }
+// a batch on hold cannot be planned until the hold is removed (Hold remarks / the word "hold")
+function lockHold(){ const y=$('dlgY'); if(y){ y.disabled=true; y.onclick=null; y.textContent='On hold — can’t plan'; y.title='Remove the hold (Hold remarks or the word “hold”) first'; y.classList.add('held'); }
+  const m=$('dlg').querySelector('.mut'); const n=document.createElement('div'); n.className='holdx'; n.textContent='This batch is on hold. Remove the hold first (clear Hold remarks or the word “hold”), then plan it.'; (m||$('dlg').querySelector('.acts')||$('dlg')).before(n);
+  if(m&&/Press OK/.test(m.textContent)) m.remove(); const no=$('dlgN')||$('dlgX'); if(no) no.focus(); }
 window.__lp={C:()=>C,D:()=>D,plan:()=>plan(),go:k=>{cur=k;refreshView();}};
 $('dlgW').addEventListener('pointerdown',e=>{if(e.target.id==='dlgW')$('dlgW').hidden=true;});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('dlgW').hidden)$('dlgW').hidden=true;});
