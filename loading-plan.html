@@ -373,6 +373,7 @@ header.fover::after{background:rgba(239,230,235,.92)}
 .qver{font-size:10.5px;color:var(--muted);padding:6px 10px 2px;text-align:right}
 #dlg .holdx{background:#F7E9EA;color:#8A3540;border-radius:6px;padding:7px 10px;font-size:12.5px;font-weight:600;margin:6px 0}
 #dlg button.held{opacity:.55;cursor:not-allowed;background:#EEE;color:#8A3540;border-color:#E3C8CB}
+.slw .pin{position:absolute;left:-3px;top:-3px;width:7px;height:7px;border-radius:50%;background:#664356;box-shadow:0 0 0 1.5px #fff;z-index:1}
 /* quick type chips */
 .qf{display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap;margin-left:10px}
 .qfc{font:600 12px var(--f-ui);border:1px solid var(--hdr-line);background:var(--surface);color:var(--fg);border-radius:14px;padding:3px 10px;cursor:pointer;white-space:nowrap;display:inline-flex;gap:5px;align-items:baseline}
@@ -489,7 +490,7 @@ header.fover::after{background:rgba(239,230,235,.92)}
       <button class="qi" data-act="export"><span>⤓</span>Export File<em>Loading plan with your plan</em></button>
       <button class="qi" data-act="update"><span>⟳</span>Update File<em>Loading plan + DOC 280+217 + Line Plan</em></button>
       <div class="qsep"></div><a class="qi" href="index.html"><span>←</span>SQ Hues Tools</a>
-      <div class="qver">Version 01 Nov 15:05</div>
+      <div class="qver">Version 01 Nov 16:33</div>
     </div>
   </div>
   <div class="hcol">
@@ -498,7 +499,7 @@ header.fover::after{background:rgba(239,230,235,.92)}
   <span class="hb">
     <button class="hb2 home" id="home" title="Back to the top of the list (Ctrl + Home)">↑ Top</button>
     <button class="hb2" id="refresh" title="Move ticked combos up into the plan by priority">Refresh</button>
-    <button class="hb2" id="auto" title="Sort every machine: FOC → Hanger → Line Plan (today, tomorrow, day after, backlog, later dates nearest first) → AOP → Urgent → other Plan Type → rest">Auto-order</button>
+    <button class="hb2" id="auto" title="Sort every machine: FOC → Hanger → AOP with Line Plan backlog → Line Plan (today, tomorrow, day after, backlog, later dates nearest first) → AOP → Urgent → other Plan Type → rest">Auto-order</button>
     <button class="hb2" id="clrF" title="Remove all column filters">Clear filters</button>
   </span>
   <span class="qf" id="qf"></span>
@@ -1588,7 +1589,7 @@ const OVTOL=5;   // excess up to 5 kg over the 102% Req Qty Kg is allowed (not a
 function isHold(x){ return !!String(x.hold||'').trim()||!!holdText(x); }
 function box(c,sl,alt,ns){
   const l=loadPct(c);
-  const lead=sl?`<span class="hdl" title="Drag to reorder">⋮⋮</span><span class="slw"><input class="sn" type="number" min="1" value="${sl}" aria-label="SL"><span class="dot${c.can?' on':''}"></span></span>`:`<span class="tick"></span><span class="slw"><span class="ns" title="Suggested serial (Auto-order rules)">${ns||''}</span><span class="dot${c.can?' on':''}"></span></span>`;
+  const lead=sl?`<span class="hdl" title="Drag to reorder">⋮⋮</span><span class="slw">${PIN[c.id]?'<i class="pin" title="Pinned — Auto-order keeps this SL (right-click › Unpin)"></i>':''}<input class="sn" type="number" min="1" value="${sl}" aria-label="SL"><span class="dot${c.can?' on':''}"></span></span>`:`<span class="tick"></span><span class="slw"><span class="ns" title="Suggested serial (Auto-order rules)">${ns||''}</span><span class="dot${c.can?' on':''}"></span></span>`;
   const po=[...new Set(c.p.map(x=>x.po).filter(Boolean))].join(' / '), lpd=[...new Set(c.p.map(x=>dshort(x.lp)||x.lpt).filter(Boolean))].join(' / ');
   const tip=`Customer PO: ${po||'–'}\nLine Plan: ${lpd||'–'}\n${c.can?'Can dye':'Not ready: '+(c.body.rm||'')}${c.m.length===2?' · body + gusset':''}${c.outside?' · partner '+c.outside:''} · combo ${fmt(c.q)} kg${l!=null?' · load '+l.toFixed(0)+'%':''} · click to ${sl?'take out of':'add to'} the plan`;
   const okp=!sl&&c.p.every(x=>x.kn==='KOK'&&String(x.ld||'').trim()&&!isHold(x));
@@ -1654,10 +1655,19 @@ function setPlanDate(c,on){
     if(!Object.keys(e).length) delete S.ed[b];
   }
 }
+// ---- pinned SL: a combo you place by hand keeps its slot; Auto-order and new ticks fill around it ----
+let PIN=store.get('mclp-pin')||{}; const savePin=()=>store.set('mclp-pin',PIN);
+const pinsOf=L=>new Map(L.filter(id=>PIN[id]).map(id=>[id,L.indexOf(id)]));
+function place(rest,pins,len){ const want=new Map([...pins].map(([id,i])=>[i,id])); const res=[]; rest=rest.slice();
+  for(let i=0;i<len;i++){ if(want.has(i)) res.push(want.get(i)); else if(rest.length) res.push(rest.shift()); }
+  for(const [id,i] of [...pins].sort((a,b)=>a[1]-b[1])) if(!res.includes(id)) res.push(id); return res.concat(rest); }
+function autoSort(k){ const L=S.plan[k]||[]; const pm=pinsOf(L); S.plan[k]=place(L.filter(x=>!pm.has(x)).sort((a,b)=>cmpAuto(C.get(a),C.get(b))),pm,L.length); }
+function insertKeep(k,id,pos){ const L=S.plan[k]=S.plan[k]||[]; const pm=pinsOf(L); L.splice(pos,0,id); S.plan[k]=place(L.filter(x=>!pm.has(x)),pm,L.length); }
+function pinIds(ids){ for(const id of ids) PIN[id]=1; savePin(); }
 function toggle(id,ok){
   const c=C.get(id), L=mlist(c);
-  if(L.includes(id)){ S.plan[c.mc]=L.filter(x=>x!==id); setPlanDate(c,false); }
-  else { if(!ok&&checkPlan(c)) return; let pos=L.findIndex(x=>cmpAuto(C.get(x),c)>0); if(pos<0) pos=L.length; L.splice(pos,0,id); setPlanDate(c,true); }
+  if(L.includes(id)){ S.plan[c.mc]=L.filter(x=>x!==id); setPlanDate(c,false); if(PIN[id]){ delete PIN[id]; savePin(); } }
+  else { if(!ok&&checkPlan(c)) return; let pos=L.findIndex(x=>!PIN[x]&&cmpAuto(C.get(x),c)>0); if(pos<0) pos=L.length; insertKeep(c.mc,id,pos); setPlanDate(c,true); }
   pending++; save(); quickRow(id);
 }
 // update just this row (no full redraw → the list does not move)
@@ -1717,7 +1727,7 @@ function lockHold(){ const y=$('dlgY'); if(y){ y.disabled=true; y.onclick=null; 
 window.__lp={C:()=>C,D:()=>D,plan:()=>plan(),go:k=>{cur=k;refreshView();}};
 $('dlgW').addEventListener('pointerdown',e=>{if(e.target.id==='dlgW')$('dlgW').hidden=true;});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('dlgW').hidden)$('dlgW').hidden=true;});
-function moveTo(id,pos){ const L=mlist(C.get(id)); const i=L.indexOf(id); if(i<0)return; L.splice(i,1); pos=Math.max(0,Math.min(L.length,pos)); L.splice(pos,0,id); save(); refreshView(); }
+function moveTo(id,pos){ const L=mlist(C.get(id)); const i=L.indexOf(id); if(i<0)return; L.splice(i,1); pos=Math.max(0,Math.min(L.length,pos)); L.splice(pos,0,id); pinIds([id]); save(); refreshView(); }
 $('mcs').addEventListener('click',e=>{if(e.target.closest('input'))return;const b=e.target.closest('.mc');if(!b)return;cur=b.dataset.k;refreshView();});
 $('mcs').addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.classList.contains('mc')){e.preventDefault();cur=e.target.dataset.k;refreshView();}});
 $('mcs').addEventListener('change',e=>{const t=e.target; if(!t.dataset.cap) return; const k=t.dataset.k, v=parseFloat(t.value); if(!(v>0)){draw();return;} S.cap[k]=Object.assign(capOf(k),{[t.dataset.cap]:v}); save(); draw(); toast(`${k} kg: ${capOf(k).m} MC × ${capOf(k).b} batches/day = ${Math.round(capOf(k).m*capOf(k).b)} loads/day.`);});
@@ -1821,7 +1831,7 @@ function moveMany(ids,targetId,after){
   if(set.has(targetId)) return;
   const keep=L.filter(id=>!set.has(id)); const moving=L.filter(id=>set.has(id));
   let pos=keep.indexOf(targetId); if(pos<0) return; if(after) pos++;
-  keep.splice(pos,0,...moving); S.plan[c0.mc]=keep; save(); refreshView();
+  keep.splice(pos,0,...moving); S.plan[c0.mc]=keep; pinIds(moving); save(); refreshView();
   toast(moving.length>1?`${moving.length} combos moved to SL ${keep.indexOf(moving[0])+1}–${keep.indexOf(moving[moving.length-1])+1}.`:`Moved to SL ${keep.indexOf(moving[0])+1}.`);
 }
 $('list').addEventListener('dragstart',e=>{if(e.target.closest&&e.target.closest('.ed,.sn')){e.preventDefault();return;}const cb=e.target.closest('.cb.pl');if(!cb)return;dragId=cb.dataset.id;
@@ -1849,10 +1859,10 @@ document.addEventListener('dragover',e=>{
   if((AS.y||AS.x)&&!AS.raf) AS.raf=requestAnimationFrame(asTick);
 });
 ['dragend','drop'].forEach(t=>document.addEventListener(t,()=>{AS.y=AS.x=0;AS.el=null;}));
-// Auto-order: 1 FOC · 2 Hanger (both by Plan Date) · 3 Line Plan: today, tomorrow, day after, then backlog oldest→newest, then later dates
+// Auto-order: 1 FOC · 2 Hanger (both by Plan Date) · AOP with a passed Line Plan date (oldest first) · 3 Line Plan: today, tomorrow, day after, backlog, later
 //             4 AOP (shade says AOP) · 5 Urgent · 6 other Plan Type comments · 7 rest — groups 4–7 by Plan Date, then OTT
 const addDays=n=>{const d=new Date();d.setDate(d.getDate()+n);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
-const AUTO_NOTE='Auto-ordered: FOC → Hanger → Line Plan (today, tomorrow, day after, backlog, later dates nearest first) → AOP → Urgent → other Plan Type → rest.';
+const AUTO_NOTE='Auto-ordered: FOC → Hanger → AOP with Line Plan backlog → Line Plan (today, tomorrow, day after, backlog, later dates nearest first) → AOP → Urgent → other Plan Type → rest. Pinned SLs stay where you put them.';
 function autoKey(c,simple){
   const t0=addDays(0),t1=addDays(1),t2=addDays(2);
   const first=f=>c.p.map(f).filter(Boolean).sort()[0]||'';
@@ -1861,6 +1871,7 @@ function autoKey(c,simple){
   let g,sub=0,d=pd;
   if(has(/FOC/i)) g=0;
   else if(has(/HANGER/i)) g=1;
+  else if(lp&&lp<t0&&c.p.some(x=>/AOP/i.test((x.sh||'')+' '+(x.pt||'')))){ g=1.5; d=lp; }   // AOP with a Line Plan date already passed: right after FOC/Hanger, oldest first
   else if(lp){ g=2; d=lp; if(!simple) sub=lp===t0?0:lp===t1?1:lp===t2?2:lp<t0?3:4; }  // planned: today, tomorrow, day after, backlog, later · not planned: oldest first
   else if(c.p.some(x=>/AOP/i.test(x.sh||''))) g=3;
   else if(c.p.some(x=>/URGENT/i.test(x.pt||''))) g=4;
@@ -1869,7 +1880,7 @@ function autoKey(c,simple){
   return [g,sub,d,ott];
 }
 const cmpAuto=(a,b,simple)=>{const x=autoKey(a,simple),y=autoKey(b,simple);for(let i=0;i<x.length;i++){if(x[i]<y[i])return -1;if(x[i]>y[i])return 1;}return cmpRank(a,b);};
-$('auto').addEventListener('click',()=>{let n=0;for(const k of MCS){const L=S.plan[k]||[];n+=L.length;L.sort((a,b)=>cmpAuto(C.get(a),C.get(b)));}if(!n){toast('Tick combos first.');return;}save();refreshView();toast(AUTO_NOTE+' (all machines)');});
+$('auto').addEventListener('click',()=>{let n=0;for(const k of MCS){const L=S.plan[k]||[];n+=L.length;autoSort(k);}if(!n){toast('Tick combos first.');return;}save();refreshView();toast(AUTO_NOTE+' (all machines)');});
 if($('clearWrap')) $('clearWrap').addEventListener('click',e=>{
   if(e.target.id==='clear'){ if(!plan().length)return; $('clearWrap').innerHTML='<span class="confirm">Clear '+esc(NAME(cur))+'? <button class="hb2" id="clrY">Clear</button><button class="hb2" id="clrN">Keep</button></span>'; }
   else if(e.target.id==='clrY'){ for(const id of plan()) if(C.has(id)) setPlanDate(C.get(id),false); for(const k of (cur==='ALL'?MCS:[cur])) S.plan[k]=[]; save(); $('clearWrap').innerHTML='<button class="hb2" id="clear">Clear</button>'; refreshView(); }
@@ -1997,7 +2008,7 @@ $('board').addEventListener('drop',e=>{if(!bDrag)return;const t=e.target.closest
   let to;
   if(t.classList.contains('bend')){ if(t.dataset.k!==c.mc){toast('Drag within the same machine.');return;} to=L.length; }
   else { const tc=C.get(t.dataset.id); if(!tc||tc.mc!==c.mc){toast('Drag within the same machine.');return;} to=L.indexOf(t.dataset.id); }
-  L.splice(from,1); if(to>from) to--; L.splice(Math.max(0,Math.min(L.length,to)),0,bDrag); save(); refreshView(); toast('SL '+(L.indexOf(bDrag)+1)+' on '+NAME(c.mc)+'.');});
+  L.splice(from,1); if(to>from) to--; L.splice(Math.max(0,Math.min(L.length,to)),0,bDrag); pinIds([bDrag]); save(); refreshView(); toast('SL '+(L.indexOf(bDrag)+1)+' on '+NAME(c.mc)+'.');});
 
 
 // ---------- keyboard: ↑ / ↓ move, Space = plan / un-plan, Enter = OK / Proceed in a box ----------
@@ -2053,7 +2064,7 @@ $('autoPlan').addEventListener('click',()=>{
   $('dlgX').onclick=$('dlgN').onclick=()=>{$('dlgW').hidden=true;};
   $('apOk').id='dlgY';   // Enter = OK
   $('dlgY').onclick=()=>{ $('dlgW').hidden=true; const added=[]; let skipped=0;
-    for(const c of cand){ if(OFF.has(c.id)) continue; if(overReq(c)){ skipped++; continue; } const L=mlist(c); let pos=L.findIndex(x=>C.has(x)&&cmpAuto(C.get(x),c)>0); if(pos<0) pos=L.length; L.splice(pos,0,c.id); setPlanDate(c,true); added.push(c.id); }
+    for(const c of cand){ if(OFF.has(c.id)) continue; if(overReq(c)){ skipped++; continue; } const L=mlist(c); let pos=L.findIndex(x=>C.has(x)&&!PIN[x]&&cmpAuto(C.get(x),c)>0); if(pos<0) pos=L.length; insertKeep(c.mc,c.id,pos); setPlanDate(c,true); added.push(c.id); }
     save(); refreshView();
     toast(`Auto plan added ${added.length} combo${added.length===1?'':'s'}${skipped?` · ${skipped} skipped (over 102% Req Qty Kg)`:''}.`,'Undo',()=>{ for(const id of added){ const c=C.get(id); if(!c) continue; S.plan[c.mc]=(S.plan[c.mc]||[]).filter(x=>x!==id); setPlanDate(c,false); } save(); refreshView(); toast('Auto plan undone.'); });
   };
@@ -2085,14 +2096,14 @@ function sendTo(id,k,quiet){
   if(wasPl) S.plan[old]=S.plan[old].filter(x=>x!==id);
   if(k===c.file) delete S.over[id]; else S.over[id]=k;
   build(); const nc=C.get(id);
-  if(wasPl&&nc){ const L=S.plan[k]=S.plan[k]||[]; if(!L.includes(id)){ let pos=L.findIndex(x=>C.has(x)&&cmpAuto(C.get(x),nc)>0); if(pos<0) pos=L.length; L.splice(pos,0,id); } }
+  if(wasPl&&nc){ const L=S.plan[k]=S.plan[k]||[]; if(!L.includes(id)){ let pos=L.findIndex(x=>C.has(x)&&!PIN[x]&&cmpAuto(C.get(x),nc)>0); if(pos<0) pos=L.length; insertKeep(k,id,pos); } }
   save(); refreshView(); if(!quiet) toast(`Sent to ${k} kg MC${wasPl?' · SL '+((S.plan[k]||[]).indexOf(id)+1):''}.`);
 }
 function openCM(id,x,y){
   const c=C.get(id); if(!c) return; const wm=wrongMc(c);
   const cm=$('cm');
   const grp=SELSET.has(id)&&SELSET.size>1?[...SELSET].filter(x=>C.has(x)):[id]; cm.dataset.ids=JSON.stringify(grp);
-  cm.innerHTML=`<div class="cmx"><b>${grp.length>1?grp.length+' combos selected':esc(c.body.b.replace(/^SQHUE-FY\d\d-\d\d-/,''))}</b><button class="cmc" title="Close" aria-label="Close">×</button></div><button class="cmd" data-act="del">🗑 Delete from plan${grp.length>1?' ('+grp.length+')':''}</button><div class="cmh">Send to MC <span class="mut">· ${grp.length>1?grp.length+' combos':fmt(Math.round(c.q))+' kg on '+c.mc+' kg'}</span></div>`+MCS.map(k=>`<button data-k="${k}" ${k===c.mc?'disabled':''}>${k} kg${k===c.auto?' <em>suits this weight</em>':''}${k===c.file&&k!==c.mc?' <em>file M/C</em>':''}${k===c.mc?' <em>current</em>':''}</button>`).join('');
+  cm.innerHTML=`<div class="cmx"><b>${grp.length>1?grp.length+' combos selected':esc(c.body.b.replace(/^SQHUE-FY\d\d-\d\d-/,''))}</b><button class="cmc" title="Close" aria-label="Close">×</button></div><button class="cmd" data-act="del">🗑 Delete from plan${grp.length>1?' ('+grp.length+')':''}</button>${grp.some(id=>PIN[id])?`<button class="cmd" data-act="unpin">📌 Unpin — let Auto-order place ${grp.length>1?'them':'it'}</button>`:''}<div class="cmh">Send to MC <span class="mut">· ${grp.length>1?grp.length+' combos':fmt(Math.round(c.q))+' kg on '+c.mc+' kg'}</span></div>`+MCS.map(k=>`<button data-k="${k}" ${k===c.mc?'disabled':''}>${k} kg${k===c.auto?' <em>suits this weight</em>':''}${k===c.file&&k!==c.mc?' <em>file M/C</em>':''}${k===c.mc?' <em>current</em>':''}</button>`).join('');
   cm.dataset.id=id; cm.hidden=false;
   const w=cm.offsetWidth,h=cm.offsetHeight; cm.style.left=Math.min(innerWidth-w-8,x)+'px'; cm.style.top=Math.min(innerHeight-h-8,y)+'px';
 }
@@ -2101,6 +2112,7 @@ $('cm').addEventListener('click',e=>{
   if(e.target.closest('.cmc')){ $('cm').hidden=true; return; }
   const ids=JSON.parse($('cm').dataset.ids||'[]');
   if(e.target.closest('button[data-act="del"]')){ $('cm').hidden=true; deleteCombos(ids); return; }
+  if(e.target.closest('button[data-act="unpin"]')){ $('cm').hidden=true; for(const id of ids) delete PIN[id]; savePin(); refreshView(); toast('Unpinned — Auto-order will place '+(ids.length>1?'them':'it')+'.'); return; }
   const b=e.target.closest('button[data-k]'); if(!b||b.disabled) return; $('cm').hidden=true;
   if(ids.length>1){ for(const id of ids) if(C.has(id)&&C.get(id).mc!==b.dataset.k) sendTo(id,b.dataset.k,true); clearSel(); toast(`${ids.length} combos sent to ${b.dataset.k} kg MC.`); } else sendTo($('cm').dataset.id,b.dataset.k); });
 // Delete from plan: the combo leaves the planner and its rows are deleted from the Master Sheet on export (Undo available)
@@ -2229,7 +2241,7 @@ async function runUpdate(){
     UPD.lp=UPD.doc=UPD.line=null;
     await loadBuf(name,buf,`Updated file loaded — ${rp.rows} batches, planned rows re-ordered by the Auto-order rules. Plan as usual, then Export.`);
     // planned rows follow today's data: Auto-order on every machine (FOC → Hanger → Line Plan by date → AOP → Urgent → rest)
-    for(const k of MCS){ const L=S.plan[k]||[]; L.sort((a,b)=>cmpAuto(C.get(a),C.get(b))); } save(); refreshView();
+    for(const k of MCS) autoSort(k); save(); refreshView();
   }catch(err){ console.error(err); lg.innerHTML=`<div class="uw">Could not update: ${esc(err.message||err)}</div>`; go.disabled=false; }
 }
 async function loadFile(f){ return loadBuf(f.name, await f.arrayBuffer()); }
@@ -2242,6 +2254,7 @@ async function loadBuf(name,buf,note){
     FILE={label:f.name,buf}; IDB.put(FILE);
     const before=MCS.reduce((a,k)=>a+(S.plan[k]||[]).length,0);
     D=d; LABEL=f.name; store.set('mclp-data',{label:LABEL,data:D}); S.plan={}; S.ed={}; S.cx={}; S.over={}; S.del={}; build(); const nf=MCS.reduce((a,k)=>a+(S.plan[k]||[]).length,0); S.seeded=LABEL;
+    { const pl=new Set(); for(const k in S.plan) for(const id of S.plan[k]||[]) pl.add(id); for(const id in PIN) if(!pl.has(id)) delete PIN[id]; savePin(); }
     save(); refreshView(); $('busy').textContent='';
     toast(note||`Loaded ${f.name}. ${nf} SL with a Plan Date are planned, in the file's M/C and SL order.`);
   }catch(err){ console.error(err); $('busy').textContent=''; toast('Could not read this file: '+(err.message||err)); }
