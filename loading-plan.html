@@ -63,9 +63,9 @@ button:focus-visible,input:focus-visible,.hbtn:focus-visible{outline:2px solid v
 .cb,.hd{min-width:max-content}
 .ln{display:grid;grid-template-columns:var(--cols);gap:7px;align-items:center;min-height:24px}
 .ln>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
-.hd{position:sticky;top:0;z-index:2;background:var(--surface);border-bottom:1px solid var(--line);font:600 10px var(--f-ui);text-transform:uppercase;letter-spacing:.35px;color:var(--muted);padding:7px 12px 6px var(--lw,78px)}
+.hd{position:sticky;top:0;z-index:2;background:var(--surface);border-bottom:1px solid var(--line);font:600 10px var(--f-ui);text-transform:uppercase;letter-spacing:.35px;color:var(--muted);padding:7px 12px 6px var(--lw,90px)}
 .hd .lh{position:absolute;left:14px;z-index:3}
-.cb{display:grid;grid-template-columns:var(--lw,78px) minmax(0,1fr);border-bottom:1px solid var(--line);background:var(--surface);cursor:pointer}
+.cb{display:grid;grid-template-columns:var(--lw,90px) minmax(0,1fr);border-bottom:1px solid var(--line);background:var(--surface);cursor:pointer}
 .cb:hover{background:var(--raise)}
 .cb.pl{background:var(--sel)}
 .cb.pl:hover{background:var(--sel)}
@@ -280,7 +280,7 @@ header{gap:6px 6px!important}
 .list .ln.hd>span.csel{background:#BDD7EE!important;box-shadow:inset 0 -2px 0 #2F75B5}
 .hdw{position:sticky;top:0;z-index:3;min-width:max-content}
 .hdw .hd{position:relative!important;top:auto!important}
-.ln.gr{background:#F3F3F3;padding-left:var(--lw,78px);min-height:16px;border-bottom:1px solid #D9D9D9;position:relative}
+.ln.gr{background:#F3F3F3;padding-left:var(--lw,90px);min-height:16px;border-bottom:1px solid #D9D9D9;position:relative}
 .ln.gr>span{align-self:stretch;position:relative;display:flex;align-items:flex-start}
 .ln.gr>span.gin{border-top:2px solid #7F7F7F;margin-top:6px}
 .ln.gr>span.gend{border-right:2px solid #7F7F7F}
@@ -352,7 +352,7 @@ header.fover::after{background:rgba(239,230,235,.92)}
 .slw .dot{position:absolute;right:4px;top:50%;margin-top:-3px;width:6px;height:6px;pointer-events:none}
 #dlg .dlgt{cursor:move;user-select:none}#dlg.red{width:820px}#dlg.red td:first-child{white-space:nowrap}#dlg.red td:nth-child(3){max-width:170px}#dlg.red th{white-space:nowrap}#dlg.red td:nth-child(-n+3),#dlg.red th:nth-child(-n+3){text-align:left}#dlg.drg{box-shadow:0 18px 48px rgba(0,0,0,.3)}
 /* subtotal row under the headers */
-.list .ln.sub{position:relative;padding:0 12px 0 var(--lw,78px);min-height:20px;background:#FFF6E0;border-bottom:1px solid #E8D9B0;font:700 11.5px var(--f-ui);color:#5A4A1E}
+.list .ln.sub{position:relative;padding:0 12px 0 var(--lw,90px);min-height:20px;background:#FFF6E0;border-bottom:1px solid #E8D9B0;font:700 11.5px var(--f-ui);color:#5A4A1E}
 .list .ln.sub>span{padding:0 5px;white-space:nowrap;overflow:hidden}
 .list .ln.sub .lh2{position:absolute;left:14px;top:2px;font-size:11px;color:#8A7440;padding:0}
 .ln.gr .gsum{font:700 11.5px var(--f-ui);font-style:normal;color:#1F1F1F;margin-left:auto;padding-right:5px;align-self:center;font-variant-numeric:tabular-nums}
@@ -373,7 +373,8 @@ header.fover::after{background:rgba(239,230,235,.92)}
 .qver{font-size:10.5px;color:var(--muted);padding:6px 10px 2px;text-align:right}
 #dlg .holdx{background:#F7E9EA;color:#8A3540;border-radius:6px;padding:7px 10px;font-size:12.5px;font-weight:600;margin:6px 0}
 #dlg button.held{opacity:.55;cursor:not-allowed;background:#EEE;color:#8A3540;border-color:#E3C8CB}
-.slw .pin{position:absolute;left:-3px;top:-3px;width:7px;height:7px;border-radius:50%;background:#664356;box-shadow:0 0 0 1.5px #fff;z-index:1}
+.lead .pin{display:inline-flex;align-items:center;margin-left:-2px;flex:none;transform:rotate(-8deg)}
+.cb.arm{outline:2px dashed #AF4F5A;outline-offset:-2px}
 /* quick type chips */
 .qf{display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap;margin-left:10px}
 .qfc{font:600 12px var(--f-ui);border:1px solid var(--hdr-line);background:var(--surface);color:var(--fg);border-radius:14px;padding:3px 10px;cursor:pointer;white-space:nowrap;display:inline-flex;gap:5px;align-items:baseline}
@@ -490,7 +491,7 @@ header.fover::after{background:rgba(239,230,235,.92)}
       <button class="qi" data-act="export"><span>⤓</span>Export File<em>Loading plan with your plan</em></button>
       <button class="qi" data-act="update"><span>⟳</span>Update File<em>Loading plan + DOC 280+217 + Line Plan</em></button>
       <div class="qsep"></div><a class="qi" href="index.html"><span>←</span>SQ Hues Tools</a>
-      <div class="qver">Version 01 Nov 16:33</div>
+      <div class="qver">Version 01 Nov 16:50</div>
     </div>
   </div>
   <div class="hcol">
@@ -1589,7 +1590,7 @@ const OVTOL=5;   // excess up to 5 kg over the 102% Req Qty Kg is allowed (not a
 function isHold(x){ return !!String(x.hold||'').trim()||!!holdText(x); }
 function box(c,sl,alt,ns){
   const l=loadPct(c);
-  const lead=sl?`<span class="hdl" title="Drag to reorder">⋮⋮</span><span class="slw">${PIN[c.id]?'<i class="pin" title="Pinned — Auto-order keeps this SL (right-click › Unpin)"></i>':''}<input class="sn" type="number" min="1" value="${sl}" aria-label="SL"><span class="dot${c.can?' on':''}"></span></span>`:`<span class="tick"></span><span class="slw"><span class="ns" title="Suggested serial (Auto-order rules)">${ns||''}</span><span class="dot${c.can?' on':''}"></span></span>`;
+  const lead=sl?`<span class="hdl" title="Drag to reorder">⋮⋮</span><span class="slw"><input class="sn" type="number" min="1" value="${sl}" aria-label="SL"><span class="dot${c.can?' on':''}"></span></span>${PIN[c.id]?PINSVG:''}`:`<span class="tick"></span><span class="slw"><span class="ns" title="Suggested serial (Auto-order rules)">${ns||''}</span><span class="dot${c.can?' on':''}"></span></span>`;
   const po=[...new Set(c.p.map(x=>x.po).filter(Boolean))].join(' / '), lpd=[...new Set(c.p.map(x=>dshort(x.lp)||x.lpt).filter(Boolean))].join(' / ');
   const tip=`Customer PO: ${po||'–'}\nLine Plan: ${lpd||'–'}\n${c.can?'Can dye':'Not ready: '+(c.body.rm||'')}${c.m.length===2?' · body + gusset':''}${c.outside?' · partner '+c.outside:''} · combo ${fmt(c.q)} kg${l!=null?' · load '+l.toFixed(0)+'%':''} · click to ${sl?'take out of':'add to'} the plan`;
   const okp=!sl&&c.p.every(x=>x.kn==='KOK'&&String(x.ld||'').trim()&&!isHold(x));
@@ -1656,6 +1657,7 @@ function setPlanDate(c,on){
   }
 }
 // ---- pinned SL: a combo you place by hand keeps its slot; Auto-order and new ticks fill around it ----
+const PINSVG='<i class="pin" title="Pinned — Auto-order keeps this SL (right-click › Unpin)"><svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><path d="M10.6 1.4 14.6 5.4 13.2 6.1 11 8.3 11.4 11.6 10 13 7 10 3.2 13.8 2.2 12.8 6 9 3 6 4.4 4.6 7.7 5 9.9 2.8Z" fill="#664356"/></svg></i>';
 let PIN=store.get('mclp-pin')||{}; const savePin=()=>store.set('mclp-pin',PIN);
 const pinsOf=L=>new Map(L.filter(id=>PIN[id]).map(id=>[id,L.indexOf(id)]));
 function place(rest,pins,len){ const want=new Map([...pins].map(([id,i])=>[i,id])); const res=[]; rest=rest.slice();
@@ -1664,6 +1666,17 @@ function place(rest,pins,len){ const want=new Map([...pins].map(([id,i])=>[i,id]
 function autoSort(k){ const L=S.plan[k]||[]; const pm=pinsOf(L); S.plan[k]=place(L.filter(x=>!pm.has(x)).sort((a,b)=>cmpAuto(C.get(a),C.get(b))),pm,L.length); }
 function insertKeep(k,id,pos){ const L=S.plan[k]=S.plan[k]||[]; const pm=pinsOf(L); L.splice(pos,0,id); S.plan[k]=place(L.filter(x=>!pm.has(x)),pm,L.length); }
 function pinIds(ids){ for(const id of ids) PIN[id]=1; savePin(); }
+// a planned combo needs two clicks (or two Space presses) to come out of the plan
+let ARM=null, armT=0;
+function userToggle(id){
+  const c=C.get(id); if(!c) return; const planned=mlist(c).includes(id);
+  if(!planned){ ARM=null; toggle(id); return; }
+  if(ARM===id&&Date.now()-armT<4000){ ARM=null; document.querySelectorAll('.cb.arm').forEach(x=>x.classList.remove('arm')); toggle(id); toast('Taken out of the plan.'); return; }
+  document.querySelectorAll('.cb.arm').forEach(x=>x.classList.remove('arm'));
+  ARM=id; armT=Date.now(); const el=$('list').querySelector(`.cb[data-id="${CSS.escape(id)}"]`); if(el) el.classList.add('arm');
+  toast('Click again to take it out of the plan.');
+  setTimeout(()=>{ if(ARM===id&&Date.now()-armT>=3900){ ARM=null; if(el) el.classList.remove('arm'); } },4000);
+}
 function toggle(id,ok){
   const c=C.get(id), L=mlist(c);
   if(L.includes(id)){ S.plan[c.mc]=L.filter(x=>x!==id); setPlanDate(c,false); if(PIN[id]){ delete PIN[id]; savePin(); } }
@@ -1799,7 +1812,7 @@ $('list').addEventListener('click',e=>{ if(e.target.closest('.sn,.hdl,.hd,.ed'))
   if(e.target.closest('.ced')||Date.now()-PICKT<500) return;
   if(e.detail>1){ clearTimeout(clickT); clickT=null; startEdit(e.target); return; }   // double-click = type in the cell
   if(clearSel()) return;   // first plain click just clears a selection
-  const id=cb.dataset.id; clearTimeout(clickT); clickT=setTimeout(()=>{ clickT=null; toggle(id); },220); });
+  const id=cb.dataset.id; clearTimeout(clickT); clickT=setTimeout(()=>{ clickT=null; userToggle(id); },220); });
 let clickT=null, PICKT=0;
 function startEdit(t){ const sp=t.closest('.ln.xl>span'); if(!sp||sp.querySelector('input')) return; const ln=sp.parentElement, b=ln.dataset.b, x=D.batches[b]; if(!x) return;
   const col=visCols()[[...ln.children].indexOf(sp)]; if(!col) return;
@@ -2031,7 +2044,7 @@ document.addEventListener('keydown',e=>{
   let i=rows.findIndex(x=>x.dataset.id===KF);
   const step={ArrowDown:1,ArrowUp:-1,PageDown:10,PageUp:-10}[e.key];
   if(step){ e.preventDefault(); document.body.classList.add('kbd'); if(i<0){ const L=$('list'),top=L.getBoundingClientRect().top+60; i=Math.max(0,rows.findIndex(x=>x.getBoundingClientRect().bottom>top)); } else i=Math.max(0,Math.min(rows.length-1,i+step)); setKF(rows[i].dataset.id,true); return; }
-  if(e.key===' '||e.code==='Space'){ if(!KF||i<0) return; e.preventDefault(); toggle(KF); setTimeout(()=>setKF(KF,true),0); return; }
+  if(e.key===' '||e.code==='Space'){ if(!KF||i<0) return; e.preventDefault(); userToggle(KF); setTimeout(()=>setKF(KF,true),0); return; }
 });
 // ---------- Auto plan: add every ready combo (KOK, LD given, no hold, within 102% Req Qty Kg) ----------
 const isReady=c=>c.p.every(x=>x.kn==='KOK'&&String(x.ld||'').trim()&&!isHold(x));
