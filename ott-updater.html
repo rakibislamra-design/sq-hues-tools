@@ -190,6 +190,7 @@ td.fail.hov:hover{background:var(--red-soft)}
 .tip tr.pick td:last-child::after{content:" ›";color:var(--muted)}
 .tip2{border-top-color:var(--q);max-width:min(560px,calc(100vw - 24px))}
 .barhov{cursor:pointer}.barhov:hover{fill:var(--q80)}
+.colhit{fill:var(--q);fill-opacity:0;cursor:pointer}.colhit:hover{fill-opacity:.07}
 .tip .meta{color:var(--muted);margin:-2px 0 8px;font-size:12px;line-height:1.4}
 .tip td.fail{color:var(--red);font-weight:600}
 .tip h4{margin:0 0 6px;font:700 13px var(--f-display)}
@@ -566,6 +567,8 @@ td.fail.hov:hover{background:var(--red-soft)}
     <details><summary><span class="n">B</span>Batch allocation (optional, ticked by default)</summary><div class="in">
       <p>After the update, every line with a shortage (Balance to RFD below 0) is matched to <b>280 WIP batches</b> by PO + fabric + shade / AOP design. Closed / PO Pending stock and Final Reject batches are never used.</p>
       <p>New columns after AX: <code>Need Additional</code> · <code>Batch No</code> · <code>Color</code> · <code>Fabrication</code> · <code>Plan Qty Kg</code> · <code>Batch Position</code> · <code>H/S Status</code> (280 H/s Pending) · <code>Dye Batch</code> (280 Dyebatch No) · <code>Dye Plan</code> · <code>Fin Plan</code> · <code>RFD Plan</code> · <code>Discussion</code> · <code>Remarks</code> (filled by you; kept when the file is uploaded again) · <code>Dyeing Mill</code>. A line needing 2+ batches is split into one row per batch; total Req Qty stays the same.</p>
+      <p><code>Dyeing Mill</code>: a value already in the uploaded file (typed by you or from an earlier run) is kept as it is; the tool fills only blank cells. Segment follows it.</p>
+      <p>Last column <code>Segment</code> = AOP (Category AOP) / Outside / Inhouse (Dyeing Mill). It feeds the Segment slicer on the Date Wise Pivot.</p>
       <p>Rules: AOP lines show <code>AOP Batch</code>; outside batches still at the mill show the 280 Order No; KPK black outside = <code>KPK-Outside-Black</code>.</p>
       <p>Downloads: the final Fabric Plan (update + allocation) and <b>Line plan batch wise file_&lt;date&gt;.xlsx</b>. If yesterday's file already has these columns, they are rebuilt, not repeated.</p>
     </div></details>
@@ -573,6 +576,7 @@ td.fail.hov:hover{background:var(--red-soft)}
     <details><summary><span class="n">4</span>Fixed cells: other sheets</summary><div class="in">
       <table>
         <tr class="own"><td>C7</td><td><b>Buyer Wise OTT Hit Rate</b>: daily date. The tool sets it to report date − 1<span class="tagw">TOOL</span></td></tr>
+        <tr class="own"><td>Whole sheet</td><td><b>Date Wise Pivot -Hues</b>: rebuilt each run. Title “SQ Hues Line plan vs Performance”, values in Mtr + Req Qty (Kg), Achievement % = (RFD + Recovered) ÷ Req, dates of the plan month only, Segment slicer, daily plan-to-performance pivot chart (data on hidden sheet <code>Chart Data</code>). Refreshes on open<span class="tagw">TOOL</span></td></tr>
         <tr><td>AP</td><td><b>DOC 217</b>: Taps key (PO + colour + article)<span class="tagf">KEY</span></td></tr>
         <tr><td>AQ</td><td><b>DOC 217</b>: Rfd qty<span class="tagf">KEY</span></td></tr>
         <tr><td>AR</td><td><b>DOC 217</b>: Balance<span class="tagf">KEY</span></td></tr>
@@ -845,7 +849,7 @@ function mergeSplitRows(xml,sst){
   let naCol=null, refCol=null; { let q; CELL.lastIndex=0; while((q=CELL.exec(hdr.inner))){ const v=String(txt(q[3],q[4])??"").trim().toLowerCase(); const cn=colNum(q[1]);
     if(v==="need additional"&&cn>colNum("AX")&&(naCol===null||cn<naCol)) naCol=cn; if(v==="split ref") refCol=q[1]; } }
   if(naCol===null) return {xml,changed:false,merged:0,removed:0};
-  const KCOL={}; const KNAME={"dye plan":"dd","fin plan":"fd","rfd plan":"rd","discussion":"disc","remarks":"rem"}; let bnCol=null;
+  const KCOL={}; const KNAME={"dye plan":"dd","fin plan":"fd","rfd plan":"rd","discussion":"disc","remarks":"rem","dyeing mill":"ml"}; let bnCol=null;
   { let q; const re=new RegExp(CELL.source,"g"); while((q=re.exec(hdr.inner))){ const v=String(txt(q[3],q[4])??"").trim().toLowerCase(); if(colNum(q[1])<naCol) continue; if(KNAME[v]) KCOL[KNAME[v]]=q[1]; if(v==="batch no"&&!bnCol) bnCol=q[1]; } }
   const cellsOf=o=>{const a=[];let q;const re=new RegExp(CELL.source,"g");while((q=re.exec(o.inner)))a.push({col:q[1],attrs:q[3],inner:q[4],full:q[0]});return a};
   const numOf=c=>{ if(!c||c.inner===undefined) return 0; const v=/<v>([^<]*)<\/v>/.exec(c.inner); return v&&!isNaN(+v[1])?+v[1]:0 };
@@ -1391,7 +1395,11 @@ const LPA = (function(){
     // batch block after Need Additional; Discussion / Remarks are free-text and carried over from the uploaded file
     const OUTC = [{ h: "Batch No", k: "no" }, { h: "Color", k: "sh" }, { h: "Fabrication", k: "fb" }, { h: "Plan Qty Kg", k: "kg", num: 1 }, { h: "Batch Position", k: "ps" },
       { h: "H/S Status", k: "hs" }, { h: "Dye Batch", k: "db" }, { h: "Dye Plan", k: "dd", date: 1, keep: 1 }, { h: "Fin Plan", k: "fd", date: 1, keep: 1 }, { h: "RFD Plan", k: "rd", date: 1, keep: 1 },
-      { h: "Discussion", k: "disc", keep: 1 }, { h: "Remarks", k: "rem", keep: 1 }, { h: "Dyeing Mill", k: "ml" }];
+      { h: "Discussion", k: "disc", keep: 1 }, { h: "Remarks", k: "rem", keep: 1 }, { h: "Dyeing Mill", k: "ml" }, { h: "Segment", k: "sg" }];
+    // Segment (pivot slicer): Category AOP -> AOP, else the Dyeing Mill of the row (Outside / Inhouse)
+    const segOf = (r, ml) => /aop/i.test(String(opt.fp.get(r, "R") ?? "")) ? "AOP" : (/outside/i.test(String(ml ?? "")) ? "Outside" : "Inhouse");
+    // Dyeing Mill already filled in the uploaded file (by hand or by an earlier run) is kept as it is; only blank cells are filled
+    const keptMill = kp => (kp && kp.ml !== undefined && kp.ml !== null && String(kp.ml).trim() !== "") ? String(kp.ml).trim() : null;
     const NA = colStr(lastL + 1); const FC = OUTC.map((o, k) => colStr(lastL + 2 + k)); const SREF = colStr(lastL + 2 + OUTC.length); const LASTC = FC[FC.length - 1];
     const FH = OUTC.map(o => o.h); const KEEP = opt.keep || new Map();
     const RQ = cl.reqk;
@@ -1428,6 +1436,7 @@ const LPA = (function(){
         const dj = key => ext.length === 1 ? ext[0][key] : uniq(ext.map(e => e[key]).filter(x => x !== null).map(x => { const t = serDate(x); return `${String(t.getUTCDate()).padStart(2, "0")}-${MONS[t.getUTCMonth()]}`; })).join("; ");
         fvals.set(rs, { no: nos.join("; "), sh: uniq(shs).join("; "), fb: uniq(fbs).join("; "), kg: q, ps: uniq(pss).join("; "), hs: uniq(ext.map(e => e.hs)).join("; "), db: uniq(ext.map(e => e.db)).join("; "),
           dd: dj("dd"), fd: dj("fd"), rd: dj("rd"), ml: mls.includes("Outside") ? "Outside" : "Inhouse" }); } }
+    for (const [r, kl] of KEEP) { const m = keptMill(kl) || (kl.byBatch ? keptMill(Object.values(kl.byBatch).find(b => keptMill(b))) : null); if (m) MILL.set(r, /outside/i.test(m) ? "Outside" : /inhouse|in-house|in house/i.test(m) ? "Inhouse" : m); }
     const cellOut = (o, ref, val) => { if (val === null || val === undefined || val === "") return `<c r="${ref}" s="${TXT}"/>`;
       if (o.num && typeof val === "number") return `<c r="${ref}" s="${NUMS}"><v>${val}</v></c>`;
       if (o.date && typeof val === "number") return `<c r="${ref}" s="${DATE}"><v>${val}</v></c>`;
@@ -1441,6 +1450,8 @@ const LPA = (function(){
       const kl = KEEP.get(r) || {}; const kp = (v && kl.byBatch && kl.byBatch[v.no]) || (kl.byBatch && Object.keys(kl.byBatch).length ? (Object.keys(kl.byBatch).length === 1 ? Object.values(kl.byBatch)[0] : kl) : kl);
       OUTC.forEach((o, k) => { let val = v ? v[o.k] : (o.k === "ml" ? (MILL.get(r) || null) : null);
         if (o.keep) val = kp[o.k] ?? null;
+        if (o.k === "ml" && keptMill(kp)) val = keptMill(kp);
+        if (o.k === "sg") val = segOf(r, keptMill(kp) || (v && v.ml ? v.ml : (MILL.get(r) || null)));
         nw[FC[k]] = cellOut(o, FC[k] + r, val); });
       const lab = AOPR.has(r) ? null : (res.get(r) || null); nw[NA] = cellT(NA + r, lab);
       return putCells(row, r, nw); });
@@ -1464,14 +1475,15 @@ const LPA = (function(){
             const nv = k < kn - 1 ? r4(tv * sh[k]) : r4(tv - sh.slice(0, -1).reduce((a, s) => a + r4(tv * s), 0));
             cells.set(qc, cx.replace(/<v>[^<]*<\/v>/, `<v>${nv}</v>`)); }
           const kl = KEEP.get(r0) || {}; const kp = (kl.byBatch && kl.byBatch[pc.no]) || (kl.byBatch && Object.keys(kl.byBatch).length ? {} : kl);
-          OUTC.forEach((o, k2) => { let vv = pc[o.k]; if (o.keep) vv = kp[o.k] ?? null; cells.set(FC[k2], cellOut(o, FC[k2] + cur, vv)); });
+          const kmb = (kl.byBatch && kl.byBatch[pc.no] && keptMill(kl.byBatch[pc.no])) || (!kl.byBatch || !Object.keys(kl.byBatch).length ? keptMill(kl) : null);
+          OUTC.forEach((o, k2) => { let vv = pc[o.k]; if (o.keep) vv = kp[o.k] ?? null; if (o.k === "ml" && kmb) vv = kmb; if (o.k === "sg") vv = segOf(r0, kmb || pc.ml); cells.set(FC[k2], cellOut(o, FC[k2] + cur, vv)); });
           if (k < kn - 1) cells.set(NA, `<c r="${NA}${cur}" s="${TXT}"/>`);
           cells.set(SREF, `<c r="${SREF}${cur}" s="${TXT}" t="inlineStr"><is><t>SPLIT-${r0}</t></is></c>`); }
         NEWROWS.push(head + [...cells.entries()].sort((a, b) => colNum(a[0]) - colNum(b[0])).map(e => e[1]).join("") + hm[3]); } }
     sx = sx.slice(0, i0) + NEWROWS.join("") + sx.slice(i1);
     const LASTROW = cur;
     sx = sx.replace(/<dimension ref="([A-Z]+\d+):[A-Z]+\d+"/, (m, a) => `<dimension ref="${a}:${SREF}${LASTROW}"`);
-    if (sx.includes("</cols>")) { const w = [17, 38, 24, 38, 12, 20, 13, 18, 11, 11, 11, 32, 32, 14]; let add = ""; const covered = n => [...sx.matchAll(/<col min="(\d+)" max="(\d+)"/g)].some(m => +m[1] <= n && n <= +m[2]);
+    if (sx.includes("</cols>")) { const w = [17, 38, 24, 38, 12, 20, 13, 18, 11, 11, 11, 32, 32, 14, 11]; let add = ""; const covered = n => [...sx.matchAll(/<col min="(\d+)" max="(\d+)"/g)].some(m => +m[1] <= n && n <= +m[2]);
       for (let k = 0; k < w.length; k++) { const n = lastL + 1 + k; if (!covered(n)) add += `<col min="${n}" max="${n}" width="${w[k]}" customWidth="1"/>`; }
       { const n = colNum(SREF); if (!covered(n)) add += `<col min="${n}" max="${n}" width="12" hidden="1" customWidth="1"/>`; } sx = sx.replace("</cols>", add + "</cols>"); }
     sx = sx.replace(/<autoFilter ref="A2:[A-Z]+\d+"/, `<autoFilter ref="A2:${LASTC}${LASTROW}"`);
@@ -1488,6 +1500,337 @@ const LPA = (function(){
 })();
 
 /* ---------- main run ---------- */
+/* ---------- Date Wise Pivot -Hues: rebuilt on every run (fresh pivot cache, Mtr captions, Kg, Achievement %, Segment slicer, plan-to-performance pivot chart) ---------- */
+const HPV = (function(){
+  const X = s => String(s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const NS_MAIN = "http://schemas.openxmlformats.org/spreadsheetml/2006/main", NS_R = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+  const NS_X14 = "http://schemas.microsoft.com/office/spreadsheetml/2009/9/main", NS_MC = "http://schemas.openxmlformats.org/markup-compatibility/2006";
+  const RT = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/";
+  const CT = { ws: "application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml", pt: "application/vnd.openxmlformats-officedocument.spreadsheetml.pivotTable+xml",
+    pcd: "application/vnd.openxmlformats-officedocument.spreadsheetml.pivotCacheDefinition+xml", pcr: "application/vnd.openxmlformats-officedocument.spreadsheetml.pivotCacheRecords+xml",
+    dr: "application/vnd.openxmlformats-officedocument.drawing+xml", ch: "application/vnd.openxmlformats-officedocument.drawingml.chart+xml",
+    sl: "application/vnd.ms-excel.slicer+xml", sc: "application/vnd.ms-excel.slicerCache+xml" };
+  const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const isoD = n => { const d = new Date(Date.UTC(1899, 11, 30) + Math.round(n) * 864e5); return d.toISOString().slice(0, 10) + "T00:00:00"; };
+  const dmy = n => { const d = new Date(Date.UTC(1899, 11, 30) + Math.round(n) * 864e5); return `${d.getUTCDate()}-${MON[d.getUTCMonth()]}`; };
+  const relsPath = p => p.replace(/([^/]+)$/, "_rels/$1.rels");
+  const resolve = (base, t) => { if (t.startsWith("/")) return t.slice(1); const parts = base.split("/"); parts.pop(); for (const s of t.split("/")) { if (s === "..") parts.pop(); else if (s !== ".") parts.push(s); } return parts.join("/"); };
+  async function relsOf(z, part) { const f = z.file(relsPath(part)); if (!f) return []; const x = await f.async("string");
+    return [...x.matchAll(/<Relationship\b([^>]*)\/?>/g)].map(m => { const a = m[1]; const g = n => (new RegExp(`\\b${n}="([^"]*)"`).exec(a) || [])[1]; return { id: g("Id"), type: g("Type") || "", target: g("Target") || "", mode: g("TargetMode"), path: g("TargetMode") === "External" ? null : resolve(part, g("Target") || "") }; }); }
+  const relsXml = list => `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${list.map(r => `<Relationship Id="${r.id}" Type="${r.type}" Target="${X(r.target)}"/>`).join("")}</Relationships>`;
+
+  /* ---- styles: append the fonts / fills / borders / xfs / dxfs the sheet needs ---- */
+  function styleKit(st) {
+    const cnt = tag => { const m = new RegExp(`<${tag}\\b[^>]*count="(\\d+)"`).exec(st); return m ? +m[1] : 0; };
+    const add = (tag, item) => { const n = cnt(tag);
+      if (!new RegExp(`<${tag}\\b`).test(st)) { st = st.replace("</styleSheet>", `<${tag} count="1">${item}</${tag}></styleSheet>`); return 0; }
+      if (new RegExp(`<${tag}\\b[^>]*/>`).test(st)) st = st.replace(new RegExp(`<${tag}\\b[^>]*/>`), `<${tag} count="1">${item}</${tag}>`);
+      else st = st.replace(new RegExp(`<${tag}\\b([^>]*)count="\\d+"([^>]*)>`), `<${tag}$1count="${n + 1}"$2>`).replace(`</${tag}>`, item + `</${tag}>`);
+      return n; };
+    let pctId = null; { const m = /<numFmt numFmtId="(\d+)" formatCode="0\.0%"\/>/.exec(st); if (m) pctId = +m[1]; }
+    if (pctId === null) { const ids = [...st.matchAll(/<numFmt numFmtId="(\d+)"/g)].map(m => +m[1]); pctId = Math.max(163, ...ids) + 1;
+      if (/<numFmts\b/.test(st)) st = st.replace(/<numFmts\b([^>]*)count="(\d+)"([^>]*)>/, (m, a, c, b) => `<numFmts${a}count="${+c + 1}"${b}>`).replace("</numFmts>", `<numFmt numFmtId="${pctId}" formatCode="0.0%"/></numFmts>`);
+      else st = st.replace(/(<styleSheet\b[^>]*>)/, `$1<numFmts count="1"><numFmt numFmtId="${pctId}" formatCode="0.0%"/></numFmts>`); }
+    // fonts must exist before xfs reference them; dxfs live after cellStyles in the schema, so they are only appended (never created out of order)
+    const fTitle = add("fonts", `<font><b/><sz val="16"/><color rgb="FF664356"/><name val="Calibri"/><family val="2"/><scheme val="minor"/></font>`);
+    const fHead = add("fonts", `<font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/><family val="2"/><scheme val="minor"/></font>`);
+    const fPct = add("fonts", `<font><b/><sz val="11"/><color rgb="FF664356"/><name val="Calibri"/><family val="2"/><scheme val="minor"/></font>`);
+    const flHead = add("fills", `<fill><patternFill patternType="solid"><fgColor rgb="FF664356"/><bgColor indexed="64"/></patternFill></fill>`);
+    const bBox = add("borders", `<border><left style="thin"><color rgb="FF664356"/></left><right style="thin"><color rgb="FF664356"/></right><top style="thin"><color rgb="FF664356"/></top><bottom style="thin"><color rgb="FF664356"/></bottom><diagonal/></border>`);
+    const xf = (a, inner) => add("cellXfs", `<xf ${a} xfId="0"${inner ? `>${inner}</xf>` : "/>"}`);
+    const S = {
+      title: xf(`numFmtId="0" fontId="${fTitle}" fillId="0" borderId="${bBox}" applyFont="1" applyBorder="1" applyAlignment="1"`, `<alignment horizontal="center" vertical="center"/>`),
+      head: xf(`numFmtId="0" fontId="${fHead}" fillId="${flHead}" borderId="0" applyFont="1" applyFill="1" applyAlignment="1"`, `<alignment horizontal="center" vertical="center" wrapText="1"/>`),
+      pct: xf(`numFmtId="${pctId}" fontId="${fPct}" fillId="0" borderId="0" applyNumberFormat="1" applyFont="1" applyAlignment="1"`, `<alignment horizontal="center" vertical="center"/>`),
+      date: xf(`numFmtId="16" fontId="0" fillId="0" borderId="0" applyNumberFormat="1"`),
+      num: xf(`numFmtId="38" fontId="0" fillId="0" borderId="0" applyNumberFormat="1"`),
+      btn: xf(`numFmtId="0" fontId="0" fillId="0" borderId="0" pivotButton="1"`),
+      txt: xf(`numFmtId="0" fontId="0" fillId="0" borderId="0"`) };
+    let D = null;
+    if (/<dxfs\b/.test(st)) {
+      D = { good: add("dxfs", `<dxf><font><b/><color rgb="FF366083"/></font></dxf>`), bad: add("dxfs", `<dxf><font><b/><color rgb="FFAF4F5A"/></font></dxf>`),
+        row: add("dxfs", `<dxf><border><bottom style="thin"><color rgb="FFD2C7CB"/></bottom></border></dxf>`),
+        tot: add("dxfs", `<dxf><font><b/></font><border><top style="thin"><color rgb="FF664356"/></top><bottom style="thin"><color rgb="FF664356"/></bottom></border></dxf>`),
+        date: add("dxfs", `<dxf><numFmt numFmtId="16" formatCode="d\\-mmm"/></dxf>`) };
+    } else {
+      const items = [`<dxf><font><b/><color rgb="FF366083"/></font></dxf>`, `<dxf><font><b/><color rgb="FFAF4F5A"/></font></dxf>`, `<dxf><border><bottom style="thin"><color rgb="FFD2C7CB"/></bottom></border></dxf>`,
+        `<dxf><font><b/></font><border><top style="thin"><color rgb="FF664356"/></top><bottom style="thin"><color rgb="FF664356"/></bottom></border></dxf>`, `<dxf><numFmt numFmtId="16" formatCode="d\\-mmm"/></dxf>`];
+      const blk = `<dxfs count="${items.length}">${items.join("")}</dxfs>`;
+      st = /<\/cellStyles>/.test(st) ? st.replace("</cellStyles>", "</cellStyles>" + blk) : st.replace("</cellXfs>", "</cellXfs>" + blk);
+      D = { good: 0, bad: 1, row: 2, tot: 3, date: 4 };
+    }
+    return { xml: st, S, D };
+  }
+
+  /* ---- read the final Fab Plan-Final sheet into columns ---- */
+  function readSheet(sx, sst, ncol) {
+    const rows = []; let hdr = null;
+    const RR = /<row r="(\d+)"[^>]*?(?:\/>|>([\s\S]*?)<\/row>)/g; let m;
+    while ((m = RR.exec(sx))) { const r = +m[1]; if (r < 2 || !m[2]) continue; const vals = new Array(ncol).fill(null), fx = new Array(ncol).fill(false), ft = new Array(ncol).fill(null); let sS = 0;
+      const CR = /<c r="([A-Z]+)\d+"([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g; let q;
+      while ((q = CR.exec(m[2]))) { const ci = colNum(q[1]) - 1; if (ci >= ncol) continue; const inner = q[3]; if (inner === undefined) continue;
+        const t = (/\bt="(\w+)"/.exec(q[2]) || [])[1]; if (ci === 18) sS = +((/\bs="(\d+)"/.exec(q[2]) || [0, 0])[1]); if (/<f[\s>\/]/.test(inner)) { fx[ci] = true; const fm = /<f[^>]*>([^<]*)<\/f>/.exec(inner); if (fm) ft[ci] = decode(fm[1]).trim(); }
+        let v = null;
+        if (t === "inlineStr") { const tt = [...inner.matchAll(/<t(?:\s[^>]*)?>([\s\S]*?)<\/t>/g)].map(z => z[1]).join(""); v = decode(tt); }
+        else { const vm = /<v>([\s\S]*?)<\/v>/.exec(inner); if (vm) { const s = vm[1]; v = t === "s" ? (sst[+s] ?? "") : t === "str" ? decode(s) : t === "b" ? (s === "1") : t === "e" ? null : (s === "" ? null : Number(s)); if (typeof v === "number" && !isFinite(v)) v = null; } }
+        vals[ci] = v; }
+      if (r === 2) hdr = vals; else rows.push({ r, vals, fx, ft, sS }); }
+    return { hdr: hdr || new Array(ncol).fill(null), rows };
+  }
+
+  /* ---- cache field xml (inline values) ---- */
+  function inlineField(name, list, numFmtId) {
+    let hasS = false, hasN = false, hasB = false, hasM = false, allInt = true, mn = Infinity, mx = -Infinity;
+    for (const v of list) { if (v === null) hasM = true; else if (typeof v === "number") { hasN = true; if (!Number.isInteger(v)) allInt = false; if (v < mn) mn = v; if (v > mx) mx = v; } else if (typeof v === "boolean") hasB = true; else hasS = true; }
+    const types = [hasS, hasN, hasB].filter(Boolean).length; const a = [];
+    if (!hasS && !hasM && !hasB) a.push(`containsSemiMixedTypes="0"`);
+    if (!hasS && !hasN && !hasB) a.push(`containsNonDate="0"`);
+    if (!hasS) a.push(`containsString="0"`);
+    if (hasM) a.push(`containsBlank="1"`);
+    if (types > 1) a.push(`containsMixedTypes="1"`);
+    if (hasN) { a.push(`containsNumber="1"`); if (allInt) a.push(`containsInteger="1"`); a.push(`minValue="${mn}" maxValue="${mx}"`); }
+    return `<cacheField name="${X(name)}" numFmtId="${numFmtId || 0}"><sharedItems${a.length ? " " + a.join(" ") : ""}/></cacheField>`;
+  }
+  const recVal = v => v === null ? "<m/>" : typeof v === "number" ? `<n v="${v}"/>` : typeof v === "boolean" ? `<b v="${v ? 1 : 0}"/>` : `<s v="${X(v)}"/>`;
+
+  async function build(zIn, sx, o) {
+    // every write / delete is staged and applied only when the whole rebuild succeeded, so a failure leaves the workbook untouched
+    const ops = [], z = { file: (p, c) => c === undefined ? zIn.file(p) : (ops.push(["w", p, c]), null), remove: p => { ops.push(["d", p]); } };
+    const res = await build0(z, sx, o);
+    if (res.ok) for (const [k, p, c] of ops) k === "w" ? zIn.file(p, c) : zIn.remove(p);
+    return res;
+  }
+  async function build0(z, sx, o) {
+    const wbPath = "xl/workbook.xml";
+    let wb = await z.file(wbPath).async("string");
+    const sheets = [...wb.matchAll(/<sheet\b([^>]*?)\/>/g)].map(m => { const a = m[1]; const g = n => (new RegExp(`\\b${n}="([^"]*)"`).exec(a) || [])[1]; return { raw: m[0], name: decode(g("name") || ""), id: +g("sheetId"), rid: g("r:id") }; });
+    const pv = sheets.find(s => /^Date Wise Pivot/i.test(s.name)); if (!pv) return { sx, note: "no Date Wise Pivot sheet" };
+    let wbRels = await relsOf(z, wbPath);
+    const pvPath = (wbRels.find(r => r.id === pv.rid) || {}).path; if (!pvPath || !z.file(pvPath)) return { sx, note: "pivot sheet part not found" };
+    let ct = await z.file("[Content_Types].xml").async("string");
+    const dropPart = p => { if (!p) return; z.remove(p); z.remove(relsPath(p)); ct = ct.replace(new RegExp(`<Override [^>]*PartName="/${p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"[^>]*/>`, "g"), ""); };
+    const addCT = (p, type) => { ct = ct.replace(new RegExp(`<Override [^>]*PartName="/${p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"[^>]*/>`, "g"), "").replace("</Types>", `<Override PartName="/${p}" ContentType="${type}"/></Types>`); };
+
+    /* -- the pivot cache this sheet uses (kept: same part and same workbook cacheId) -- */
+    const pvRels = await relsOf(z, pvPath);
+    const oldPT = pvRels.filter(r => /\/pivotTable$/.test(r.type)).map(r => r.path);
+    if (!oldPT.length) return { sx, note: "no pivot table on the sheet" };
+    const ptRels = await relsOf(z, oldPT[0]); const pcdPath = (ptRels.find(r => /pivotCacheDefinition$/.test(r.type)) || {}).path;
+    if (!pcdPath || !z.file(pcdPath)) return { sx, note: "pivot cache not found" };
+    const wbPcdRel = wbRels.find(r => r.path === pcdPath); if (!wbPcdRel) return { sx, note: "pivot cache not linked" };
+    const cidM = new RegExp(`<pivotCache\\b[^>]*cacheId="(\\d+)"[^>]*r:id="${wbPcdRel.id}"|<pivotCache\\b[^>]*r:id="${wbPcdRel.id}"[^>]*cacheId="(\\d+)"`).exec(wb); if (!cidM) return { sx, note: "cacheId not found" };
+    const cacheId = +(cidM[1] || cidM[2]);
+    const pcdRels = await relsOf(z, pcdPath); const pcrPath = (pcdRels.find(r => /pivotCacheRecords$/.test(r.type)) || {}).path || pcdPath.replace(/Definition(\d*)\.xml$/, "Records$1.xml");
+
+    /* -- remove what an earlier run (or the original file) hung on the pivot sheet, plus our hidden chart-data sheet and slicer caches -- */
+    for (const r of pvRels) { if (!r.path) continue;
+      if (/\/drawing$/.test(r.type)) { for (const d of await relsOf(z, r.path)) if (d.path && /\/chart$/.test(d.type)) { for (const c of await relsOf(z, d.path)) if (c.path && !/theme/.test(c.path)) dropPart(c.path); dropPart(d.path); } }
+      if (/\/(pivotTable|drawing|slicer)$/.test(r.type)) dropPart(r.path); }
+    const oldCD = sheets.find(s => s.name === "Chart Data");
+    if (oldCD) { const p = (wbRels.find(r => r.id === oldCD.rid) || {}).path; if (p) { for (const r of await relsOf(z, p)) if (r.path && /\/pivotTable$/.test(r.type)) dropPart(r.path); dropPart(p); }
+      wb = wb.replace(oldCD.raw, ""); wbRels = wbRels.filter(r => r.id !== oldCD.rid); }
+    for (const r of wbRels.filter(r => /\/slicerCache$/.test(r.type))) dropPart(r.path);
+    wbRels = wbRels.filter(r => !/\/slicerCache$/.test(r.type));
+    wb = wb.replace(/<ext\b[^>]*uri="\{BBE1A952-AA13-448e-AADC-164F8A28A991\}"[^>]*>[\s\S]*?<\/ext>/g, "").replace(/<ext\b[^>]*uri="\{46BE6895-7355-4a93-B00E-2C351335B9C9\}"[^>]*>[\s\S]*?<\/ext>/g, "").replace(/<extLst>\s*<\/extLst>/, "");
+    wb = wb.replace(/<definedName\b[^>]*name="Slicer_[^"]*"[^>]*>[^<]*<\/definedName>/g, "").replace(/<definedNames>\s*<\/definedNames>/, "");
+
+    /* -- source data -- */
+    const srcLast = o.srcLast, ncol = colNum(srcLast);
+    const D = readSheet(sx, o.sst, ncol);
+    const lastRow = Math.max(2, ...D.rows.map(x => x.r));
+    const iL = 11, iM = 12, iN = 13, iO = 14, iP = 15, iK = 10, iS = 18;
+    // the formula columns K / N / P get cached values here (and in the sheet) so the pivot reads them even before Excel recalculates
+    for (const x of D.rows) { const v = x.vals; if (x.fx[iM] && (x.ft[iM] === null || /^\$?L\$?\d+$/i.test(x.ft[iM]))) v[iM] = v[iL];   // M = L (Taps balance ≤ 20 rule)
+      const L = typeof v[iL] === "number" ? v[iL] : 0, M = typeof v[iM] === "number" ? v[iM] : 0, Oo = typeof v[iO] === "number" ? v[iO] : 0;
+      const hasLine = v[iL] !== null || v[iM] !== null;
+      if (x.fx[iN] || v[iN] === null) v[iN] = hasLine ? M - L : v[iN];
+      if (x.fx[iP] || v[iP] === null) v[iP] = hasLine ? (M - L) + Oo : v[iP];
+      if (x.fx[iK] || v[iK] === null) v[iK] = hasLine ? ((M - L) + Oo) / 3 : v[iK]; }
+    // Agreed RFD Date-Hues typed as a plain number (no date format) would become a separate pivot item: give those cells the column's date style
+    const st0 = await z.file("xl/styles.xml").async("string");
+    const cfmt = new Map([...st0.matchAll(/<numFmt numFmtId="(\d+)" formatCode="([^"]*)"/g)].map(m => [+m[1], decode(m[2])]));
+    const xfs = [...((/<cellXfs\b[^>]*>([\s\S]*?)<\/cellXfs>/.exec(st0) || [, ""])[1]).matchAll(/<xf\b([^>]*?)(?:\/>|>)/g)].map(m => +((/numFmtId="(\d+)"/.exec(m[1]) || [0, 0])[1]));
+    const isDateXf = s => { const id = xfs[s] ?? 0; if ((id >= 14 && id <= 22) || (id >= 45 && id <= 47) || (id >= 27 && id <= 36) || (id >= 50 && id <= 58)) return true; const f = cfmt.get(id); return !!f && /[dmy]/i.test(f.replace(/"[^"]*"|\[[^\]]*\]|\\./g, "")) && !/[0#]/.test(f.replace(/"[^"]*"|\[[^\]]*\]/g, "")); };
+    const dCount = new Map(); for (const x of D.rows) if (typeof x.vals[iS] === "number" && isDateXf(x.sS)) dCount.set(x.sS, (dCount.get(x.sS) || 0) + 1);
+    const dStyle = [...dCount.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+    const sFix = new Set(dStyle === undefined ? [] : D.rows.filter(x => typeof x.vals[iS] === "number" && !isDateXf(x.sS)).map(x => x.r));
+    const fix = new Map(D.rows.map(x => [x.r, x.vals]));
+    sx = sx.replace(/<row r="(\d+)"([^>]*?[^/])?>([\s\S]*?)<\/row>/g, (all, rS, ra, inner) => { const r = +rS; if (r < 3 || !fix.has(r)) return all; const v = fix.get(r);
+      if (sFix.has(r)) inner = inner.replace(new RegExp(`<c r="S${r}"([^>]*?)(/?)>`), (m, a, sl) => `<c r="S${r}"${a.replace(/\s*s="\d+"/, "")} s="${dStyle}"${sl}>`);
+      return `<row r="${rS}"${ra || ""}>` + inner.replace(/<c r="([KMNP])(\d+)"([^>]*?)>(<f\b[^>]*?(?:\/>|>[\s\S]*?<\/f>))(?:<v>[^<]*<\/v>)?<\/c>/g, (c, col, rr, at, f) => { const val = v[colNum(col) - 1]; return typeof val === "number" ? `<c r="${col}${rr}"${at.replace(/\s*t="[^"]*"/, "")}>${f}<v>${+val.toFixed(6)}</v></c>` : c; }) + "</row>"; });
+
+    // field names: header text, unique (Excel needs unique cache field names)
+    const used = new Set(); const names = D.hdr.map((h, i) => { let n = String(h ?? "").replace(/\s+/g, " ").trim() || `Column${i + 1}`; let k = n, j = 2; while (used.has(k.toLowerCase())) k = n + j++; used.add(k.toLowerCase()); return k; });
+    const segIdx = names.findIndex((n, i) => i > 49 && n.toLowerCase() === "segment"); const hasSeg = segIdx >= 0;
+
+    // shared items: date field S (dates, then text, blank last) and Segment
+    const sKey = v => v === null ? "m" : typeof v === "number" ? "d" + Math.round(v) : "s" + String(v);
+    const sMap = new Map(); for (const x of D.rows) { const v = x.vals[iS]; const k = sKey(typeof v === "number" ? Math.round(v) : v); if (!sMap.has(k)) sMap.set(k, typeof v === "number" ? Math.round(v) : v); }
+    const sItems = [...sMap.values()].sort((a, b) => { const ra = a === null ? 2 : typeof a === "number" ? 0 : 1, rb = b === null ? 2 : typeof b === "number" ? 0 : 1; return ra - rb || (ra === 0 ? a - b : ra === 1 ? String(a).localeCompare(String(b)) : 0); });
+    const sIdx = new Map(sItems.map((v, i) => [sKey(v), i]));
+    const segItems = hasSeg ? [...new Set(D.rows.map(x => x.vals[segIdx]).filter(v => v !== null && v !== "").map(String))].sort() : [];
+    if (hasSeg && D.rows.some(x => x.vals[segIdx] === null || x.vals[segIdx] === "")) segItems.push(null);
+    const segPos = new Map(segItems.map((v, i) => [v, i]));
+    // visible dates = the plan month (from the file name, else the report date)
+    let ym = null; { const m = /_(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[-_ ]?(\d{2})\b/i.exec(o.fileName || ""); if (m) ym = [2000 + +m[2], MON.findIndex(x => x.toLowerCase() === m[1].slice(0, 3).toLowerCase())]; }
+    if (!ym && o.report) { const d = new Date(Date.UTC(1899, 11, 30) + o.report * 864e5); ym = [d.getUTCFullYear(), d.getUTCMonth()]; }
+    const inMonth = n => { if (!ym) return true; const d = new Date(Date.UTC(1899, 11, 30) + n * 864e5); return d.getUTCFullYear() === ym[0] && d.getUTCMonth() === ym[1]; };
+    let vis = sItems.map((v, i) => [v, i]).filter(([v]) => typeof v === "number" && inMonth(v));
+    if (!vis.length) vis = sItems.map((v, i) => [v, i]).filter(([v]) => typeof v === "number");
+    const visSet = new Set(vis.map(([, i]) => i));
+
+    /* -- pivot cache definition + records -- */
+    let fields = "";
+    for (let i = 0; i < ncol; i++) {
+      if (i === iS) { const nums = sItems.filter(v => typeof v === "number"), hasStr = sItems.some(v => typeof v === "string"), hasM = sItems.includes(null);
+        const a = []; if (!hasStr && !hasM) a.push(`containsSemiMixedTypes="0"`); if (!hasStr) a.push(`containsNonDate="0"`); if (nums.length) a.push(`containsDate="1"`); if (!hasStr) a.push(`containsString="0"`); if (hasM) a.push(`containsBlank="1"`); if (nums.length && (hasStr)) a.push(`containsMixedTypes="1"`);
+        if (nums.length) a.push(`minDate="${isoD(Math.min(...nums))}" maxDate="${isoD(Math.max(...nums) + 1)}"`);
+        fields += `<cacheField name="${X(names[i])}" numFmtId="16"><sharedItems ${a.join(" ")} count="${sItems.length}">${sItems.map(v => v === null ? "<m/>" : typeof v === "number" ? `<d v="${isoD(v)}"/>` : `<s v="${X(v)}"/>`).join("")}</sharedItems></cacheField>`; continue; }
+      if (hasSeg && i === segIdx) { const hasM = segItems.includes(null);
+        fields += `<cacheField name="${X(names[i])}" numFmtId="0"><sharedItems${hasM ? ` containsBlank="1"` : ""} count="${segItems.length}">${segItems.map(v => v === null ? "<m/>" : `<s v="${X(v)}"/>`).join("")}</sharedItems></cacheField>`; continue; }
+      fields += inlineField(names[i], D.rows.map(x => x.vals[i]), 0);
+    }
+    const recs = D.rows.map(x => "<r>" + x.vals.map((v, i) => i === iS ? `<x v="${sIdx.get(sKey(typeof v === "number" ? Math.round(v) : v))}"/>` : (hasSeg && i === segIdx) ? `<x v="${segPos.get(v === "" ? null : (v === null ? null : String(v)))}"/>` : recVal(v)).join("") + "</r>").join("");
+    const pcd = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n<pivotCacheDefinition xmlns="${NS_MAIN}" xmlns:r="${NS_R}" r:id="rId1" refreshOnLoad="1" refreshedBy="SQ Hues Tools" refreshedDate="${(Date.now() / 864e5 + 25569).toFixed(6)}" createdVersion="6" refreshedVersion="6" minRefreshableVersion="3" recordCount="${D.rows.length}">`
+      + `<cacheSource type="worksheet"><worksheetSource ref="A2:${srcLast}${lastRow}" sheet="Fab Plan-Final"/></cacheSource><cacheFields count="${ncol}">${fields}</cacheFields>`
+      + `<extLst><ext uri="{725AE2AE-9491-48be-B2B4-4EB974FC3084}" xmlns:x14="${NS_X14}"><x14:pivotCacheDefinition pivotCacheId="${cacheId}"/></ext></extLst></pivotCacheDefinition>`;
+    z.file(pcdPath, pcd);
+    z.file(pcrPath, `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n<pivotCacheRecords xmlns="${NS_MAIN}" xmlns:r="${NS_R}" count="${D.rows.length}">${recs}</pivotCacheRecords>`);
+    z.file(relsPath(pcdPath), relsXml([{ id: "rId1", type: RT + "pivotCacheRecords", target: pcrPath.split("/").pop() }]));
+    addCT(pcdPath, CT.pcd); addCT(pcrPath, CT.pcr);
+
+    /* -- aggregates for the cells the pivot shows -- */
+    const agg = new Map(); for (const [, i] of vis) agg.set(i, { L: 0, M: 0, N: 0, O: 0, P: 0, K: 0 });
+    for (const x of D.rows) { const k = sIdx.get(sKey(typeof x.vals[iS] === "number" ? Math.round(x.vals[iS]) : x.vals[iS])); const a = agg.get(k); if (!a) continue;
+      const n = i => typeof x.vals[i] === "number" ? x.vals[i] : 0; a.L += n(iL); a.M += n(iM); a.N += n(iN); a.O += n(iO); a.P += n(iP); a.K += n(iK); }
+    const T = { L: 0, M: 0, N: 0, O: 0, P: 0, K: 0 }; for (const a of agg.values()) for (const k in T) T[k] += a[k];
+    const hasO = [...agg.values()].some(a => Math.abs(a.O) > 1e-9);
+
+    /* -- styles -- */
+    const stK = styleKit(await z.file("xl/styles.xml").async("string")); z.file("xl/styles.xml", stK.xml); const S = stK.S, DX = stK.D;
+
+    /* -- pivot table definitions -- */
+    const pf = (extra) => { let h = ""; for (let i = 0; i < ncol; i++) {
+        if (i === iS) h += `<pivotField axis="axisRow" compact="0" numFmtId="16" outline="0" showAll="0" sortType="ascending"><items count="${sItems.length + 1}">${sItems.map((v, k) => `<item${visSet.has(k) ? "" : ` h="1"`} x="${k}"/>`).join("")}<item t="default"/></items></pivotField>`;
+        else if (hasSeg && i === segIdx) h += `<pivotField compact="0" outline="0" showAll="0"><items count="${segItems.length + 1}">${segItems.map((v, k) => `<item x="${k}"/>`).join("")}<item t="default"/></items></pivotField>`;
+        else h += `<pivotField${extra.includes(i) ? ` dataField="1"` : ""} compact="0" outline="0" showAll="0"/>`; } return `<pivotFields count="${ncol}">${h}</pivotFields>`; };
+    const rowItems = (grand) => `<rowItems count="${vis.length + (grand ? 1 : 0)}">${vis.map(([, i]) => `<i><x v="${i}"/></i>`).join("")}${grand ? `<i t="grand"><x/></i>` : ""}</rowItems>`;
+    const colItems = n => `<colItems count="${n}">${Array.from({ length: n }, (_, k) => k ? `<i i="${k}"><x v="${k}"/></i>` : `<i><x/></i>`).join("")}</colItems>`;
+    const DF1 = [["Req Qty (Mtr)", iL], ["RFD Qty (Mtr)", iM], ["Balance to RFD (Mtr)", iN], ["Recovered Qty (Mtr)", iO], ["Final Balance (Mtr)", iP], ["Req Qty (Kg)", iK]];
+    const DF2 = [["Plan (Mtr)", iL], ["RFD (Mtr)", iM]];
+    const ptHead = (name, extra) => `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n<pivotTableDefinition xmlns="${NS_MAIN}" name="${name}" cacheId="${cacheId}" applyNumberFormats="0" applyBorderFormats="0" applyFontFormats="0" applyPatternFormats="0" applyAlignmentFormats="0" applyWidthHeightFormats="1" dataCaption="Values" updatedVersion="6" minRefreshableVersion="3" itemPrintTitles="1" createdVersion="6" indent="0" compact="0" compactData="0" multipleFieldFilters="0"${extra}>`;
+    const fmtDate = `<formats count="1"><format dxfId="${DX.date}"><pivotArea dataOnly="0" labelOnly="1" outline="0" fieldPosition="0"><references count="1"><reference field="${iS}" count="0"/></references></pivotArea></format></formats>`;
+    const top1 = 4, last1 = top1 + 1 + vis.length + 1;
+    const pt1 = ptHead("PivotTable1", "") + `<location ref="A${top1}:${colStr(1 + DF1.length)}${last1}" firstHeaderRow="1" firstDataRow="2" firstDataCol="1"/>` + pf(DF1.map(d => d[1]))
+      + `<rowFields count="1"><field x="${iS}"/></rowFields>` + rowItems(true) + `<colFields count="1"><field x="-2"/></colFields>` + colItems(DF1.length)
+      + `<dataFields count="${DF1.length}">${DF1.map(([n, f]) => `<dataField name="${X(n)}" fld="${f}" baseField="0" baseItem="0" numFmtId="38"/>`).join("")}</dataFields>` + fmtDate
+      + `<pivotTableStyleInfo name="PivotStyleMedium2" showRowHeaders="1" showColHeaders="1" showRowStripes="0" showColStripes="0" showLastColumn="1"/></pivotTableDefinition>`;
+    const top2 = 3, last2 = top2 + 1 + vis.length;
+    const cf = k => `<chartFormat chart="0" format="${k + 1}" series="1"><pivotArea type="data" outline="0" fieldPosition="0"><references count="1"><reference field="4294967294" count="1" selected="0"><x v="${k}"/></reference></references></pivotArea></chartFormat>`;
+    const pt2 = ptHead("PivotTable2", ` rowGrandTotals="0" colGrandTotals="0" chartFormat="1"`) + `<location ref="A${top2}:C${last2}" firstHeaderRow="1" firstDataRow="2" firstDataCol="1"/>` + pf(DF2.map(d => d[1]))
+      + `<rowFields count="1"><field x="${iS}"/></rowFields>` + rowItems(false) + `<colFields count="1"><field x="-2"/></colFields>` + colItems(2)
+      + `<dataFields count="2">${DF2.map(([n, f]) => `<dataField name="${X(n)}" fld="${f}" baseField="0" baseItem="0" numFmtId="38"/>`).join("")}</dataFields>` + fmtDate
+      + `<chartFormats count="2">${cf(0)}${cf(1)}</chartFormats>`
+      + `<pivotTableStyleInfo name="PivotStyleLight16" showRowHeaders="1" showColHeaders="1" showRowStripes="0" showColStripes="0" showLastColumn="1"/></pivotTableDefinition>`;
+    const pt1Path = "xl/pivotTables/sqhPivotTable1.xml", pt2Path = "xl/pivotTables/sqhPivotTable2.xml";
+    const rel2pcd = from => { const a = from.split("/"), b = pcdPath.split("/"); a.pop(); let i = 0; while (i < a.length && a[i] === b[i]) i++; return "../".repeat(a.length - i) + b.slice(i).join("/"); };
+    z.file(pt1Path, pt1); z.file(relsPath(pt1Path), relsXml([{ id: "rId1", type: RT + "pivotCacheDefinition", target: rel2pcd(pt1Path) }])); addCT(pt1Path, CT.pt);
+    z.file(pt2Path, pt2); z.file(relsPath(pt2Path), relsXml([{ id: "rId1", type: RT + "pivotCacheDefinition", target: rel2pcd(pt2Path) }])); addCT(pt2Path, CT.pt);
+
+    /* -- the pivot sheet itself -- */
+    const c = (ref, s, inner) => inner === undefined ? `<c r="${ref}" s="${s}"/>` : `<c r="${ref}" s="${s}"${inner}`;
+    const str = (ref, s, t) => `<c r="${ref}" s="${s}" t="inlineStr"><is><t xml:space="preserve">${X(t)}</t></is></c>`;
+    const num = (ref, s, v) => `<c r="${ref}" s="${s}"><v>${+(+v).toFixed(6)}</v></c>`;
+    const lastCol1 = colStr(1 + DF1.length), pctCol = colStr(2 + DF1.length);
+    let rowsX = `<row r="1" ht="30" customHeight="1">${str("A1", S.title, "SQ Hues Line plan vs Performance")}${Array.from({ length: 1 + DF1.length }, (_, k) => c(colStr(k + 2) + "1", S.title)).join("")}</row>`;
+    rowsX += `<row r="2" ht="8" customHeight="1"/>`;
+    rowsX += `<row r="${top1}" ht="22" customHeight="1">${c("A" + top1, S.txt)}${str("B" + top1, S.btn, "Values")}${str(pctCol + top1, S.head, "Achievement %")}</row>`;
+    rowsX += `<row r="${top1 + 1}" ht="30" customHeight="1">${str("A" + (top1 + 1), S.btn, names[iS])}${DF1.map(([n], k) => str(colStr(k + 2) + (top1 + 1), S.txt, n)).join("")}${c(pctCol + (top1 + 1), S.head)}</row>`;
+    const pctF = r => `<c r="${pctCol}${r}" s="${S.pct}"><f>IFERROR((C${r}+N(E${r}))/B${r},"")</f></c>`;
+    let r = top1 + 2;
+    for (const [v, i] of vis) { const a = agg.get(i);
+      rowsX += `<row r="${r}">${num("A" + r, S.date, v)}${[a.L, a.M, a.N, a.O, a.P, a.K].map((q, k) => (k === 3 && Math.abs(q) < 1e-9) ? c(colStr(k + 2) + r, S.num) : num(colStr(k + 2) + r, S.num, q)).join("")}${pctF(r)}</row>`; r++; }
+    rowsX += `<row r="${r}">${str("A" + r, S.txt, "Grand Total")}${[T.L, T.M, T.N, T.O, T.P, T.K].map((q, k) => (k === 3 && !hasO) ? c(colStr(k + 2) + r, S.num) : num(colStr(k + 2) + r, S.num, q)).join("")}${pctF(r)}</row>`;
+    const pvLast = r;
+    const cfx = `<conditionalFormatting sqref="${pctCol}${top1 + 2}:${pctCol}${pvLast}">`
+      + `<cfRule type="expression" dxfId="${DX.tot}" priority="1"><formula>$A${top1 + 2}="Grand Total"</formula></cfRule>`
+      + `<cfRule type="expression" dxfId="${DX.row}" priority="2"><formula>AND($A${top1 + 2}&lt;&gt;"",$A${top1 + 2}&lt;&gt;"Grand Total")</formula></cfRule>`
+      + `<cfRule type="expression" dxfId="${DX.good}" priority="3"><formula>AND(ISNUMBER(${pctCol}${top1 + 2}),${pctCol}${top1 + 2}&gt;=0.95)</formula></cfRule>`
+      + `<cfRule type="expression" dxfId="${DX.bad}" priority="4"><formula>AND(ISNUMBER(${pctCol}${top1 + 2}),${pctCol}${top1 + 2}&lt;0.95)</formula></cfRule></conditionalFormatting>`;
+    const colsX = `<cols><col min="1" max="1" width="20" customWidth="1"/><col min="2" max="${1 + DF1.length}" width="17" customWidth="1"/><col min="${2 + DF1.length}" max="${2 + DF1.length}" width="15" customWidth="1"/><col min="${3 + DF1.length}" max="${3 + DF1.length}" width="3" customWidth="1"/></cols>`;
+    const pvRelList = [{ id: "rId1", type: RT + "pivotTable", target: "../pivotTables/" + pt1Path.split("/").pop() }, { id: "rId2", type: RT + "drawing", target: "../drawings/sqhDrawing1.xml" }];
+    if (hasSeg) pvRelList.push({ id: "rId3", type: "http://schemas.microsoft.com/office/2007/relationships/slicer", target: "../slicers/sqhSlicer1.xml" });
+    const pvSheet = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n<worksheet xmlns="${NS_MAIN}" xmlns:r="${NS_R}" xmlns:mc="${NS_MC}" xmlns:x14="${NS_X14}" mc:Ignorable="x14"><sheetPr><tabColor rgb="FF664356"/></sheetPr><dimension ref="A1:${pctCol}${pvLast}"/>`
+      + `<sheetViews><sheetView showGridLines="0" workbookViewId="0"><pane ySplit="${top1 + 1}" topLeftCell="A${top1 + 2}" activePane="bottomLeft" state="frozen"/><selection pane="bottomLeft" activeCell="A${top1 + 2}" sqref="A${top1 + 2}"/></sheetView></sheetViews>`
+      + `<sheetFormatPr defaultRowHeight="14.4"/>${colsX}<sheetData>${rowsX}</sheetData><mergeCells count="2"><mergeCell ref="A1:${pctCol}1"/><mergeCell ref="${pctCol}${top1}:${pctCol}${top1 + 1}"/></mergeCells>${cfx}`
+      + `<pageMargins left="0.5" right="0.5" top="0.6" bottom="0.6" header="0.3" footer="0.3"/><pageSetup paperSize="9" orientation="landscape"/><drawing r:id="rId2"/>`
+      + (hasSeg ? `<extLst><ext uri="{A8765BA9-456A-4dab-B4F3-ACF838C121DE}"><x14:slicerList><x14:slicer r:id="rId3"/></x14:slicerList></ext></extLst>` : "") + `</worksheet>`;
+    z.file(pvPath, pvSheet); z.file(relsPath(pvPath), relsXml(pvRelList));
+
+    /* -- hidden "Chart Data" sheet with PivotTable2 (feeds the pivot chart; same cache, so the slicer drives both) -- */
+    let cdRows = `<row r="1">${str("A1", S.txt, "Feeds the plan-to-performance chart on " + pv.name + ". Do not edit.")}</row>`;
+    cdRows += `<row r="${top2}">${c("A" + top2, S.txt)}${str("B" + top2, S.btn, "Values")}</row><row r="${top2 + 1}">${str("A" + (top2 + 1), S.btn, names[iS])}${str("B" + (top2 + 1), S.txt, DF2[0][0])}${str("C" + (top2 + 1), S.txt, DF2[1][0])}</row>`;
+    let r2 = top2 + 2; for (const [v, i] of vis) { const a = agg.get(i); cdRows += `<row r="${r2}">${num("A" + r2, S.date, v)}${num("B" + r2, S.num, a.L)}${num("C" + r2, S.num, a.M)}</row>`; r2++; }
+    const cdPath = "xl/worksheets/sqhChartData.xml";
+    z.file(cdPath, `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n<worksheet xmlns="${NS_MAIN}" xmlns:r="${NS_R}"><dimension ref="A1:C${Math.max(top2 + 1, r2 - 1)}"/><sheetViews><sheetView workbookViewId="0"/></sheetViews><sheetFormatPr defaultRowHeight="14.4"/><cols><col min="1" max="1" width="20" customWidth="1"/><col min="2" max="3" width="14" customWidth="1"/></cols><sheetData>${cdRows}</sheetData><pageMargins left="0.7" right="0.7" top="0.75" bottom="0.75" header="0.3" footer="0.3"/></worksheet>`);
+    z.file(relsPath(cdPath), relsXml([{ id: "rId1", type: RT + "pivotTable", target: "../pivotTables/" + pt2Path.split("/").pop() }])); addCT(cdPath, CT.ws);
+
+    /* -- chart -- */
+    const n2 = vis.length, rA = `'Chart Data'!$A$${top2 + 2}:$A$${top2 + 1 + n2}`;
+    const strCache = arr => `<c:strCache><c:ptCount val="${arr.length}"/>${arr.map((v, k) => `<c:pt idx="${k}"><c:v>${X(v)}</c:v></c:pt>`).join("")}</c:strCache>`;
+    const numCache = arr => `<c:numCache><c:formatCode>#,##0</c:formatCode><c:ptCount val="${arr.length}"/>${arr.map((v, k) => `<c:pt idx="${k}"><c:v>${+v.toFixed(3)}</c:v></c:pt>`).join("")}</c:numCache>`;
+    const fill = rgb => `<c:spPr><a:solidFill><a:srgbClr val="${rgb}"/></a:solidFill><a:ln><a:noFill/></a:ln></c:spPr>`;
+    const cats = vis.map(([v]) => dmy(v));
+    const ser = (k, col, rgb, vals) => `<c:ser><c:idx val="${k}"/><c:order val="${k}"/><c:tx><c:strRef><c:f>'Chart Data'!$${col}$${top2 + 1}</c:f>${strCache([DF2[k][0]])}</c:strRef></c:tx>${fill(rgb)}<c:invertIfNegative val="0"/>`
+      + `<c:cat><c:strRef><c:f>${rA}</c:f>${strCache(cats)}</c:strRef></c:cat><c:val><c:numRef><c:f>'Chart Data'!$${col}$${top2 + 2}:$${col}$${top2 + 1 + n2}</c:f>${numCache(vals)}</c:numRef></c:val></c:ser>`;
+    const txt = (sz, rgb, b) => `<c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="${sz}" b="${b ? 1 : 0}"><a:solidFill><a:srgbClr val="${rgb}"/></a:solidFill></a:defRPr></a:pPr><a:endParaRPr lang="en-US"/></a:p></c:txPr>`;
+    const pfmt = (k, rgb) => `<c:pivotFmt><c:idx val="${k}"/>${rgb ? fill(rgb) : ""}<c:marker><c:symbol val="none"/></c:marker></c:pivotFmt>`;
+    const chart = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="${NS_R}">`
+      + `<c:date1904 val="0"/><c:lang val="en-US"/><c:roundedCorners val="0"/><c:pivotSource><c:name>[${X(o.fileName || "Fabric_Plan.xlsx")}]Chart Data!PivotTable2</c:name><c:fmtId val="0"/></c:pivotSource>`
+      + `<c:chart><c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1400" b="1"><a:solidFill><a:srgbClr val="664356"/></a:solidFill></a:defRPr></a:pPr><a:r><a:rPr lang="en-US" sz="1400" b="1"><a:solidFill><a:srgbClr val="664356"/></a:solidFill></a:rPr><a:t>Daily plan to performance (Mtr)</a:t></a:r></a:p></c:rich></c:tx><c:overlay val="0"/></c:title><c:autoTitleDeleted val="0"/>`
+      + `<c:pivotFmts>${pfmt(0)}${pfmt(1, "D2C7CB")}${pfmt(2, "664356")}</c:pivotFmts>`
+      + `<c:plotArea><c:layout/><c:barChart><c:barDir val="col"/><c:grouping val="clustered"/><c:varyColors val="0"/>${ser(0, "B", "D2C7CB", vis.map(([, i]) => agg.get(i).L))}${ser(1, "C", "664356", vis.map(([, i]) => agg.get(i).M))}`
+      + `<c:gapWidth val="60"/><c:overlap val="-5"/><c:axId val="50010001"/><c:axId val="50010002"/></c:barChart>`
+      + `<c:catAx><c:axId val="50010001"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:delete val="0"/><c:axPos val="b"/><c:numFmt formatCode="d\\-mmm" sourceLinked="0"/><c:majorTickMark val="none"/><c:minorTickMark val="none"/><c:tickLblPos val="nextTo"/><c:spPr><a:ln w="9525"><a:solidFill><a:srgbClr val="BFBFBF"/></a:solidFill></a:ln></c:spPr>${txt(900, "595959")}<c:crossAx val="50010002"/><c:crosses val="autoZero"/><c:auto val="1"/><c:lblAlgn val="ctr"/><c:lblOffset val="100"/><c:noMultiLvlLbl val="0"/></c:catAx>`
+      + `<c:valAx><c:axId val="50010002"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:delete val="0"/><c:axPos val="l"/><c:majorGridlines><c:spPr><a:ln w="6350"><a:solidFill><a:srgbClr val="E6DFE1"/></a:solidFill></a:ln></c:spPr></c:majorGridlines><c:numFmt formatCode="#,##0" sourceLinked="0"/><c:majorTickMark val="none"/><c:minorTickMark val="none"/><c:tickLblPos val="nextTo"/><c:spPr><a:ln><a:noFill/></a:ln></c:spPr>${txt(900, "595959")}<c:crossAx val="50010001"/><c:crosses val="autoZero"/><c:crossBetween val="between"/></c:valAx>`
+      + `<c:spPr><a:noFill/><a:ln><a:noFill/></a:ln></c:spPr></c:plotArea><c:legend><c:legendPos val="t"/><c:overlay val="0"/>${txt(1000, "404040")}</c:legend><c:plotVisOnly val="1"/><c:dispBlanksAs val="gap"/></c:chart>`
+      + `<c:spPr><a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill><a:ln w="9525"><a:solidFill><a:srgbClr val="D2C7CB"/></a:solidFill></a:ln></c:spPr></c:chartSpace>`;
+    const chPath = "xl/charts/sqhChart1.xml"; z.file(chPath, chart); addCT(chPath, CT.ch);
+
+    /* -- drawing: slicer (top) + chart (below), right of the table -- */
+    const c0 = 3 + DF1.length; // first column after the spacer (0-based col index for drawing anchors)
+    const anchor = (fc, fr, tc, tr) => `<xdr:from><xdr:col>${fc}</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>${fr}</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:to><xdr:col>${tc}</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>${tr}</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to>`;
+    const slicerAnchor = hasSeg ? `<xdr:twoCellAnchor editAs="oneCell">${anchor(c0, 2, c0 + 7, 8)}<mc:AlternateContent xmlns:mc="${NS_MC}"><mc:Choice xmlns:a14="http://schemas.microsoft.com/office/drawing/2010/main" Requires="a14"><xdr:graphicFrame macro=""><xdr:nvGraphicFramePr><xdr:cNvPr id="2" name="Segment"/><xdr:cNvGraphicFramePr/></xdr:nvGraphicFramePr><xdr:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/></xdr:xfrm><a:graphic><a:graphicData uri="http://schemas.microsoft.com/office/drawing/2010/slicer"><sle:slicer xmlns:sle="http://schemas.microsoft.com/office/drawing/2010/slicer" name="Segment"/></a:graphicData></a:graphic></xdr:graphicFrame></mc:Choice><mc:Fallback><xdr:sp macro="" textlink=""><xdr:nvSpPr><xdr:cNvPr id="0" name=""/><xdr:cNvSpPr><a:spLocks noTextEdit="1"/></xdr:cNvSpPr></xdr:nvSpPr><xdr:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="4572000" cy="1100000"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:solidFill><a:prstClr val="white"/></a:solidFill><a:ln w="1"><a:solidFill><a:prstClr val="green"/></a:solidFill></a:ln></xdr:spPr><xdr:txBody><a:bodyPr vertOverflow="clip" horzOverflow="clip"/><a:lstStyle/><a:p><a:r><a:rPr lang="en-US" sz="1100"/><a:t>This shape represents a slicer. Slicers are supported in Excel 2010 or later.</a:t></a:r></a:p></xdr:txBody></xdr:sp></mc:Fallback></mc:AlternateContent><xdr:clientData/></xdr:twoCellAnchor>` : "";
+    const chTop = hasSeg ? 9 : 2;
+    const chartAnchor = `<xdr:twoCellAnchor editAs="oneCell">${anchor(c0, chTop, c0 + 16, chTop + 24)}<xdr:graphicFrame macro=""><xdr:nvGraphicFramePr><xdr:cNvPr id="3" name="Plan to performance"/><xdr:cNvGraphicFramePr/></xdr:nvGraphicFramePr><xdr:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/></xdr:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" r:id="rId1"/></a:graphicData></a:graphic></xdr:graphicFrame><xdr:clientData/></xdr:twoCellAnchor>`;
+    const drPath = "xl/drawings/sqhDrawing1.xml";
+    z.file(drPath, `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="${NS_R}">${slicerAnchor}${chartAnchor}</xdr:wsDr>`);
+    z.file(relsPath(drPath), relsXml([{ id: "rId1", type: RT + "chart", target: "../charts/sqhChart1.xml" }])); addCT(drPath, CT.dr);
+
+    /* -- workbook: hidden Chart Data sheet, slicer cache, defined name -- */
+    let nextRid = Math.max(0, ...wbRels.map(r => +(/^rId(\d+)$/.exec(r.id) || [0, 0])[1])) + 1;
+    const cdRid = "rId" + nextRid++; wbRels.push({ id: cdRid, type: RT + "worksheet", target: "worksheets/sqhChartData.xml" });
+    const sheetIds = [...wb.matchAll(/<sheet\b[^>]*sheetId="(\d+)"/g)].map(m => +m[1]); const cdId = Math.max(0, ...sheetIds) + 1;
+    wb = wb.replace("</sheets>", `<sheet name="Chart Data" sheetId="${cdId}" state="hidden" r:id="${cdRid}"/></sheets>`);
+    if (hasSeg) {
+      const scPath = "xl/slicerCaches/sqhSlicerCache1.xml", slPath = "xl/slicers/sqhSlicer1.xml";
+      const scRid = "rId" + nextRid++; wbRels.push({ id: scRid, type: "http://schemas.microsoft.com/office/2007/relationships/slicerCache", target: "slicerCaches/sqhSlicerCache1.xml" });
+      const order = segItems.map((v, k) => [v, k]).filter(([v]) => v !== null).sort((a, b) => ["Inhouse", "Outside", "AOP"].indexOf(a[0]) - ["Inhouse", "Outside", "AOP"].indexOf(b[0]));
+      z.file(scPath, `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n<slicerCacheDefinition xmlns="${NS_X14}" xmlns:mc="${NS_MC}" mc:Ignorable="x" xmlns:x="${NS_MAIN}" name="Slicer_Segment" sourceName="${X(names[segIdx])}"><pivotTables><pivotTable tabId="${pv.id}" name="PivotTable1"/><pivotTable tabId="${cdId}" name="PivotTable2"/></pivotTables><data><tabular pivotCacheId="${cacheId}" sortOrder="ascending" crossFilter="showItemsWithDataAtTop"><items count="${segItems.length}">${order.map(([, k]) => `<i x="${k}" s="1"/>`).join("")}${segItems.includes(null) ? `<i x="${segItems.indexOf(null)}" s="1" nd="1"/>` : ""}</items></tabular></data></slicerCacheDefinition>`);
+      z.file(slPath, `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n<slicers xmlns="${NS_X14}" xmlns:mc="${NS_MC}" mc:Ignorable="x" xmlns:x="${NS_MAIN}"><slicer name="Segment" cache="Slicer_Segment" caption="Segment · Inhouse / Outside / AOP" columnCount="${Math.max(1, order.length)}" rowHeight="241300" style="SlicerStyleLight1"/></slicers>`);
+      addCT(scPath, CT.sc); addCT(slPath, CT.sl);
+      const ext = `<ext uri="{BBE1A952-AA13-448e-AADC-164F8A28A991}" xmlns:x14="${NS_X14}"><x14:slicerCaches><x14:slicerCache r:id="${scRid}"/></x14:slicerCaches></ext>`;
+      wb = /<extLst>/.test(wb) ? wb.replace("<extLst>", "<extLst>" + ext) : wb.replace("</workbook>", `<extLst>${ext}</extLst></workbook>`);
+      const dn = `<definedName name="Slicer_Segment">#N/A</definedName>`;
+      if (/<definedNames>/.test(wb)) wb = wb.replace("<definedNames>", "<definedNames>" + dn);
+      else wb = /<calcPr\b/.test(wb) ? wb.replace(/<calcPr\b/, `<definedNames>${dn}</definedNames><calcPr`) : wb.replace(/<pivotCaches>/, `<definedNames>${dn}</definedNames><pivotCaches>`);
+    }
+    z.file(wbPath, wb); z.file(relsPath(wbPath), relsXml(wbRels)); z.file("[Content_Types].xml", ct);
+    return { ok: true, sx, note: `pivot rebuilt · ${vis.length} dates · ${D.rows.length} source rows${hasSeg ? " · Segment slicer" : ""}${sFix.size ? ` · ${sFix.size} Agreed RFD dates given date format` : ""}`, rows: vis.length, hasSeg };
+  }
+  return { build };
+})();
+
 async function run(){
   $("errBox").innerHTML="";$("results").hidden=true;$("dlInline").hidden=true;$("runBtn").disabled=true;$("prog").classList.remove("fail","done");
   prog(1,"Starting…");
@@ -1661,7 +2004,12 @@ async function run(){
     // segment per plan line for the plan-to-performance charts: Category AOP -> AOP; else Dyeing Mill Outside / Inhouse
     DEM.forEach((x,i)=>{ const r=rows[i]; const cat=String(val(r,"R").v??""); const ml=ALLOC&&ALLOC.mill?ALLOC.mill.get(r):null;
       x.g=/aop/i.test(cat)?2:(ml==="Outside"?1:(ml==="Inhouse"?0:(ALLOC?0:null))); });
-    const z=F.zip; z.file(F.path,out);
+    const z=F.zip;
+    // Date Wise Pivot -Hues: fresh pivot (cache, captions, Kg, Achievement %, Segment slicer, pivot chart) so it opens already up to date
+    let PIV=null; prog(76,"Rebuilding the Date Wise Pivot…");
+    try{ PIV=await HPV.build(z,out,{sst:F.sst,srcLast:ALLOC?ALLOC.lastCol:"AX",fileName:outNames().ott,report:toSerial($("runDate").value)}); if(PIV&&PIV.ok) out=PIV.sx; else console.warn("pivot not rebuilt:",PIV&&PIV.note); }
+    catch(e){ console.error("pivot rebuild failed",e); PIV={ok:false,note:e.message||String(e)}; }
+    z.file(F.path,out);
     // Buyer Wise OTT Hit Rate: move the daily date (C7) to the day before the report date, and drop stale cached results
     try{
       const bwPath=await sheetPath(z,"Buyer Wise OTT Hit Rate");
@@ -1698,7 +2046,7 @@ async function run(){
     prog(98,"Building the update log…");
     outputs={ott:ottBlob,log:logBlob,bw:ALLOC?ALLOC.batchwise:null,ottName:outNames().ott,logName:outNames().log,bwName:outNames().bw};
     $("dlBW").hidden=!ALLOC;
-    render({alloc:ALLOC?ALLOC.summary:null,allocErr:ALLOCERR,aop:AR?{rows:aopReport.length,lines:AR.lines,used:[...aopPools.values()].reduce((a,b)=>a+b,0),before:aopReport.reduce((s,x)=>s+x.before,0),after:aopReport.reduce((s,x)=>s+x.after,0),noMatch:aopNoMatch.length,left:[...aopLeft.values()].reduce((a,b)=>a+b,0)}:null,kpk:{noMatch:kpkNoMatch.map(r=>`row ${r} ${buyer.get(r)} · ${String(val(r,"J").v??"")}`),rows:kpkReport.length,before:kpkReport.reduce((s,x)=>s+x.before,0),after:kpkReport.reduce((s,x)=>s+x.after,0),pool:[...new Set(kpk.values())].reduce((a,k)=>a+(KP.pool.get(k)||0),0),left:kpkLeft,skippedSL:KP.skippedSL,from:$("kpkFrom").value},rows:rows.length,step2,report,nGroups,added,totBefore,totAfter,buyers,anChanged,anComparable,open,docRows:D.rows});
+    render({piv:PIV,alloc:ALLOC?ALLOC.summary:null,allocErr:ALLOCERR,aop:AR?{rows:aopReport.length,lines:AR.lines,used:[...aopPools.values()].reduce((a,b)=>a+b,0),before:aopReport.reduce((s,x)=>s+x.before,0),after:aopReport.reduce((s,x)=>s+x.after,0),noMatch:aopNoMatch.length,left:[...aopLeft.values()].reduce((a,b)=>a+b,0)}:null,kpk:{noMatch:kpkNoMatch.map(r=>`row ${r} ${buyer.get(r)} · ${String(val(r,"J").v??"")}`),rows:kpkReport.length,before:kpkReport.reduce((s,x)=>s+x.before,0),after:kpkReport.reduce((s,x)=>s+x.after,0),pool:[...new Set(kpk.values())].reduce((a,k)=>a+(KP.pool.get(k)||0),0),left:kpkLeft,skippedSL:KP.skippedSL,from:$("kpkFrom").value},rows:rows.length,step2,report,nGroups,added,totBefore,totAfter,buyers,anChanged,anComparable,open,docRows:D.rows});
     setViewer(false);
     autoSave();
     status(`Done · ${rows.length.toLocaleString()} plan rows processed.`);
@@ -1810,6 +2158,7 @@ function render(R){
   if(R.kpk&&R.kpk.rows){ const fd=new Date(R.kpk.from+"T00:00:00"); const left=[...R.kpk.left].map(([k,v])=>`${k.replace("|"," gsm ")} ${fmt(v)} m`).join(", ");
     flags.push(`<div class="flag good"><b>KPK no-PO lines</b>&nbsp;· ${R.kpk.rows} lines filled from sheet 280 (RFD from ${fd.getDate()} ${MON[fd.getMonth()]}${R.kpk.skippedSL?`, ${R.kpk.skippedSL} Sri Lanka PO rows skipped`:""}): ${fmt(R.kpk.pool)} m RFD · M ${fmt(R.kpk.before)} → ${fmt(R.kpk.after)} m${left?` · more than the plan, left over: ${esc(left)}`:""}.</div>`); }
   if(R.kpk&&R.kpk.noMatch&&R.kpk.noMatch.length) flags.push(`<div class="flag warn"><b>${R.kpk.noMatch.length} KPK line(s) with no PO</b>&nbsp;have no 120/140 gsm or colour to match, so sheet 280 can't fill them. M left as it was: ${esc(R.kpk.noMatch.slice(0,6).join("; "))}${R.kpk.noMatch.length>6?" …":""}</div>`);
+  if(R.piv) flags.push(R.piv.ok?`<div class="flag good"><b>Date Wise Pivot</b>&nbsp;· ${esc(R.piv.note)} · opens already refreshed, and refreshes again when the file is opened.</div>`:`<div class="flag warn"><b>Date Wise Pivot not rebuilt</b>&nbsp;· ${esc(R.piv.note||"")}. The sheet was left as it was in the uploaded file.</div>`);
   if(R.alloc){ const a=R.alloc; flags.push(`<div class="flag good"><b>Batch allocation</b>&nbsp;· ${a.marked} batches marked Line plan · ${a.withBatch} lines carry batch details · ${a.splitLines} lines split into ${a.splitRows} rows · Need Additional ${a.needAdd} lines (${fmt(a.needAddM)} m) · No Batch Found ${a.noBatch} lines · batch-wise file ${a.bwRows} rows, ${fmt(a.bwKg)} kg.</div>`); }
   if(R.allocErr) flags.push(`<div class="flag warn"><b>Batch allocation stopped</b>&nbsp;· ${esc(R.allocErr)}. The updated Fabric Plan is still fine, just without batch columns.</div>`);
   if(R.aop) flags.push(`<div class="flag ${R.aop.rows?"good":"warn"}"><b>AOP release report</b>&nbsp;· ${R.aop.rows} AOP line(s) matched by PO + colour: ${fmt(R.aop.used)} m released · M ${fmt(R.aop.before)} → ${fmt(R.aop.after)} m${R.aop.left>EPS?` · ${fmt(R.aop.left)} m more than the plan`:""}${R.aop.noMatch?` · ${R.aop.noMatch} AOP line(s) not found in the report follow the normal update`:""}.</div>`);
@@ -2055,17 +2404,19 @@ function dayChartSVG(days,ariaLabel,color,popSuffix,R,future){
   const fs=colW<30?9.5:colW<44?10.5:12, bw=Math.max(6,Math.min(40,colW*0.54));
   let g=`<svg viewBox="0 0 ${W} ${H}" style="width:${W}px;max-width:none" role="img" aria-label="${ariaLabel}">`;
   for(let v=0;v<=yMax+1e-9;v+=step) g+=`<line x1="${left}" x2="${W-6}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text class="mut" x="${left-6}" y="${y(v)+4}" text-anchor="end">${fmtK(v)}</text>`;
+  let hits="";   // full-height hover targets, drawn last so any point of the column opens the pop-up
   axis.forEach((s0,i)=>{const o=by.get(s0), f=fut.get(s0), d=sDate(s0), cx=left+i*colW+colW/2, wk=d.getUTCDay()===5;
     if(wk) g+=`<rect x="${left+i*colW}" y="${top}" width="${colW}" height="${ph}" fill="var(--q5)" fill-opacity=".55"></rect>`;
     const yd=s0===yday; if(yd) g+=`<rect x="${left+i*colW+1}" y="${top-18}" width="${colW-2}" height="${ph+18+34}" rx="6" fill="var(--q10)" stroke="var(--q60)" stroke-width="1.2"></rect><text x="${cx}" y="${top-6}" text-anchor="middle" style="font:700 ${Math.max(9,fs-1)}px var(--f-body);fill:var(--q)">${colW<44?"Yday":"Yesterday"}</text>`;
     if(o){ const p=pc(o);
       if(popSuffix!==null) g+=`<rect x="${cx-bw/2}" y="${y(o.d)}" width="${bw}" height="${Math.max(1,top+ph-y(o.d))}" rx="2" fill="none" stroke="${color}" stroke-opacity=".55" stroke-dasharray="3 2"></rect>`;
-      g+=`<rect class="barhov" data-pop="day|${o.s}${popSuffix!==null?"|"+popSuffix:""}" x="${cx-bw/2}" y="${Math.min(y(o.a),top+ph-3)}" width="${bw}" height="${Math.max(3,top+ph-y(o.a))}" rx="2" fill="${color}"></rect>`;
+      g+=`<rect class="barhov" x="${cx-bw/2}" y="${Math.min(y(o.a),top+ph-3)}" width="${bw}" height="${Math.max(3,top+ph-y(o.a))}" rx="2" fill="${color}"></rect>`;
       g+=`<text x="${cx}" y="${Math.min(y(o.a),popSuffix!==null?y(o.d):y(o.a))-5}" text-anchor="middle" class="pct ${cls(p)}" style="font-size:${fs}px">${Math.round(p)}%</text>`; }
     else if(f) g+=`<rect x="${cx-bw/2}" y="${y(f.d)}" width="${bw}" height="${Math.max(1,top+ph-y(f.d))}" rx="2" fill="none" stroke="${color}" stroke-opacity=".35" stroke-dasharray="2 3"><title>${fromSerial(s0)} · plan ${fmt(f.d)} m (upcoming)</title></rect>`;
     g+=`<text class="mut" x="${cx}" y="${top+ph+14}" text-anchor="middle" style="font-size:${fs}px${yd?";font-weight:700;fill:var(--q)":""}">${d.getUTCDate()}</text>`;
+    if(o||f) hits+=`<rect class="colhit" data-pop="day|${s0}${popSuffix!==null?"|"+popSuffix:""}" x="${left+i*colW}" y="${top-20}" width="${colW}" height="${ph+20+34}"></rect>`;
     if(i===0||d.getUTCDate()===1) g+=`<text class="mut" x="${cx}" y="${top+ph+29}" text-anchor="middle" style="font-size:${fs}px">${MON[d.getUTCMonth()]}</text>`;});
-  return g+"</svg>";
+  return g+hits+"</svg>";
 }
 function dayAgg(R,seg){ const by=new Map();
   for(const x of DEM){ if(!(x.L>0)||!inRange(x,R))continue; if(seg!==null&&x.g!==seg)continue; if(!by.has(x.s))by.set(x.s,{s:x.s,d:0,a:0}); const o=by.get(x.s); o.d+=x.L; o.a+=x.M+x.O; }
