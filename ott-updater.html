@@ -32,10 +32,11 @@
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.5}
-.wrap{max-width:min(1760px,100%);margin:0 auto;padding-inline:clamp(16px,2.2vw,40px);padding-block:28px 64px;display:grid;gap:22px}
+.wrap{max-width:min(1560px,100%);margin:0 auto;padding-inline:clamp(16px,2.2vw,40px);padding-block:28px 64px;display:grid;gap:22px}
 header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;border-bottom:3px solid var(--q);padding-bottom:14px}
 .brand{display:flex;gap:14px;align-items:center}
-.hdate{display:flex;flex-direction:column;align-items:center;line-height:1.1;margin:0 auto;padding:0 12px}
+.hdate{display:flex;flex-direction:column;align-items:flex-end;line-height:1.1;margin-left:auto;padding:0 18px 0 12px}
+@media (max-width:640px){.hdate{margin-left:0;align-items:flex-start;padding:0}}
 .hdate span{font:600 12px var(--f-mono,monospace);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
 .hdate b{font:700 26px var(--f-display);color:var(--q)}
 .mark{width:44px;height:44px;border-radius:10px;background:var(--q);color:#fff;display:grid;place-items:center;font:800 24px/1 var(--f-display)}
@@ -325,6 +326,7 @@ td.fail.hov:hover{background:var(--red-soft)}
 
 /* fit to screen: nothing pushes the page sideways; wide charts/tables scroll inside their box */
 .wrap>*{min-width:0;max-width:100%}
+@media (min-width:1100px){.wrap{padding-right:clamp(52px,3.4vw,64px)}}
 #dayChart{overflow-x:auto}
 .wrap table{max-width:100%}
 .wrap :is(section,div):has(> table){overflow-x:auto}
@@ -430,12 +432,13 @@ td.fail.hov:hover{background:var(--red-soft)}
 
   <section id="daySec" class="dem" hidden aria-label="Date-wise RFD and achieve %">
         <div class="row2"><h2>Cumulative plan to performance <span class="stamp" data-stamp></span></h2><span class="status" id="dayNote"></span></div>
-        <div class="dayrange" role="group" aria-label="Date range for plan to performance">
-          <button type="button" class="chip" data-dr="ytd" aria-pressed="true">Up to yesterday</button>
-          <button type="button" class="chip" data-dr="month" aria-pressed="false">This month</button>
-          <button type="button" class="chip" data-dr="7" aria-pressed="false">Last 7 days</button>
-          <label for="dayFrom">From <input type="date" id="dayFrom"></label>
-          <label for="dayTo">To <input type="date" id="dayTo"></label>
+        <div class="demctl">
+          <div class="dp" id="dp2">
+            <button type="button" class="dpbtn" id="dpBtn2" aria-haspopup="dialog" aria-expanded="false">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+              <span id="dpLabel2">Up to yesterday</span><span class="caret" aria-hidden="true">▾</span>
+            </button>
+          </div>
         </div>
         <div class="chartbox">
           <div class="seghead"><div class="legend" id="dayLegend" style="margin:0"></div>
@@ -467,6 +470,8 @@ td.fail.hov:hover{background:var(--red-soft)}
                 <button type="button" data-q="ytd">Up to yesterday</button>
                 <button type="button" data-q="yday">Yesterday</button>
                 <button type="button" data-q="mtd">This month to yesterday</button>
+                <button type="button" data-q="7">Last 7 days</button>
+                <button type="button" data-q="month">Full month</button>
                 <button type="button" data-q="today">Today</button>
               </div>
               <div class="dphead"><button type="button" id="dpPrev" aria-label="Previous month">‹</button><b id="dpMonth"></b><button type="button" id="dpNext" aria-label="Next month">›</button></div>
@@ -2013,7 +2018,7 @@ function hideTip2(){ $("tip2").hidden=true; $("tip").querySelectorAll("tr.pick.o
 function hideTip(){ $("tip").hidden=true; hideTip2(); TIP.key=null; }
 function holdTips(){ clearTimeout(TIP.t1); }
 function holdAll(){ clearTimeout(TIP.t1); clearTimeout(TIP.sw); }
-function releaseTips(){ clearTimeout(TIP.t1); TIP.t1=setTimeout(hideTip,320); }
+function releaseTips(){ clearTimeout(TIP.t1); TIP.t1=setTimeout(hideTip,220); }
 let LAST_DAYS_R=null;
 /* ---------- plan to performance: own date range, cumulative + Inhouse / Outside / AOP ---------- */
 const SEGN=["Inhouse","Outside","AOP"], SEGC=["var(--seg-in)","var(--seg-out)","var(--seg-aop)"];
@@ -2021,25 +2026,31 @@ let daySel={mode:"ytd"};
 function dayRange(){
   const rep=toSerial(DASH.report||$("runDate").value); if(!rep) return null;
   if(daySel.mode==="ytd") return {lo:null,hi:rep-1,label:`Up to ${fromSerial(rep-1)}`};
-  if(daySel.mode==="month"){ const d=new Date(Date.UTC(1899,11,30)+(rep-1)*864e5); const lo=toSerial(`${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,"0")}-01`); return {lo,hi:rep-1,label:`${fromSerial(lo)} to ${fromSerial(rep-1)}`}; }
+  if(daySel.mode==="month"){ const d=new Date(Date.UTC(1899,11,30)+(rep-1)*864e5); const lo=toSerial(`${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,"0")}-01`); const d2=sDate(lo); return {lo,hi:rep-1,axisHi:ymSerial(d2.getUTCFullYear(),d2.getUTCMonth()+1,0),label:`${fromSerial(lo)} to ${fromSerial(rep-1)}`}; }
   if(daySel.mode==="7") return {lo:rep-7,hi:rep-1,label:`${fromSerial(rep-7)} to ${fromSerial(rep-1)}`};
   const {lo,hi}=daySel; return {lo,hi,label:lo&&hi?(lo===hi?fromSerial(lo):`${fromSerial(lo)} to ${fromSerial(hi)}`):lo?`From ${fromSerial(lo)}`:`Up to ${fromSerial(hi)}`};
 }
-function syncDayInputs(R){ const iso=n=>{ if(!n) return ""; const d=new Date(Date.UTC(1899,11,30)+n*864e5); return d.toISOString().slice(0,10); };
-  if(R){ $("dayFrom").value=iso(R.lo); $("dayTo").value=iso(R.hi); }
-  document.querySelectorAll(".dayrange .chip").forEach(c=>c.setAttribute("aria-pressed",String(c.dataset.dr===daySel.mode))); }
-function dayChartSVG(days,ariaLabel,color,popSuffix){
+function syncDayInputs(R){ $("dpLabel2").textContent=!R?"Up to yesterday":daySel.mode==="ytd"?`Up to yesterday · ${R.label.replace("Up to ","")}`:daySel.mode==="month"?`Full month · ${MONL[sDate(R.lo).getUTCMonth()]} ${sDate(R.lo).getUTCFullYear()}`:daySel.mode==="7"?`Last 7 days · ${R.label}`:R.label; }
+function dayChartSVG(days,ariaLabel,color,popSuffix,R,future){
   const pc=o=>o.d>0?o.a/o.d*100:0, cls=p=>p>=95?"good":p>=70?"mid":"bad";
-  const avail=Math.max(360,(($("dayChart").clientWidth)||940)-4), colW=Math.max(34,Math.floor((avail-56-16)/days.length)), top=30, ph=Math.round(Math.min(260,Math.max(160,window.innerHeight*0.22))), left=56, W=left+days.length*colW+16, H=top+ph+44;
-  const mx=Math.max(...days.map(o=>Math.max(o.a,o.d)),1), step=niceStep(mx/4), yMax=Math.ceil(mx/step)*step||1, y=v=>top+ph-v/yMax*ph;
+  // continuous axis: every calendar day from start to end (full month in "Full month"), empty days keep their slot
+  const by=new Map(days.map(o=>[o.s,o])), fut=new Map((future||[]).map(o=>[o.s,o]));
+  const a0=R&&R.lo!=null?R.lo:days[0].s, a1=Math.max(R&&R.axisHi!=null?R.axisHi:(R&&R.hi!=null?R.hi:days[days.length-1].s),days[days.length-1].s);
+  let axis=[]; if(a1-a0<=92){ for(let n=a0;n<=a1;n++) axis.push(n); } else axis=days.map(o=>o.s);
+  const n=axis.length, avail=Math.max(320,(($("dayChart").clientWidth)||940)-4), left=48, colW=Math.max(n>40?16:20,(avail-left-10)/n), top=24, ph=Math.round(Math.min(210,Math.max(140,window.innerHeight*0.19))), W=Math.round(left+n*colW+10), H=top+ph+40;
+  const mx=Math.max(...days.map(o=>Math.max(o.a,o.d)),...(future||[]).map(o=>o.d),1), step=niceStep(mx/4), yMax=Math.ceil(mx/step)*step||1, y=v=>top+ph-v/yMax*ph;
+  const fs=colW<30?9.5:colW<44?10.5:12, bw=Math.max(6,Math.min(46,colW*0.66));
   let g=`<svg viewBox="0 0 ${W} ${H}" style="width:${W}px;max-width:none" role="img" aria-label="${ariaLabel}">`;
-  for(let v=0;v<=yMax+1e-9;v+=step) g+=`<line x1="${left}" x2="${W-8}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text class="mut" x="${left-6}" y="${y(v)+4}" text-anchor="end">${fmtK(v)}</text>`;
-  days.forEach((o,i)=>{const x0=left+i*colW, bw=Math.max(14,Math.min(64,colW*0.62)), p=pc(o), d=sDate(o.s), cx=x0+colW/2;
-    if(popSuffix!==null) g+=`<rect x="${cx-bw/2}" y="${y(o.d)}" width="${bw}" height="${Math.max(1,top+ph-y(o.d))}" rx="3" fill="none" stroke="${color}" stroke-opacity=".55" stroke-dasharray="3 2"></rect>`;
-    g+=`<rect class="barhov" data-pop="day|${o.s}${popSuffix!==null?"|"+popSuffix:""}" x="${cx-bw/2}" y="${Math.min(y(o.a),top+ph-4)}" width="${bw}" height="${Math.max(4,top+ph-y(o.a))}" rx="3" fill="${color}"></rect>`;
-    g+=`<text x="${cx}" y="${Math.min(y(o.a),popSuffix!==null?y(o.d):y(o.a))-7}" text-anchor="middle" class="pct ${cls(p)}">${Math.round(p)}%</text>`;
-    g+=`<text class="mut" x="${cx}" y="${top+ph+16}" text-anchor="middle">${d.getUTCDate()}</text>`;
-    if(i===0||d.getUTCDate()===1) g+=`<text class="mut" x="${cx}" y="${top+ph+32}" text-anchor="middle">${MON[d.getUTCMonth()]}</text>`;});
+  for(let v=0;v<=yMax+1e-9;v+=step) g+=`<line x1="${left}" x2="${W-6}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text class="mut" x="${left-6}" y="${y(v)+4}" text-anchor="end">${fmtK(v)}</text>`;
+  axis.forEach((s0,i)=>{const o=by.get(s0), f=fut.get(s0), d=sDate(s0), cx=left+i*colW+colW/2, wk=d.getUTCDay()===5;
+    if(wk) g+=`<rect x="${left+i*colW}" y="${top}" width="${colW}" height="${ph}" fill="var(--q5)" fill-opacity=".55"></rect>`;
+    if(o){ const p=pc(o);
+      if(popSuffix!==null) g+=`<rect x="${cx-bw/2}" y="${y(o.d)}" width="${bw}" height="${Math.max(1,top+ph-y(o.d))}" rx="2" fill="none" stroke="${color}" stroke-opacity=".55" stroke-dasharray="3 2"></rect>`;
+      g+=`<rect class="barhov" data-pop="day|${o.s}${popSuffix!==null?"|"+popSuffix:""}" x="${cx-bw/2}" y="${Math.min(y(o.a),top+ph-3)}" width="${bw}" height="${Math.max(3,top+ph-y(o.a))}" rx="2" fill="${color}"></rect>`;
+      g+=`<text x="${cx}" y="${Math.min(y(o.a),popSuffix!==null?y(o.d):y(o.a))-5}" text-anchor="middle" class="pct ${cls(p)}" style="font-size:${fs}px">${Math.round(p)}%</text>`; }
+    else if(f) g+=`<rect x="${cx-bw/2}" y="${y(f.d)}" width="${bw}" height="${Math.max(1,top+ph-y(f.d))}" rx="2" fill="none" stroke="${color}" stroke-opacity=".35" stroke-dasharray="2 3"><title>${fromSerial(s0)} · plan ${fmt(f.d)} m (upcoming)</title></rect>`;
+    g+=`<text class="mut" x="${cx}" y="${top+ph+14}" text-anchor="middle" style="font-size:${fs}px">${d.getUTCDate()}</text>`;
+    if(i===0||d.getUTCDate()===1) g+=`<text class="mut" x="${cx}" y="${top+ph+29}" text-anchor="middle" style="font-size:${fs}px">${MON[d.getUTCMonth()]}</text>`;});
   return g+"</svg>";
 }
 function dayAgg(R,seg){ const by=new Map();
@@ -2050,19 +2061,18 @@ function drawDays(){
   const R=DEM?dayRange():null; LAST_DAYS_R=R; syncDayInputs(R);
   document.querySelectorAll("#segChips .chip").forEach(c=>c.setAttribute("aria-pressed",String(c.dataset.g===(daySeg===null?"all":String(daySeg)))));
   const color=daySeg===null?"var(--accent)":SEGC[daySeg], name=daySeg===null?"All lines":SEGN[daySeg];
-  $("dayLegend").innerHTML=`<span><i style="background:${color}"></i>RFD qty (+ recovered) · ${name}</span>${daySeg!==null?`<span><i style="background:none;outline:1px dashed ${color}"></i>Plan</span>`:""}<span>% above bar = achieve % vs plan · hover a bar for buyers · lines with plan ≤ 0 left out</span>`;
+  $("dayLegend").innerHTML=`<span><i style="background:${color}"></i>RFD qty (+ recovered) · ${name}</span>${daySeg!==null?`<span><i style="background:none;outline:1px dashed ${color}"></i>Plan</span>`:""}${daySel.mode==="month"?`<span><i style="background:none;outline:1px dotted ${color}"></i>Upcoming plan</span>`:""}`;
   if(!DEM||!R){$("dayChart").innerHTML='<p class="status">Run the update to see plan to performance.</p>';$("dayNote").textContent="";return}
   const hasSeg=DEM.some(x=>x.g!==undefined&&x.g!==null);
   if(daySeg!==null&&!hasSeg){$("dayChart").innerHTML='<p class="status">Inhouse / Outside / AOP appear after the next update run with batch allocation ticked.</p>';$("dayNote").textContent=R.label;return}
   const days=dayAgg(R,daySeg);
   if(!days.length){$("dayChart").innerHTML='<p class="status">No plan in this period.</p>';$("dayNote").textContent=`${R.label} · ${name}`;return}
-  $("dayChart").innerHTML=dayChartSVG(days,`${name}: plan and RFD by date`,color,daySeg);
+  const future=R.axisHi>R.hi?dayAgg({lo:R.hi+1,hi:R.axisHi},daySeg):[];
+  $("dayChart").innerHTML=dayChartSVG(days,`${name}: plan and RFD by date`,color,daySeg,R,future);
   const T=DEM.reduce((t,x)=>(x.L>0&&inRange(x,R)&&(daySeg===null||x.g===daySeg)?{d:t.d+x.L,a:t.a+x.M+x.O}:t),{d:0,a:0});   // all lines in range, so segments add up to All
   $("dayNote").textContent=`Plan ${fmt(T.d)} m · RFD ${fmt(T.a)} m · ${Math.round(T.d?T.a/T.d*100:0)}%`;
 }
 $("segChips").addEventListener("click",e=>{const b=e.target.closest(".chip"); if(!b) return; daySeg=b.dataset.g==="all"?null:+b.dataset.g; drawDays();});
-document.querySelector(".dayrange").addEventListener("click",e=>{const b=e.target.closest(".chip"); if(!b) return; daySel={mode:b.dataset.dr}; drawDays();});
-["dayFrom","dayTo"].forEach(id=>$(id).addEventListener("change",()=>{ const lo=toSerial($("dayFrom").value), hi=toSerial($("dayTo").value); if(!lo&&!hi) return; daySel={mode:"range",lo:lo&&hi&&lo>hi?hi:lo,hi:lo&&hi&&lo>hi?lo:hi}; drawDays(); }));
 function drawTBC(){
   const head=`<thead><tr><th>Buyer</th><th class="n">Demand qty (TBC)</th><th class="n">RFD qty</th><th class="n">Balance qty</th></tr></thead>`;
   if(!DEM){$("tbcTbl").innerHTML=head+`<tbody><tr><td colspan="4" style="color:var(--muted)">Run the update to see Plan TBC qty by buyer.</td></tr></tbody>`;return}
@@ -2232,7 +2242,8 @@ if(/github\.io$/.test(location.hostname)||location.protocol==="file:"||location.
   document.addEventListener("drop",e=>{e.preventDefault();off();document.querySelectorAll(".drop.over").forEach(d=>d.classList.remove("over"))});
   window.addEventListener("blur",off); })();
 /* ---------- date range calendar ---------- */
-const DP={view:null,lo:null,hi:null,hover:null};
+const DP={view:null,lo:null,hi:null,hover:null,tgt:"dem"};
+const MONL=["January","February","March","April","May","June","July","August","September","October","November","December"];
 const serialToday=()=>{const d=new Date();return Math.round((Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())-Date.UTC(1899,11,30))/864e5)};
 const sDate=n=>new Date(Date.UTC(1899,11,30)+n*864e5);
 const ymSerial=(y,m,d)=>Math.round((Date.UTC(y,m,d)-Date.UTC(1899,11,30))/864e5);
@@ -2249,13 +2260,16 @@ function dpDraw(){
   $("dpGrid").innerHTML=h;
   $("dpSel").textContent=DP.lo===null?"Click a start date, then an end date":DP.hi===null?`From ${fromSerial(DP.lo)} · pick end date`:(DP.lo===DP.hi?fromSerial(DP.lo):`${fromSerial(Math.min(DP.lo,DP.hi))} to ${fromSerial(Math.max(DP.lo,DP.hi))}`);
 }
-function dpOpen(){ const rep=toSerial(DASH.report||$("runDate").value)||serialToday();
-  if(demSel.mode==="range"){DP.lo=demSel.lo;DP.hi=demSel.hi}else{DP.lo=null;DP.hi=null}
+function dpOpen(tgt){ const rep=toSerial(DASH.report||$("runDate").value)||serialToday(); DP.tgt=tgt||"dem";
+  const sel=DP.tgt==="day"?daySel:demSel, wrap=$(DP.tgt==="day"?"dp2":"dp"); if($("dpPop").parentElement!==wrap) wrap.appendChild($("dpPop"));
+  $("dpPop").querySelector('[data-q="month"]').hidden=DP.tgt!=="day";
+  if(sel.mode==="range"){DP.lo=sel.lo;DP.hi=sel.hi}else{DP.lo=null;DP.hi=null}
   const base=sDate(DP.lo!==null?DP.lo:rep-1); DP.view=new Date(Date.UTC(base.getUTCFullYear(),base.getUTCMonth(),1)); DP.hover=null;
-  $("dpPop").hidden=false; $("dpBtn").setAttribute("aria-expanded","true"); dpDraw(); }
-function dpClose(){ $("dpPop").hidden=true; $("dpBtn").setAttribute("aria-expanded","false"); }
-function dpSet(sel){ demSel=sel; dpClose(); drawDemand(); if(!DEM) $("dpLabel").textContent=sel.mode==="ytd"?"Up to yesterday":(sel.lo===sel.hi?fromSerial(sel.lo):`${fromSerial(sel.lo)} to ${fromSerial(sel.hi)}`); }
-$("dpBtn").addEventListener("click",()=>{$("dpPop").hidden?dpOpen():dpClose()});
+  $("dpPop").hidden=false; $(DP.tgt==="day"?"dpBtn2":"dpBtn").setAttribute("aria-expanded","true"); dpDraw(); }
+function dpClose(){ $("dpPop").hidden=true; $("dpBtn").setAttribute("aria-expanded","false"); $("dpBtn2").setAttribute("aria-expanded","false"); }
+function dpSet(sel){ if(DP.tgt==="day"){ daySel=sel; dpClose(); drawDays(); return; } demSel=sel; dpClose(); drawDemand(); if(!DEM) $("dpLabel").textContent=sel.mode==="ytd"?"Up to yesterday":(sel.lo===sel.hi?fromSerial(sel.lo):`${fromSerial(sel.lo)} to ${fromSerial(sel.hi)}`); }
+$("dpBtn").addEventListener("click",e=>{e.stopPropagation(); (!$("dpPop").hidden&&DP.tgt==="dem")?dpClose():dpOpen("dem")});
+$("dpBtn2").addEventListener("click",e=>{e.stopPropagation(); (!$("dpPop").hidden&&DP.tgt==="day")?dpClose():dpOpen("day")});
 $("dpPrev").addEventListener("click",()=>{DP.view=new Date(Date.UTC(DP.view.getUTCFullYear(),DP.view.getUTCMonth()-1,1));dpDraw()});
 $("dpNext").addEventListener("click",()=>{DP.view=new Date(Date.UTC(DP.view.getUTCFullYear(),DP.view.getUTCMonth()+1,1));dpDraw()});
 $("dpGrid").addEventListener("click",e=>{const b=e.target.closest("button[data-s]");if(!b)return;const n=+b.dataset.s;
@@ -2268,14 +2282,18 @@ document.querySelectorAll(".dpquick button").forEach(b=>b.addEventListener("clic
   if(b.dataset.q==="ytd")return dpSet({mode:"ytd"});
   if(b.dataset.q==="yday")return dpSet({mode:"range",lo:y,hi:y});
   if(b.dataset.q==="today")return dpSet({mode:"range",lo:rep,hi:rep});
+  if(b.dataset.q==="month")return dpSet({mode:"month"});
+  if(b.dataset.q==="7")return dpSet(DP.tgt==="day"?{mode:"7"}:{mode:"range",lo:rep-7,hi:y});
   if(b.dataset.q==="mtd")return dpSet({mode:"range",lo:ymSerial(dt.getUTCFullYear(),dt.getUTCMonth(),1),hi:y});}));
-document.addEventListener("click",e=>{if(!$("dpPop").hidden&&!$("dp").contains(e.target))dpClose()});
+document.addEventListener("click",e=>{if(!$("dpPop").hidden&&!$("dpPop").parentElement.contains(e.target))dpClose()});
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("dpPop").hidden)dpClose()});
 $("runDate").addEventListener("change",()=>{if(DEM)drawDemand()});
 drawTBC();
 const popOf=t=>t&&t.closest?t.closest("[data-pop]"):null;
 document.addEventListener("mouseover",e=>{const el=popOf(e.target); if(!el||$("tip").contains(el))return; holdTips(); clearTimeout(TIP.sw);
-  const id=el.dataset.pop; if($("tip").hidden||TIP.key===id) showPop(el); else TIP.sw=setTimeout(()=>showPop(el),350); });
+  const id=el.dataset.pop; if($("tip").hidden||TIP.key===id) showPop(el); else TIP.sw=setTimeout(()=>showPop(el),90); });
+let TIPMV=0; document.addEventListener("mousemove",e=>{ if($("tip").hidden||!$("tip2").hidden||TIPMV) return; const el=popOf(e.target); if(!el||$("tip").contains(el)||el.dataset.pop!==TIP.key) return;
+  const x=e.clientX,y=e.clientY; TIPMV=requestAnimationFrame(()=>{ TIPMV=0; placeBeside($("tip"),{left:x-14,right:x+14,top:y-10,bottom:y+10}); }); },{passive:true});
 document.addEventListener("mouseout",e=>{const el=popOf(e.target); if(el&&!$("tip").contains(el)&&!el.contains(e.relatedTarget)){ clearTimeout(TIP.sw); releaseTips(); } });
 document.addEventListener("click",e=>{const el=popOf(e.target); if(el&&!$("tip").contains(el)){ holdAll(); TIP.key=null; showPop(el); return; }
   if(!$("tip").hidden&&!$("tip").contains(e.target)&&!$("tip2").contains(e.target)) hideTip(); });
