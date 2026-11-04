@@ -15,6 +15,7 @@
   --q:#664356; --q80:#7C5D6D; --q60:#957B87; --q20:#D2C7CB; --q10:#E6DFE1; --q5:#EFECED;
   --bg:#FBFAFA; --surface:#FFFFFF; --fg:#2B2027; --muted:#6E6369; --line:#DED5D8;
   --accent:var(--q); --accent-soft:var(--q10); --accent-ink:#FFFFFF;
+  --seg-in:#5C3A4D; --seg-out:#4F86BD; --seg-aop:#B08A7E;
   --tan:#B7A19B; --blue:#366083; --red:#AF4F5A; --red-soft:#F3E3E1; --ok:#366083; --ok-soft:#E3E8EF;
   --f-display:"Archivo","Segoe UI",Arial,sans-serif;
   --f-body:"Source Sans 3","Segoe UI",Calibri,Arial,sans-serif;
@@ -23,17 +24,20 @@
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#1C1619; --surface:#251D21; --fg:#EFE8EB; --muted:#B5A9AF; --line:#3D3138;
   --accent:#B29EA6; --accent-soft:#3A2C33; --accent-ink:#1C1619;
-  --red:#D7ADAA; --red-soft:#3B2427; --ok:#A3ABBF; --ok-soft:#262C36; --q5:#2A2126; --q10:#33282E; --q20:#4A3B43; color-scheme:dark}}
+  --seg-in:#9E6C89; --seg-out:#5BA0E0; --seg-aop:#D8B19C; --red:#D7ADAA; --red-soft:#3B2427; --ok:#A3ABBF; --ok-soft:#262C36; --q5:#2A2126; --q10:#33282E; --q20:#4A3B43; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#1C1619; --surface:#251D21; --fg:#EFE8EB; --muted:#B5A9AF; --line:#3D3138;
   --accent:#B29EA6; --accent-soft:#3A2C33; --accent-ink:#1C1619;
-  --red:#D7ADAA; --red-soft:#3B2427; --ok:#A3ABBF; --ok-soft:#262C36; --q5:#2A2126; --q10:#33282E; --q20:#4A3B43; color-scheme:dark}
+  --seg-in:#9E6C89; --seg-out:#5BA0E0; --seg-aop:#D8B19C; --red:#D7ADAA; --red-soft:#3B2427; --ok:#A3ABBF; --ok-soft:#262C36; --q5:#2A2126; --q10:#33282E; --q20:#4A3B43; color-scheme:dark}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.5}
 .wrap{max-width:min(1760px,100%);margin:0 auto;padding-inline:clamp(16px,2.2vw,40px);padding-block:28px 64px;display:grid;gap:22px}
 header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;border-bottom:3px solid var(--q);padding-bottom:14px}
 .brand{display:flex;gap:14px;align-items:center}
+.hdate{display:flex;flex-direction:column;align-items:center;line-height:1.1;margin:0 auto;padding:0 12px}
+.hdate span{font:600 12px var(--f-mono,monospace);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.hdate b{font:700 26px var(--f-display);color:var(--q)}
 .mark{width:44px;height:44px;border-radius:10px;background:var(--q);color:#fff;display:grid;place-items:center;font:800 24px/1 var(--f-display)}
 h1{font:800 clamp(22px,3.2vw,30px)/1.1 var(--f-display);margin:0;letter-spacing:-.01em;text-wrap:balance}
 .sub{color:var(--muted);font-size:13.5px;margin:2px 0 0}
@@ -217,6 +221,7 @@ td.fail.hov:hover{background:var(--red-soft)}
 .pubsteps .dlb{padding:5px 12px;font-size:13px;vertical-align:middle}
 .newupd{display:inline-flex;align-items:center;gap:8px}
 .vdl{display:inline-flex;align-items:center;gap:8px;text-decoration:none;font:600 14px var(--f-body);background:var(--accent);color:var(--accent-ink);border-radius:9px;padding:8px 14px}
+.vdl.alt{background:var(--surface);color:var(--q);border:1.5px solid var(--q)}
 .vdl svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
 .pubrow{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
 .pubrow input[type=password]{font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:7px 10px;width:100%}
@@ -244,6 +249,20 @@ td.fail.hov:hover{background:var(--red-soft)}
 .chartbox text{fill:var(--fg);font-family:var(--f-body);font-size:12px;font-variant-numeric:tabular-nums}
 .chartbox text.pct{font:700 11px var(--f-body)}.chartbox text.pct.good{fill:var(--ok)}.chartbox text.pct.mid{fill:var(--fg)}.chartbox text.pct.bad{fill:var(--red)}
 .chartbox text.mut{fill:var(--muted);font-size:11px}
+.dayrange{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.dayrange .chip{font:600 12.5px var(--f-body);border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:999px;padding:4px 11px;cursor:pointer}
+.dayrange .chip[aria-pressed="true"]{background:var(--q);border-color:var(--q);color:#fff}
+.dayrange label{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted)}
+.dayrange input[type=date]{font:500 13px var(--f-body);color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:4px 6px}
+.segchips{display:flex;flex-wrap:wrap;gap:6px}
+.segchips .chip{font:600 13px var(--f-body);border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:999px;padding:5px 12px;cursor:pointer;display:inline-flex;align-items:center;gap:7px}
+.segchips .chip i{width:10px;height:10px;border-radius:3px;background:var(--c)}
+.segchips .chip[aria-pressed="true"]{background:var(--q);border-color:var(--q);color:#fff}
+.segchips .chip:focus-visible,.dayrange .chip:focus-visible{outline:2px solid var(--q);outline-offset:2px}
+.seghead{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:6px 14px;margin:0 0 4px}
+.seghead h3{margin:0;font:700 15px var(--f-display);display:flex;align-items:center;gap:8px}
+.seghead h3 i{width:12px;height:12px;border-radius:3px;background:var(--c)}
+.seghead .status b{font-weight:700}
 .legend{display:flex;gap:16px;font-size:12.5px;color:var(--muted);margin:2px 0 8px}
 .legend i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-1px;margin-right:6px}
 .hist{display:grid;gap:10px}
@@ -323,11 +342,11 @@ td.fail.hov:hover{background:var(--red-soft)}
     <div class="brand">
       <div class="mark" aria-hidden="true">Q</div>
       <div>
-        <div class="tag">SQ Biricina · Fabric Planning</div>
+        <div class="tag">SQ Hues · Fabric Planning</div>
         <h1>OTT Fabric Plan Updater</h1>
-        <p class="sub">Updates Fab Plan-Final from DOC-280+217. The files are processed in your browser and aren't uploaded anywhere.</p>
       </div>
     </div>
+    <div class="hdate" id="hdrDate" aria-label="Today"></div>
     <div class="hdr-right"><button type="button" class="gear" id="gearBtn" aria-label="Site settings" title="Site settings (owner)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button><a class="back" id="backLink" href="./">← All tools</a><div class="tag">Quality Seeks Quality</div></div>
   </header>
 
@@ -349,7 +368,6 @@ td.fail.hov:hover{background:var(--red-soft)}
     <div class="drop" id="dropFP">
       <span class="lbl">1 · Fabric Plan / Hues Feedback</span>
       <span class="name" id="nameFP">Drop the OTT workbook here</span>
-      <span class="hint">e.g. Fabric_Plan_Oct26-Hues_Feedback-…_SQ.xlsx</span>
       <span class="ok" id="okFP">Uploaded</span>
       <span class="badmsg" id="badFP"></span>
       <span class="tickmark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
@@ -358,7 +376,6 @@ td.fail.hov:hover{background:var(--red-soft)}
     <div class="drop" id="dropDOC">
       <span class="lbl">2 · DOC -280+217</span>
       <span class="name" id="nameDOC">Drop the DOC master here</span>
-      <span class="hint">Reads sheet 217 (AP key · AQ Rfd · AR Bal · AF %)</span>
       <span class="ok" id="okDOC">Uploaded</span>
       <span class="badmsg" id="badDOC"></span>
       <span class="tickmark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
@@ -367,7 +384,6 @@ td.fail.hov:hover{background:var(--red-soft)}
     <div class="drop opt" id="dropAOP">
       <span class="lbl">3 · AOP release report · optional</span>
       <span class="name" id="nameAOP">Drop the Daily Fabric Release Report (AOP)</span>
-      <span class="hint">AOP lines (Category = AOP) get RFD from it, matched by PO + colour. Leave empty to skip.</span>
       <span class="ok" id="okAOP">Uploaded</span>
       <span class="badmsg" id="badAOP"></span>
       <span class="tickmark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
@@ -393,6 +409,7 @@ td.fail.hov:hover{background:var(--red-soft)}
       <button class="ghost dlb" id="dlBW" type="button" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Batch wise file</button>
       <button class="ghost dlb" id="dlLog" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Update log</button>
     </span>
+    <button class="ghost" id="closeUpd" type="button" hidden>✕ Close</button>
     <span class="status" id="status">Add both files to start.</span>
     <span class="status" id="dlStatus"></span>
     <span class="savechip" id="saveChip" hidden></span>
@@ -412,8 +429,23 @@ td.fail.hov:hover{background:var(--red-soft)}
 
 
   <section id="daySec" class="dem" hidden aria-label="Date-wise RFD and achieve %">
-        <div class="row2"><h2>Date-wise RFD · achieve % <span class="stamp" data-stamp></span></h2><span class="status" id="dayNote"></span></div>
-        <div class="chartbox"><div class="legend"><span><i style="background:var(--accent)"></i>RFD qty (+ recovered)</span><span>% above bar = achieve % vs plan</span></div><div id="dayChart"></div></div>
+        <div class="row2"><h2>Cumulative plan to performance <span class="stamp" data-stamp></span></h2><span class="status" id="dayNote"></span></div>
+        <div class="dayrange" role="group" aria-label="Date range for plan to performance">
+          <button type="button" class="chip" data-dr="ytd" aria-pressed="true">Up to yesterday</button>
+          <button type="button" class="chip" data-dr="month" aria-pressed="false">This month</button>
+          <button type="button" class="chip" data-dr="7" aria-pressed="false">Last 7 days</button>
+          <label for="dayFrom">From <input type="date" id="dayFrom"></label>
+          <label for="dayTo">To <input type="date" id="dayTo"></label>
+        </div>
+        <div class="chartbox">
+          <div class="seghead"><div class="legend" id="dayLegend" style="margin:0"></div>
+            <div class="segchips" id="segChips" role="group" aria-label="Show segment">
+              <button type="button" class="chip" data-g="all" aria-pressed="true">All</button>
+              <button type="button" class="chip" data-g="0" aria-pressed="false" style="--c:var(--seg-in)"><i></i>Inhouse</button>
+              <button type="button" class="chip" data-g="1" aria-pressed="false" style="--c:var(--seg-out)"><i></i>Outside</button>
+              <button type="button" class="chip" data-g="2" aria-pressed="false" style="--c:var(--seg-aop)"><i></i>AOP</button>
+            </div></div>
+          <div id="dayChart"></div></div>
   </section>
 
   <section id="summary" aria-label="Buyer-wise qty added since last update">
@@ -442,7 +474,7 @@ td.fail.hov:hover{background:var(--red-soft)}
               <div class="dpfoot"><span id="dpSel">Click a start date, then an end date</span><span><button type="button" class="ghost sm" id="dpCancel">Cancel</button> <button type="button" class="primary sm" id="dpApply">Apply</button></span></div>
             </div>
           </div>
-          <span class="status">Dates = Agreed RFD Date-Hues (col S) · dots mark days with demand</span>
+          
         </div>
         <div class="tbl"><table id="demTbl"></table></div>
         <div class="row2" style="margin-top:6px"><h2>Plan TBC · buyer-wise <span class="stamp" data-stamp></span></h2><span class="status" id="tbcNote">Rows where Agreed RFD Date-Hues is “Plan TBC” · not date-filtered</span></div>
@@ -1432,7 +1464,7 @@ const LPA = (function(){
     // conditional formats / data validations / merges are row-based: move their row numbers with the split
     const mapRow = n => { if (!PIECES.size) return n; let best = n, add = 0; for (const [r0, pcs] of PIECES) if (r0 < n) add += pcs.length - 1; return Math.min(1048576, n + add); };
     if (PIECES.size) sx = sx.replace(/(<(?:conditionalFormatting|dataValidation|mergeCell)\b[^>]*?(?:sqref|ref)=")([^"]+)(")/g, (m, a, refs, z) => a + refs.split(" ").map(rg => rg.replace(/([A-Z]+)(\d+)/g, (q, cc, n) => cc + mapRow(+n))).join(" ") + z);
-    return { sheetXml: sx, lastRow: LASTROW, lastCol: LASTC, naCol: NA, rowMap: rmap, batchwise: bwBlob,
+    return { mill: MILL, sheetXml: sx, lastRow: LASTROW, lastCol: LASTC, naCol: NA, rowMap: rmap, batchwise: bwBlob,
       summary: { marked: mark.size, details: [...mark.values()].filter(v => v[1]).length, needAdd: [...out.values()].filter(v => v[0] === "Need Additional").length,
         needAddM: [...out.entries()].filter(([, v]) => v[0] === "Need Additional").reduce((s, [r, v]) => s + v[1] * (isprint.get(r) ? 3 : 1), 0),
         noBatch: [...out.values()].filter(v => v[0] === "No Batch Found").length, splitLines: nSplitLines, splitRows: [...PIECES.values()].reduce((a, p) => a + p.length, 0),
@@ -1612,6 +1644,9 @@ async function run(){
         out=ALLOC.sheetXml;
       }catch(e){ console.error(e); ALLOCERR=e.message||String(e); ALLOC=null; }
     }
+    // segment per plan line for the plan-to-performance charts: Category AOP -> AOP; else Dyeing Mill Outside / Inhouse
+    DEM.forEach((x,i)=>{ const r=rows[i]; const cat=String(val(r,"R").v??""); const ml=ALLOC&&ALLOC.mill?ALLOC.mill.get(r):null;
+      x.g=/aop/i.test(cat)?2:(ml==="Outside"?1:(ml==="Inhouse"?0:(ALLOC?0:null))); });
     const z=F.zip; z.file(F.path,out);
     // Buyer Wise OTT Hit Rate: move the daily date (C7) to the day before the report date, and drop stale cached results
     try{
@@ -1846,9 +1881,9 @@ let FAILMAP=new Map();
 function inRange(x,R){return x.s!==null&&!((R.lo!==null&&R.lo&&x.s<R.lo)||(R.hi!==null&&R.hi&&x.s>R.hi))}
 function drawDemand(){
   const head=`<thead><tr><th>Buyer</th><th class="n">Demand qty</th><th class="n">RFD qty</th><th class="n">Recovered</th><th class="n">Failed qty</th><th style="min-width:190px">Hit % (RFD + Recovered ÷ Demand)</th></tr></thead>`;
-  if(!DEM){$("demTbl").innerHTML=head+`<tbody><tr><td colspan="6" style="color:var(--muted)">Run the update to see demand vs RFD.</td></tr></tbody>`;drawDays(null);return}
+  if(!DEM){$("demTbl").innerHTML=head+`<tbody><tr><td colspan="6" style="color:var(--muted)">Run the update to see demand vs RFD.</td></tr></tbody>`;drawDays();return}
   const R=demRange();
-  if(!R){$("demNote").textContent="";$("demTbl").innerHTML=head+`<tbody><tr><td colspan="6" style="color:var(--muted)">Pick dates above.</td></tr></tbody>`;drawDays(null);return}
+  if(!R){$("demNote").textContent="";$("demTbl").innerHTML=head+`<tbody><tr><td colspan="6" style="color:var(--muted)">Pick dates above.</td></tr></tbody>`;drawDays();return}
   const by=new Map(); FAILMAP=new Map(); const allShort=new Map();
   for(const x of DEM){ if(!inRange(x,R))continue;
     if(!by.has(x.b))by.set(x.b,{b:x.b,d:0,m:0,o:0}); const o=by.get(x.b); o.d+=x.L; o.m+=x.M; o.o+=x.O;
@@ -1863,8 +1898,8 @@ function drawDemand(){
   let h=head+"<tbody>"+(list.length?list.map(o=>line(o.b,o,"",o.b)).join(""):`<tr><td colspan="6" style="color:var(--muted)">No demand in this period.</td></tr>`);
   if(list.length) h+=line("Total",t,' class="tot"',"__ALL__");
   $("demTbl").innerHTML=h+"</tbody>";
-  $("demNote").textContent=`${R.label} · qty in m · hover a failed qty to see PO & colour`; $("dpLabel").textContent=demSel.mode==="ytd"?`Up to yesterday · ${R.label.replace("Up to ","")}`:R.label;
-  drawDays(R); drawTBC();
+  $("demNote").textContent=""; $("dpLabel").textContent=demSel.mode==="ytd"?`Up to yesterday · ${R.label.replace("Up to ","")}`:R.label;
+  drawDays(); drawTBC();
 }
 let TIP={spec:null,key:null,t1:null,sw:null};
 function placeBeside(el,a){
@@ -1923,13 +1958,13 @@ function specFor(kind,key){
       total:["Total",...(L0.all?[""]:[]),"",fmt(T)], foot:"Overdue = agreed date before the report date"};
   }
   if(kind==="day"){
-    const s0=+key, g=new Map();
-    for(const x of DEM){ if(x.s!==s0)continue; if(!g.has(x.b))g.set(x.b,{b:x.b,d:0,a:0,f:0}); const o=g.get(x.b); o.d+=x.L; o.a+=x.M+x.O; o.f+=Math.max(0,x.L-x.M-x.O); }
+    const [k0,k1]=String(key).split("|"); const s0=+k0, sg=k1===undefined?null:+k1, g=new Map();
+    for(const x of DEM){ if(x.s!==s0)continue; if(sg!==null&&x.g!==sg)continue; if(!g.has(x.b))g.set(x.b,{b:x.b,d:0,a:0,f:0}); const o=g.get(x.b); o.d+=x.L; o.a+=x.M+x.O; o.f+=Math.max(0,x.L-x.M-x.O); }
     const items=[...g.values()].filter(o=>o.d>0).sort((a,b)=>b.f-a.f||b.d-a.d), T=items.reduce((t,o)=>({d:t.d+o.d,a:t.a+o.a,f:t.f+o.f}),{d:0,a:0,f:0});
     const pc=o=>o.d>0?o.a/o.d*100:0, cl=p=>p>=95?"good":p>=70?"mid":"bad";
-    return {title:`${fromSerial(s0)} · buyer-wise`, meta:"Point at a buyer for failed qty by PO & colour",
+    return {title:`${fromSerial(s0)} · ${sg===null?"buyer-wise":SEGN[sg]+" · buyer-wise"}`, meta:"Point at a buyer for failed qty by PO & colour",
       cols:[{t:"Buyer"},{t:"Plan",n:1},{t:"RFD",n:1},{t:"Failed",n:1},{t:"Achieve",n:1}],
-      rows:items.map(o=>({c:[esc(o.b),fmt(o.d),fmt(o.a),fmt(o.f),`<span class="hit ${cl(pc(o))}">${pc(o).toFixed(0)}%</span>`],f:3,sub:o.f>0.5?()=>subDayBuyer(s0,o.b):null})),
+      rows:items.map(o=>({c:[esc(o.b),fmt(o.d),fmt(o.a),fmt(o.f),`<span class="hit ${cl(pc(o))}">${pc(o).toFixed(0)}%</span>`],f:3,sub:o.f>0.5?()=>subDayBuyer(s0,o.b,sg):null})),
       total:["Total",fmt(T.d),fmt(T.a),fmt(T.f),`<span class="hit ${cl(T.d?T.a/T.d*100:0)}">${(T.d?T.a/T.d*100:0).toFixed(1)}%</span>`]};
   }
   return null;
@@ -1951,9 +1986,9 @@ function subTbcArticles(b,po,col){
   return {title:`PO ${esc(po||"—")} · ${esc(col||"—")}`, meta:`${esc(b)} · Plan TBC (no agreed date)`,
     cols:[{t:"Article"},{t:"Balance qty",n:1}], rows:list.map(o=>({c:[`<span style="font-size:12px">${esc(o.art)}</span>`,fmt(o.q)],f:1})), total:["Total",fmt(T)]};
 }
-function subDayBuyer(s0,b){
+function subDayBuyer(s0,b,sg=null){
   const g=new Map();
-  for(const x of DEM){ if(x.s!==s0||x.b!==b)continue; const f=Math.max(0,x.L-x.M-x.O); if(f<=0.5)continue; const k=x.po+"\u0001"+x.col+"\u0001"+(x.art||""); if(!g.has(k))g.set(k,{po:x.po,col:x.col,art:x.art||"",f:0}); g.get(k).f+=f; }
+  for(const x of DEM){ if(x.s!==s0||x.b!==b)continue; if(sg!==null&&x.g!==sg)continue; const f=Math.max(0,x.L-x.M-x.O); if(f<=0.5)continue; const k=x.po+"\u0001"+x.col+"\u0001"+(x.art||""); if(!g.has(k))g.set(k,{po:x.po,col:x.col,art:x.art||"",f:0}); g.get(k).f+=f; }
   const list=[...g.values()].sort((a,c)=>c.f-a.f), T=list.reduce((t,o)=>t+o.f,0);
   return {title:`${esc(b)} · ${fromSerial(s0)} · failed`, meta:"By PO, colour and article",
     cols:[{t:"PO"},{t:"Colour"},{t:"Article"},{t:"Failed qty",n:1}],
@@ -1980,27 +2015,54 @@ function holdTips(){ clearTimeout(TIP.t1); }
 function holdAll(){ clearTimeout(TIP.t1); clearTimeout(TIP.sw); }
 function releaseTips(){ clearTimeout(TIP.t1); TIP.t1=setTimeout(hideTip,320); }
 let LAST_DAYS_R=null;
-function drawDays(R){
-  LAST_DAYS_R=R;
-  if(!DEM||!R){$("dayChart").innerHTML='<p class="status">Run the update to see daily RFD and achieve %.</p>';$("dayNote").textContent="";return}
-  const by=new Map();
-  for(const x of DEM){ if(!inRange(x,R))continue; if(!by.has(x.s))by.set(x.s,{s:x.s,d:0,a:0}); const o=by.get(x.s); o.d+=x.L; o.a+=x.M+x.O; }
-  const days=[...by.values()].filter(o=>o.d>0).sort((a,b)=>a.s-b.s);
-  if(!days.length){$("dayChart").innerHTML='<p class="status">No plan in this period.</p>';$("dayNote").textContent=R.label;return}
+/* ---------- plan to performance: own date range, cumulative + Inhouse / Outside / AOP ---------- */
+const SEGN=["Inhouse","Outside","AOP"], SEGC=["var(--seg-in)","var(--seg-out)","var(--seg-aop)"];
+let daySel={mode:"ytd"};
+function dayRange(){
+  const rep=toSerial(DASH.report||$("runDate").value); if(!rep) return null;
+  if(daySel.mode==="ytd") return {lo:null,hi:rep-1,label:`Up to ${fromSerial(rep-1)}`};
+  if(daySel.mode==="month"){ const d=new Date(Date.UTC(1899,11,30)+(rep-1)*864e5); const lo=toSerial(`${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,"0")}-01`); return {lo,hi:rep-1,label:`${fromSerial(lo)} to ${fromSerial(rep-1)}`}; }
+  if(daySel.mode==="7") return {lo:rep-7,hi:rep-1,label:`${fromSerial(rep-7)} to ${fromSerial(rep-1)}`};
+  const {lo,hi}=daySel; return {lo,hi,label:lo&&hi?(lo===hi?fromSerial(lo):`${fromSerial(lo)} to ${fromSerial(hi)}`):lo?`From ${fromSerial(lo)}`:`Up to ${fromSerial(hi)}`};
+}
+function syncDayInputs(R){ const iso=n=>{ if(!n) return ""; const d=new Date(Date.UTC(1899,11,30)+n*864e5); return d.toISOString().slice(0,10); };
+  if(R){ $("dayFrom").value=iso(R.lo); $("dayTo").value=iso(R.hi); }
+  document.querySelectorAll(".dayrange .chip").forEach(c=>c.setAttribute("aria-pressed",String(c.dataset.dr===daySel.mode))); }
+function dayChartSVG(days,ariaLabel,color,popSuffix){
   const pc=o=>o.d>0?o.a/o.d*100:0, cls=p=>p>=95?"good":p>=70?"mid":"bad";
-  const avail=Math.max(360,($("dayChart").clientWidth||940)-4), colW=Math.max(34,Math.floor((avail-56-16)/days.length)), top=30, ph=Math.round(Math.min(300,Math.max(180,window.innerHeight*0.26))), left=56, W=left+days.length*colW+16, H=top+ph+44;
-  const mx=Math.max(...days.map(o=>o.a),1), step=niceStep(mx/4), yMax=Math.ceil(mx/step)*step||1, y=v=>top+ph-v/yMax*ph;
-  let g=`<svg viewBox="0 0 ${W} ${H}" style="width:${W}px;max-width:none" role="img" aria-label="RFD qty and achieve % by date">`;
+  const avail=Math.max(360,(($("dayChart").clientWidth)||940)-4), colW=Math.max(34,Math.floor((avail-56-16)/days.length)), top=30, ph=Math.round(Math.min(260,Math.max(160,window.innerHeight*0.22))), left=56, W=left+days.length*colW+16, H=top+ph+44;
+  const mx=Math.max(...days.map(o=>Math.max(o.a,o.d)),1), step=niceStep(mx/4), yMax=Math.ceil(mx/step)*step||1, y=v=>top+ph-v/yMax*ph;
+  let g=`<svg viewBox="0 0 ${W} ${H}" style="width:${W}px;max-width:none" role="img" aria-label="${ariaLabel}">`;
   for(let v=0;v<=yMax+1e-9;v+=step) g+=`<line x1="${left}" x2="${W-8}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text class="mut" x="${left-6}" y="${y(v)+4}" text-anchor="end">${fmtK(v)}</text>`;
   days.forEach((o,i)=>{const x0=left+i*colW, bw=Math.max(14,Math.min(64,colW*0.62)), p=pc(o), d=sDate(o.s), cx=x0+colW/2;
-    g+=`<rect class="barhov" data-pop="day|${o.s}" x="${cx-bw/2}" y="${Math.min(y(o.a),top+ph-4)}" width="${bw}" height="${Math.max(4,top+ph-y(o.a))}" rx="3" fill="var(--accent)"></rect>`;
-    g+=`<text x="${cx}" y="${y(o.a)-7}" text-anchor="middle" class="pct ${cls(p)}">${Math.round(p)}%</text>`;
+    if(popSuffix!==null) g+=`<rect x="${cx-bw/2}" y="${y(o.d)}" width="${bw}" height="${Math.max(1,top+ph-y(o.d))}" rx="3" fill="none" stroke="${color}" stroke-opacity=".55" stroke-dasharray="3 2"></rect>`;
+    g+=`<rect class="barhov" data-pop="day|${o.s}${popSuffix!==null?"|"+popSuffix:""}" x="${cx-bw/2}" y="${Math.min(y(o.a),top+ph-4)}" width="${bw}" height="${Math.max(4,top+ph-y(o.a))}" rx="3" fill="${color}"></rect>`;
+    g+=`<text x="${cx}" y="${Math.min(y(o.a),popSuffix!==null?y(o.d):y(o.a))-7}" text-anchor="middle" class="pct ${cls(p)}">${Math.round(p)}%</text>`;
     g+=`<text class="mut" x="${cx}" y="${top+ph+16}" text-anchor="middle">${d.getUTCDate()}</text>`;
     if(i===0||d.getUTCDate()===1) g+=`<text class="mut" x="${cx}" y="${top+ph+32}" text-anchor="middle">${MON[d.getUTCMonth()]}</text>`;});
-  $("dayChart").innerHTML=g+"</svg>";
-  const T=days.reduce((t,o)=>({d:t.d+o.d,a:t.a+o.a}),{d:0,a:0});
-  $("dayNote").textContent=`${R.label} · ${days.length} days (calendar below sets the range) · overall ${(T.d?T.a/T.d*100:0).toFixed(1)}% · hover a bar for buyer breakdown`;
+  return g+"</svg>";
 }
+function dayAgg(R,seg){ const by=new Map();
+  for(const x of DEM){ if(!(x.L>0)||!inRange(x,R))continue; if(seg!==null&&x.g!==seg)continue; if(!by.has(x.s))by.set(x.s,{s:x.s,d:0,a:0}); const o=by.get(x.s); o.d+=x.L; o.a+=x.M+x.O; }
+  return [...by.values()].filter(o=>o.d>0).sort((a,b)=>a.s-b.s); }
+let daySeg=null;   // null = all lines, 0 Inhouse, 1 Outside, 2 AOP
+function drawDays(){
+  const R=DEM?dayRange():null; LAST_DAYS_R=R; syncDayInputs(R);
+  document.querySelectorAll("#segChips .chip").forEach(c=>c.setAttribute("aria-pressed",String(c.dataset.g===(daySeg===null?"all":String(daySeg)))));
+  const color=daySeg===null?"var(--accent)":SEGC[daySeg], name=daySeg===null?"All lines":SEGN[daySeg];
+  $("dayLegend").innerHTML=`<span><i style="background:${color}"></i>RFD qty (+ recovered) · ${name}</span>${daySeg!==null?`<span><i style="background:none;outline:1px dashed ${color}"></i>Plan</span>`:""}<span>% above bar = achieve % vs plan · hover a bar for buyers · lines with plan ≤ 0 left out</span>`;
+  if(!DEM||!R){$("dayChart").innerHTML='<p class="status">Run the update to see plan to performance.</p>';$("dayNote").textContent="";return}
+  const hasSeg=DEM.some(x=>x.g!==undefined&&x.g!==null);
+  if(daySeg!==null&&!hasSeg){$("dayChart").innerHTML='<p class="status">Inhouse / Outside / AOP appear after the next update run with batch allocation ticked.</p>';$("dayNote").textContent=R.label;return}
+  const days=dayAgg(R,daySeg);
+  if(!days.length){$("dayChart").innerHTML='<p class="status">No plan in this period.</p>';$("dayNote").textContent=`${R.label} · ${name}`;return}
+  $("dayChart").innerHTML=dayChartSVG(days,`${name}: plan and RFD by date`,color,daySeg);
+  const T=DEM.reduce((t,x)=>(x.L>0&&inRange(x,R)&&(daySeg===null||x.g===daySeg)?{d:t.d+x.L,a:t.a+x.M+x.O}:t),{d:0,a:0});   // all lines in range, so segments add up to All
+  $("dayNote").textContent=`Plan ${fmt(T.d)} m · RFD ${fmt(T.a)} m · ${Math.round(T.d?T.a/T.d*100:0)}%`;
+}
+$("segChips").addEventListener("click",e=>{const b=e.target.closest(".chip"); if(!b) return; daySeg=b.dataset.g==="all"?null:+b.dataset.g; drawDays();});
+document.querySelector(".dayrange").addEventListener("click",e=>{const b=e.target.closest(".chip"); if(!b) return; daySel={mode:b.dataset.dr}; drawDays();});
+["dayFrom","dayTo"].forEach(id=>$(id).addEventListener("change",()=>{ const lo=toSerial($("dayFrom").value), hi=toSerial($("dayTo").value); if(!lo&&!hi) return; daySel={mode:"range",lo:lo&&hi&&lo>hi?hi:lo,hi:lo&&hi&&lo>hi?lo:hi}; drawDays(); }));
 function drawTBC(){
   const head=`<thead><tr><th>Buyer</th><th class="n">Demand qty (TBC)</th><th class="n">RFD qty</th><th class="n">Balance qty</th></tr></thead>`;
   if(!DEM){$("tbcTbl").innerHTML=head+`<tbody><tr><td colspan="4" style="color:var(--muted)">Run the update to see Plan TBC qty by buyer.</td></tr></tbody>`;return}
@@ -2022,8 +2084,8 @@ function showDash(){
 function buildSnapshot(){
   const bIdx=new Map(), B=[]; const bi=b=>{if(!bIdx.has(b)){bIdx.set(b,B.length);B.push(b)}return bIdx.get(b)};
   const aIdx=new Map(), A=[]; const ai=a=>{a=a||"";if(!aIdx.has(a)){aIdx.set(a,A.length);A.push(a)}return aIdx.get(a)};
-  const rows=DEM.filter(x=>x.L||x.M||x.O).map(x=>[bi(x.b),x.s,x.tbc?1:0,r3(x.L),r3(x.M),r3(x.O),x.po,x.col,ai(x.art)]);
-  return {v:1,articles:A,ott:outputs?outputs.ottName:"",ottPath:OTT_PATH,store:"data-branch",tool:"ott-fabric-plan-updater",at:DASH.at,report:DASH.report,fp:DASH.fp,doc:DASH.doc,summary:DASH.buyers,buyers:B,rows};
+  const rows=DEM.filter(x=>x.L||x.M||x.O).map(x=>[bi(x.b),x.s,x.tbc?1:0,r3(x.L),r3(x.M),r3(x.O),x.po,x.col,ai(x.art),(x.g===undefined?null:x.g)]);
+  return {v:1,articles:A,ott:outputs?outputs.ottName:"",ottPath:OTT_PATH,bw:(outputs&&outputs.bw)?outputs.bwName:"",bwPath:BW_PATH,store:"data-branch",tool:"ott-fabric-plan-updater",at:DASH.at,report:DASH.report,fp:DASH.fp,doc:DASH.doc,summary:DASH.buyers,buyers:B,rows};
 }
 function setViewer(on){
   $("viewBar").hidden=!on; $("newUpdBtn").hidden=!getKey();
@@ -2032,19 +2094,21 @@ function setViewer(on){
 }
 function loadSnapshot(j){
   if(!j||j.v!==1||!Array.isArray(j.rows))return false;
-  DEM=j.rows.map(r=>({b:j.buyers[r[0]],s:r[1],tbc:!!r[2],L:r[3],M:r[4],O:r[5],po:r[6]||"",col:r[7]||"",art:(j.articles&&r[8]!=null)?j.articles[r[8]]:""}));
+  DEM=j.rows.map(r=>({b:j.buyers[r[0]],s:r[1],tbc:!!r[2],L:r[3],M:r[4],O:r[5],po:r[6]||"",col:r[7]||"",art:(j.articles&&r[8]!=null)?j.articles[r[8]]:"",g:(r[9]===undefined?null:r[9])}));
   DASH={at:j.at,report:j.report,fp:j.fp||"",doc:j.doc||"",buyers:j.summary||[],live:false};
   drawSummary(DASH.buyers); showDash();
-  const ott=j.ott||"";
-  $("viewBanner").innerHTML=`<b>Last update</b><span>${esc(stampText(j.at).replace("Last updated ",""))}</span><span>Report date ${esc(j.report?fromSerial(toSerial(j.report)):"–")}</span>${ott?`<a class="vdl" id="vdl" href="${esc(j.store==="data-branch"?rawURL(j.ottPath):(j.ottPath||ott))}" download="${esc(ott)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Download Fabric Plan file</a>`:""}`;
+  const ott=j.ott||"", bwn=j.bw||"";
+  const ico='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>';
+  const href=p=>j.store==="data-branch"?rawURL(p):p;
+  $("viewBanner").innerHTML=`<b>Last update</b><span>${esc(stampText(j.at).replace("Last updated ",""))}</span><span>Report date ${esc(j.report?fromSerial(toSerial(j.report)):"–")}</span>${ott?`<a class="vdl" data-p="${esc(j.ottPath)}" data-n="${esc(ott)}" href="${esc(href(j.ottPath))}" download="${esc(ott)}">${ico}<span>Download Fabric Plan file</span></a>`:""}${bwn?`<a class="vdl alt" data-p="${esc(j.bwPath)}" data-n="${esc(bwn)}" href="${esc(href(j.bwPath))}" download="${esc(bwn)}">${ico}<span>Download Batch wise line plan</span></a>`:""}`;
   setViewer(true);
-  const a=$("vdl"); if(a&&j.store==="data-branch") a.addEventListener("click",async ev=>{ ev.preventDefault(); const t=a.innerHTML; a.lastChild.textContent="Downloading…";
-    try{ const r=await fetch(rawURL(j.ottPath)+"?ts="+Date.now(),{cache:"no-store"}); if(!r.ok)throw 0; const blob=await r.blob(); const u=URL.createObjectURL(blob), x=document.createElement("a"); x.href=u; x.download=ott; document.body.appendChild(x); x.click(); setTimeout(()=>{URL.revokeObjectURL(u);x.remove()},4000); }
-    catch(e){ location.href=rawURL(j.ottPath); } finally{ a.innerHTML=t; } });
+  if(j.store==="data-branch") document.querySelectorAll("#viewBanner .vdl").forEach(a=>a.addEventListener("click",async ev=>{ ev.preventDefault(); const lab=a.querySelector("span"), t=lab.textContent; lab.textContent="Downloading…";
+    try{ const r=await fetch(rawURL(a.dataset.p)+"?ts="+Date.now(),{cache:"no-store"}); if(!r.ok)throw 0; const blob=await r.blob(); const u=URL.createObjectURL(blob), x=document.createElement("a"); x.href=u; x.download=a.dataset.n; document.body.appendChild(x); x.click(); setTimeout(()=>{URL.revokeObjectURL(u);x.remove()},4000); }
+    catch(e){ location.href=rawURL(a.dataset.p); } finally{ lab.textContent=t; } }));
   return true;
 }
 const SITE=(()=>{ const h=location.hostname; if(!/\.github\.io$/i.test(h))return null; const owner=h.split(".")[0]; const seg=location.pathname.split("/").filter(Boolean); const repo=seg.length&&!/\.html?$/i.test(seg[0])?seg[0]:`${owner}.github.io`; return {owner,repo}; })();
-const OTT_PATH="fabric-plan.xlsx", DATA_BRANCH="data";
+const OTT_PATH="fabric-plan.xlsx", BW_PATH="batch-wise.xlsx", DATA_BRANCH="data";
 const rawURL=f=>SITE?`https://raw.githubusercontent.com/${SITE.owner}/${SITE.repo}/${DATA_BRANCH}/${f}`:f;
 const getKey=()=>{try{return localStorage.getItem("sqhues.sitekey")||""}catch(e){return ""}};
 function b64bytes(bytes){ let bin=""; for(let i=0;i<bytes.length;i+=0x8000) bin+=String.fromCharCode.apply(null,bytes.subarray(i,i+0x8000)); return btoa(bin); }
@@ -2075,7 +2139,9 @@ async function autoSave(){
     const xbytes=new Uint8Array(await (await outputs.ott).arrayBuffer());
     const bx=await gh(key,"POST","/git/blobs",{content:b64bytes(xbytes),encoding:"base64"});
     const bj=await gh(key,"POST","/git/blobs",{content:b64bytes(new TextEncoder().encode(JSON.stringify(buildSnapshot()))),encoding:"base64"});
-    const tree=await gh(key,"POST","/git/trees",{tree:[{path:OTT_PATH,mode:"100644",type:"blob",sha:bx.sha},{path:"dashboard.json",mode:"100644",type:"blob",sha:bj.sha}]});
+    const items=[{path:OTT_PATH,mode:"100644",type:"blob",sha:bx.sha},{path:"dashboard.json",mode:"100644",type:"blob",sha:bj.sha}];
+    if(outputs.bw){ const bb=new Uint8Array(await (await outputs.bw).arrayBuffer()); const bw=await gh(key,"POST","/git/blobs",{content:b64bytes(bb),encoding:"base64"}); items.push({path:BW_PATH,mode:"100644",type:"blob",sha:bw.sha}); }
+    const tree=await gh(key,"POST","/git/trees",{tree:items});
     const commit=await gh(key,"POST","/git/commits",{message:`OTT update ${DASH.report} (latest only)`,tree:tree.sha,parents:[]});
     try{ await gh(key,"PATCH",`/git/refs/heads/${DATA_BRANCH}`,{sha:commit.sha,force:true}); }
     catch(e){ if(e.status===404||e.status===422) await gh(key,"POST","/git/refs",{ref:`refs/heads/${DATA_BRANCH}`,sha:commit.sha}); else throw e; }
@@ -2095,13 +2161,13 @@ function drawSummary(buyers){
   const sa=v=>v===undefined?`<td class="n" style="color:var(--muted)">–</td>`:`<td class="n" style="color:${v>0.5?"var(--fg)":"var(--muted)"}">${v>0.5?"+":""}${fmt(v)}</td>`;
   const pct=(x,y)=>y>0?x/y*100:0;
   const cell=(after,before,req,bold)=>{const p=pct(after,req),p0=pct(before,req),d=p-p0;
-    return `<td><div style="display:flex;align-items:center;gap:10px"><div class="bar" style="flex:1;min-width:90px"><i style="width:${Math.min(100,p0).toFixed(1)}%;background:var(--q60)"></i><i style="left:${Math.min(100,p0).toFixed(1)}%;width:${Math.max(0,Math.min(100,p)-Math.min(100,p0)).toFixed(1)}%;border-radius:0 4px 4px 0"></i></div><span style="min-width:96px;text-align:right;${bold?"font-weight:700":""}">${p.toFixed(1)}%${d>0.05?` <span style="color:var(--accent);font-size:12px;font-weight:600">+${d.toFixed(1)}</span>`:""}</span></div></td>`};
+    return `<td><div style="display:flex;align-items:center;gap:10px"><div class="bar" style="flex:1;min-width:90px"><i style="width:${Math.min(100,p0).toFixed(1)}%;background:var(--q60)"></i><i style="left:${Math.min(100,p0).toFixed(1)}%;width:${Math.max(0,Math.min(100,p)-Math.min(100,p0)).toFixed(1)}%;border-radius:0 4px 4px 0"></i></div><span style="min-width:70px;text-align:right;${bold?"font-weight:700":""}">${Math.round(p)}%${Math.round(d)>0?` <span style="color:var(--accent);font-size:12px;font-weight:600">+${Math.round(d)}</span>`:""}</span></div></td>`};
   let h=head+"<tbody>";
   for(const b of list){
     h+=`<tr><td>${esc(b.buyer)}</td><td class="n">${fmt(b.req)}</td><td class="n">${fmt(b.before)}</td><td class="n">${fmt(b.after)}</td>${sa(b.solid)}${sa(b.aop)}<td class="n" style="font-weight:700;color:${b.gain>0?"var(--accent)":"var(--muted)"}">${b.gain>0?"+":""}${fmt(b.gain)}</td>${cell(b.after,b.before,b.req,false)}</tr>`}
   h+=`<tr class="tot"><td>Total</td><td class="n">${fmt(t.req)}</td><td class="n">${fmt(t.b)}</td><td class="n">${fmt(t.a)}</td>${sa(t.has?t.s:undefined)}${sa(t.has?t.o:undefined)}<td class="n">${t.g>0?"+":""}${fmt(t.g)}</td>${cell(t.a,t.b,t.req,true)}</tr></tbody>`;
   $("sumTbl").innerHTML=h;
-  $("sumNote").textContent=`Last update = RFD Qty in ${DASH.fp||(fpFile?fpFile.name:"the uploaded file")} · qty in m`;
+  $("sumNote").textContent="";
 }
 async function sheetNames(zip){const f=zip.file("xl/workbook.xml");if(!f)throw new Error("not a workbook");const x=await f.async("string");return [...x.matchAll(/<sheet\b[^>]*\bname="([^"]*)"/g)].map(m=>decode(m[1]))}
 const RULE={
@@ -2223,7 +2289,9 @@ $("gearBtn").addEventListener("click",()=>{ const d=$("setDlg"); d.hidden=!d.hid
 $("setClose").addEventListener("click",()=>{$("setDlg").hidden=true});
 $("keySave").addEventListener("click",()=>{ const v=$("siteKey").value.trim(); if(!v){$("setStatus").textContent="Paste the key first.";return} try{localStorage.setItem("sqhues.sitekey",v)}catch(e){} $("setStatus").textContent=SITE?`✓ Saved · auto-save is ON for ${SITE.owner}/${SITE.repo}`:"✓ Saved (auto-save runs on the GitHub site)"; $("newUpdBtn").hidden=false; });
 $("keyRemove").addEventListener("click",()=>{ try{localStorage.removeItem("sqhues.sitekey")}catch(e){} $("siteKey").value=""; $("setStatus").textContent="Key removed · auto-save is off"; $("newUpdBtn").hidden=true; });
-$("newUpdBtn").addEventListener("click",()=>{ setViewer(false); $("fileFP").focus(); });
+$("newUpdBtn").addEventListener("click",()=>{ setViewer(false); $("closeUpd").hidden=false; $("fileFP").focus(); });
+$("closeUpd").addEventListener("click",()=>{ $("closeUpd").hidden=true; setViewer(true); window.scrollTo({top:0,behavior:"smooth"}); });
+(()=>{ const d=new Date(); $("hdrDate").innerHTML=`<span>${d.toLocaleDateString("en-GB",{weekday:"long"})}</span><b>${d.toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"})}</b>`; })();
 drawSummary(null);
 fetchSnapshot();
 refresh();
@@ -2257,7 +2325,7 @@ refresh();
 })();
 
 /* fit to screen: redraw the date chart when the window size changes */
-(function(){let t;addEventListener("resize",()=>{clearTimeout(t);t=setTimeout(()=>{if(LAST_DAYS_R!==null)drawDays(LAST_DAYS_R)},150)})})();
+(function(){let t;addEventListener("resize",()=>{clearTimeout(t);t=setTimeout(()=>{if(LAST_DAYS_R!==null)drawDays()},150)})})();
 </script>
 
 </body>
