@@ -1591,7 +1591,7 @@ const HPV = (function(){
     if (hasN) { a.push(`containsNumber="1"`); if (allInt) a.push(`containsInteger="1"`); a.push(`minValue="${mn}" maxValue="${mx}"`); }
     return `<cacheField name="${X(name)}" numFmtId="${numFmtId || 0}"><sharedItems${a.length ? " " + a.join(" ") : ""}/></cacheField>`;
   }
-  const recVal = v => v === null ? "<m/>" : typeof v === "number" ? `<n v="${v}"/>` : typeof v === "boolean" ? `<b v="${v ? 1 : 0}"/>` : `<s v="${X(v)}"/>`;
+  const recVal = v => v === null ? "<m/>" : typeof v === "number" ? `<n v="${v}"/>` : typeof v === "boolean" ? `<b v="${v ? 1 : 0}"/>` : `<s v="${X(String(v).slice(0, 255))}"/>`;
 
   async function build(zIn, sx, o) {
     // every write / delete is staged and applied only when the whole rebuild succeeded, so a failure leaves the workbook untouched
@@ -1611,16 +1611,29 @@ const HPV = (function(){
     const dropPart = p => { if (!p) return; z.remove(p); z.remove(relsPath(p)); ct = ct.replace(new RegExp(`<Override [^>]*PartName="/${p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"[^>]*/>`, "g"), ""); };
     const addCT = (p, type) => { ct = ct.replace(new RegExp(`<Override [^>]*PartName="/${p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"[^>]*/>`, "g"), "").replace("</Types>", `<Override PartName="/${p}" ContentType="${type}"/></Types>`); };
 
-    /* -- the pivot cache this sheet uses (kept: same part and same workbook cacheId) -- */
+    /* -- pivot caches: other pivot tables in the workbook keep their own cache untouched; our two pivots get their own cache (sqh*) -- */
     const pvRels = await relsOf(z, pvPath);
-    const oldPT = pvRels.filter(r => /\/pivotTable$/.test(r.type)).map(r => r.path);
-    if (!oldPT.length) return { sx, note: "no pivot table on the sheet" };
-    const ptRels = await relsOf(z, oldPT[0]); const pcdPath = (ptRels.find(r => /pivotCacheDefinition$/.test(r.type)) || {}).path;
-    if (!pcdPath || !z.file(pcdPath)) return { sx, note: "pivot cache not found" };
-    const wbPcdRel = wbRels.find(r => r.path === pcdPath); if (!wbPcdRel) return { sx, note: "pivot cache not linked" };
-    const cidM = new RegExp(`<pivotCache\\b[^>]*cacheId="(\\d+)"[^>]*r:id="${wbPcdRel.id}"|<pivotCache\\b[^>]*r:id="${wbPcdRel.id}"[^>]*cacheId="(\\d+)"`).exec(wb); if (!cidM) return { sx, note: "cacheId not found" };
-    const cacheId = +(cidM[1] || cidM[2]);
-    const pcdRels = await relsOf(z, pcdPath); const pcrPath = (pcdRels.find(r => /pivotCacheRecords$/.test(r.type)) || {}).path || pcdPath.replace(/Definition(\d*)\.xml$/, "Records$1.xml");
+    const oldCDs = sheets.find(s => s.name === "Chart Data"); const cdOldPath = oldCDs ? (wbRels.find(r => r.id === oldCDs.rid) || {}).path : null;
+    const allPT = [];
+    for (const wr of wbRels.filter(r => /\/worksheet$/.test(r.type) && r.path && z.file(r.path)))
+      for (const t of await relsOf(z, wr.path)) if (t.path && /\/pivotTable$/.test(t.type) && z.file(t.path))
+        allPT.push({ sheet: wr.path, pt: t.path, cache: ((await relsOf(z, t.path)).find(x => /pivotCacheDefinition$/.test(x.type)) || {}).path });
+    const mine = allPT.filter(t => t.sheet === pvPath || t.sheet === cdOldPath), others = allPT.filter(t => !mine.includes(t));
+    const dropCaches = new Set([...mine.map(t => t.cache), ...wbRels.filter(r => /pivotCacheDefinition$/.test(r.type) && /\/sqh/.test(r.path || "")).map(r => r.path)].filter(c => c && !others.some(o => o.cache === c)));
+    for (const c of dropCaches) { const wr = wbRels.find(r => r.path === c);
+      for (const rr of await relsOf(z, c)) if (rr.path && /pivotCacheRecords$/.test(rr.type)) dropPart(rr.path);
+      dropPart(c);
+      if (wr) { wb = wb.replace(new RegExp(`<pivotCache\\b[^>]*r:id="${wr.id}"[^>]*/>`), ""); wbRels = wbRels.filter(r => r !== wr); } }
+    wb = wb.replace(/<pivotCaches>\s*<\/pivotCaches>/, "");
+    const pcdPath = "xl/pivotCache/sqhPivotCacheDefinition1.xml", pcrPath = "xl/pivotCache/sqhPivotCacheRecords1.xml";
+    const cacheId = Math.max(0, ...[...wb.matchAll(/<pivotCache\b[^>]*cacheId="(\d+)"/g)].map(m => +m[1])) + 1;
+    { const rid = "rId" + (Math.max(0, ...wbRels.map(r => +(/^rId(\d+)$/.exec(r.id) || [0, 0])[1])) + 1);
+      wbRels.push({ id: rid, type: RT + "pivotCacheDefinition", target: "pivotCache/sqhPivotCacheDefinition1.xml", path: pcdPath });
+      const ent = `<pivotCache cacheId="${cacheId}" r:id="${rid}"/>`;
+      if (/<pivotCaches>/.test(wb)) wb = wb.replace("</pivotCaches>", ent + "</pivotCaches>");
+      else if (/<\/calcPr>|<calcPr\b[^>]*\/>/.test(wb)) wb = wb.replace(/(<calcPr\b[^>]*\/>|<calcPr\b[^>]*>[\s\S]*?<\/calcPr>)/, `$1<pivotCaches>${ent}</pivotCaches>`);
+      else if (/<definedNames>/.test(wb)) wb = wb.replace("</definedNames>", `</definedNames><pivotCaches>${ent}</pivotCaches>`);
+      else wb = wb.replace("</sheets>", `</sheets><pivotCaches>${ent}</pivotCaches>`); }
 
     /* -- remove what an earlier run (or the original file) hung on the pivot sheet, plus our hidden chart-data sheet and slicer caches -- */
     for (const r of pvRels) { if (!r.path) continue;
