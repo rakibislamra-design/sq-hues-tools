@@ -2064,6 +2064,8 @@ async function run(){
     autoSave();
     status(`Done · ${rows.length.toLocaleString()} plan rows processed.`);
     prog(100,"Done · ready to download");
+    // download both files straight away (the buttons stay for a second copy)
+    try{ const o=outputs; await save(o.ott,o.ottName); if(o.bw){ await new Promise(r=>setTimeout(r,900)); await save(o.bw,o.bwName); $("dlStatus").textContent=`Downloaded ${o.ottName} and ${o.bwName}`; } }catch(e){ console.warn("auto download",e); }
   }catch(e){
     console.error(e); status("Update stopped."); $("prog").classList.add("fail"); $("progText").textContent="Stopped";
     $("errBox").innerHTML=`<div class="flag err">${esc(e.message||String(e))}</div>`; status("Update stopped: "+(e.message||String(e)).slice(0,140)); $("errBox").scrollIntoView({block:"nearest"});
