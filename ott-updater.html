@@ -519,7 +519,7 @@ td.fail.hov:hover{background:var(--red-soft)}
 
     <details><summary><span class="n">B</span>Batch allocation (optional, ticked by default)</summary><div class="in">
       <p>After the update, every line with a shortage (Balance to RFD below 0) is matched to <b>280 WIP batches</b> by PO + fabric + shade / AOP design. Closed / PO Pending stock and Final Reject batches are never used.</p>
-      <p>New columns after AX: <code>Need Additional</code> · <code>Batch No</code> · <code>Color</code> · <code>Fabrication</code> · <code>Plan Qty Kg</code> · <code>Batch Position</code> · <code>Dyeing Mill</code>. A line needing 2+ batches is split into one row per batch; total Req Qty stays the same.</p>
+      <p>New columns after AX: <code>Need Additional</code> · <code>Batch No</code> · <code>Color</code> · <code>Fabrication</code> · <code>Plan Qty Kg</code> · <code>Batch Position</code> · <code>H/S Status</code> (280 H/s Pending) · <code>Dye Batch</code> (280 Dyebatch No) · <code>Dye Plan</code> · <code>Fin Plan</code> · <code>RFD Plan</code> · <code>Discussion</code> · <code>Remarks</code> (filled by you; kept when the file is uploaded again) · <code>Dyeing Mill</code>. A line needing 2+ batches is split into one row per batch; total Req Qty stays the same.</p>
       <p>Rules: AOP lines show <code>AOP Batch</code>; outside batches still at the mill show the 280 Order No; KPK black outside = <code>KPK-Outside-Black</code>.</p>
       <p>Downloads: the final Fabric Plan (update + allocation) and <b>Line plan batch wise file_&lt;date&gt;.xlsx</b>. If yesterday's file already has these columns, they are rebuilt, not repeated.</p>
     </div></details>
@@ -799,6 +799,8 @@ function mergeSplitRows(xml,sst){
   let naCol=null, refCol=null; { let q; CELL.lastIndex=0; while((q=CELL.exec(hdr.inner))){ const v=String(txt(q[3],q[4])??"").trim().toLowerCase(); const cn=colNum(q[1]);
     if(v==="need additional"&&cn>colNum("AX")&&(naCol===null||cn<naCol)) naCol=cn; if(v==="split ref") refCol=q[1]; } }
   if(naCol===null) return {xml,changed:false,merged:0,removed:0};
+  const KCOL={}; const KNAME={"dye plan":"dd","fin plan":"fd","rfd plan":"rd","discussion":"disc","remarks":"rem"}; let bnCol=null;
+  { let q; const re=new RegExp(CELL.source,"g"); while((q=re.exec(hdr.inner))){ const v=String(txt(q[3],q[4])??"").trim().toLowerCase(); if(colNum(q[1])<naCol) continue; if(KNAME[v]) KCOL[KNAME[v]]=q[1]; if(v==="batch no"&&!bnCol) bnCol=q[1]; } }
   const cellsOf=o=>{const a=[];let q;const re=new RegExp(CELL.source,"g");while((q=re.exec(o.inner)))a.push({col:q[1],attrs:q[3],inner:q[4],full:q[0]});return a};
   const numOf=c=>{ if(!c||c.inner===undefined) return 0; const v=/<v>([^<]*)<\/v>/.exec(c.inner); return v&&!isNaN(+v[1])?+v[1]:0 };
   // group rows by Split Ref (first occurrence keeps the position)
@@ -806,9 +808,21 @@ function mergeSplitRows(xml,sst){
   const drop=new Set(), sumInto=new Map();
   for(const [,rs] of groups) if(rs.length>1){ sumInto.set(rs[0],rs); rs.slice(1).forEach(r=>drop.add(r)); }
   const byR=new Map(parsed.map(o=>[o.r,o]));
-  const out=[]; let cur=0; const newNo=new Map(); let removedBefore=0; const shiftMap=[];
+  const out=[]; let cur=0; const newNo=new Map(); let removedBefore=0; const shiftMap=[]; const keep=new Map();
+  const tv=(oo,col)=>{ if(!col) return ""; const c=oo.cs.find(z=>z.col===col); return c?String(txt(c.attrs,c.inner)??"").trim():"" };
   for(const o of parsed){ if(drop.has(o.r)){ removedBefore++; continue; }
     cur++; newNo.set(o.r,cur); const dr=cur-o.r;
+    { const grp=sumInto.has(o.r)?sumInto.get(o.r).map(r=>byR.get(r)):[o]; const j=col=>[...new Set(grp.map(oo=>tv(oo,col)).filter(Boolean))].join("; ");
+      const kv={}; let any=false;
+      for(const [k,col] of Object.entries(KCOL)){ let v;
+        if(k==="disc"||k==="rem") v=j(col);
+        else { v=null; for(const oo of grp){ const c=oo.cs.find(z=>z.col===col); const x=c?txt(c.attrs,c.inner):null; if(x!==null&&x!==""){ v=(typeof x==="number"||!isNaN(+x))?+x:String(x); break; } } }
+        if(v!==null&&v!==""){ kv[k]=v; any=true; } }
+      // per batch row as well, so a note typed on one batch row returns to that batch
+      if(any&&bnCol){ const by={}; for(const oo of grp){ const bn=tv(oo,bnCol); if(!bn) continue; const one={}; let has=false;
+          for(const [k,col] of Object.entries(KCOL)){ const c=oo.cs.find(z=>z.col===col); const x=c?txt(c.attrs,c.inner):null; if(x!==null&&x!==""){ one[k]=(k==="disc"||k==="rem")?String(x):((typeof x==="number"||!isNaN(+x))?+x:String(x)); has=true; } }
+          if(has) by[bn]=one; } kv.byBatch=by; }
+      if(any) keep.set(cur,kv); }
     let cs=o.cs.filter(c=>colNum(c.col)<naCol);
     if(sumInto.has(o.r)){ const grp=sumInto.get(o.r).map(r=>byR.get(r));
       const get=(oo,col)=>oo.cs.find(c=>c.col===col);
@@ -832,7 +846,7 @@ function mergeSplitRows(xml,sst){
   x2=x2.replace(/<dimension ref="([A-Z]+\d+):[A-Z]+\d+"/,(a,b)=>`<dimension ref="${b}:AX${cur}"`);
   x2=x2.replace(/<autoFilter ref="A2:[A-Z]+\d+"/,`<autoFilter ref="A2:AX${cur}"`);
   if(drop.size) x2=x2.replace(/(<(?:conditionalFormatting|dataValidation|mergeCell)\b[^>]*?(?:sqref|ref)=")([^"]+)(")/g,(a,p,refs,z)=>p+refs.split(" ").map(rg=>rg.replace(/([A-Z]+)(\d+)/g,(q,cc,n)=>cc+mapRow(+n))).join(" ")+z);
-  return {xml:x2,changed:true,merged:sumInto.size,removed:drop.size};
+  return {xml:x2,changed:true,merged:sumInto.size,removed:drop.size,keep};
 }
 async function readFP(file){
   const buf=await file.arrayBuffer();
@@ -848,7 +862,7 @@ async function readFP(file){
     unshareFormulas(doc);
     const mg=mergeSplitRows(new XMLSerializer().serializeToString(doc),sst);
     if(mg.changed){ doc=new DOMParser().parseFromString(mg.xml,"application/xml"); if(doc.getElementsByTagName("parsererror").length) throw new Error("Could not re-read the Fab Plan-Final sheet after joining split rows."); }
-    return {zip,path,sst,doc,merged:mg.merged,mergedRows:mg.removed};
+    return {zip,path,sst,doc,merged:mg.merged,mergedRows:mg.removed,keep:mg.keep};
   }
   return {zip,path,sst,doc};
 }
@@ -1023,6 +1037,8 @@ const LPA = (function(){
     const c = { cp: colOf(G2, H2, "customerpo"), shade: colOf(G2, H2, "shade"), fab: colOf(G2, H2, "fabricyarn"), fin: colOf(G2, H2, "finalbatchposition"), pos: colOf(G2, H2, "batchposition"),
       ar: colOf(G2, H2, "aopdesigndetails"), exp: colOf(G2, H2, "expectedqtymtr"), bn: colOf(G2, H2, "batchno"), woc: colOf(G2, H2, "workordercategory"), body: colOf(G2, H2, "bodytype"), om: colOf(G2, H2, "outsidemill"),
       ekg: colOf(G2, H2, "expectedqtykg"), W: colOf(G2, H2, "planqtykg"), ono: colOf(G2, H2, "orderno") };
+    const colOpt = k => { try { return colOf(G2, H2, k); } catch (e) { return null; } };
+    c.hs = colOpt("hspending"); c.dyeb = colOpt("dyebatchno"); c.dd = colOpt("dyeingdate"); c.fd = colOpt("finishingdate"); c.rd = colOpt("rfddate");
     const c7 = { cp: colOf(G7, H7, "customerpo"), color: colOf(G7, H7, "color"), fab: colOf(G7, H7, "fabrication"), bal: colOf(G7, H7, "100rfdblncmtr") };
     const g2 = (r, col) => { const m = G2.rows.get(r); return m ? (m.has(col) ? m.get(col) : null) : null; };
 
@@ -1268,7 +1284,9 @@ const LPA = (function(){
       const pos = String(g2(r, c.fin) ?? "").trim().toUpperCase();
       const u = new Map([...(USAGE.get(r) || new Map())].filter(([d, v]) => d !== "NaT" && v >= 0.5));
       const ek = num(g2(r, c.ekg)); let em = num(g2(r, c.exp)); if (em <= 0) em = DERIVED[r] || 0;
-      BINFO.set(r, { no: g2(r, c.bn) === null ? "" : String(g2(r, c.bn)), shade: g2(r, c.shade) === null ? "" : String(g2(r, c.shade)), fab: g2(r, c.fab) === null ? "" : String(g2(r, c.fab)),
+      const dOf = col => { const v = col ? g2(r, col) : null; return typeof v === "number" ? Math.floor(v) : null; };
+      const tOf = col => { const v = col ? g2(r, col) : null; return v === null ? "" : String(v); };
+      BINFO.set(r, { hs: tOf(c.hs), db: tOf(c.dyeb), dd: dOf(c.dd), fd: dOf(c.fd), rd: dOf(c.rd), no: g2(r, c.bn) === null ? "" : String(g2(r, c.bn)), shade: g2(r, c.shade) === null ? "" : String(g2(r, c.shade)), fab: g2(r, c.fab) === null ? "" : String(g2(r, c.fab)),
         pos: String(g2(r, c.fin) ?? "").trim(), kg: num(g2(r, c.W)), out: outside, ono: g2(r, c.ono) === null ? "" : String(g2(r, c.ono)) });
       if (outside && pos.startsWith("OUTSIDE") && u.size > 1 && em > 0) {
         nSplit++; const ds = [...u.keys()].sort((a, b) => a - b); const ukg = USAGEKG.get(r) || new Map();
@@ -1324,13 +1342,18 @@ const LPA = (function(){
       while ((q = cr.exec(m[2]))) if (colNum(q[1]) < naOld) keep.push(q[0]); return m[1].replace(/ spans="[^"]*"/, "") + keep.join("") + m[3]; });
     const hdrRowX = /<row r="2"[^>]*>[\s\S]*?<\/row>/.exec(sx)[0];
     let lastL = 0; { const cr = CELLRE(); let q; while ((q = cr.exec(hdrRowX))) if (q[4] !== undefined && /<v>|<is>/.test(q[4])) lastL = Math.max(lastL, colNum(q[1])); }
-    const NA = colStr(lastL + 1); const FC = [0, 1, 2, 3, 4, 5].map(k => colStr(lastL + 2 + k)); const SREF = colStr(lastL + 8);
-    const FH = ["Batch No", "Color", "Fabrication", "Plan Qty Kg", "Batch Position", "Dyeing Mill"];
+    // batch block after Need Additional; Discussion / Remarks are free-text and carried over from the uploaded file
+    const OUTC = [{ h: "Batch No", k: "no" }, { h: "Color", k: "sh" }, { h: "Fabrication", k: "fb" }, { h: "Plan Qty Kg", k: "kg", num: 1 }, { h: "Batch Position", k: "ps" },
+      { h: "H/S Status", k: "hs" }, { h: "Dye Batch", k: "db" }, { h: "Dye Plan", k: "dd", date: 1, keep: 1 }, { h: "Fin Plan", k: "fd", date: 1, keep: 1 }, { h: "RFD Plan", k: "rd", date: 1, keep: 1 },
+      { h: "Discussion", k: "disc", keep: 1 }, { h: "Remarks", k: "rem", keep: 1 }, { h: "Dyeing Mill", k: "ml" }];
+    const NA = colStr(lastL + 1); const FC = OUTC.map((o, k) => colStr(lastL + 2 + k)); const SREF = colStr(lastL + 2 + OUTC.length); const LASTC = FC[FC.length - 1];
+    const FH = OUTC.map(o => o.h); const KEEP = opt.keep || new Map();
     const RQ = cl.reqk;
     // styles: text = PO cell style (Q), number = RFD Qty style (M), from the first data row
     const r3x = /<row r="3"[^>]*>[\s\S]*?<\/row>/.exec(sx); const sQ = r3x ? /<c r="[A-Z]+3"/.test(r3x[0]) && (new RegExp(`<c r="${cl.po}3" s="(\\d+)"`).exec(r3x[0]) || [])[1] : null;
     const sM = r3x ? (new RegExp(`<c r="M3" s="(\\d+)"`).exec(r3x[0]) || [])[1] : null;
     const TXT = sQ || "94", NUMS = sM || "110";
+    const sD = r3x ? (new RegExp(`<c r="${cl.dt}3" s="(\\d+)"`).exec(r3x[0]) || [])[1] : null; const DATE = sD || NUMS;
     // Dyeing Mill fallback for blank lines (same PO / buyer+article+colour / buyer+colour / colour)
     const nz = t => String(t).toLowerCase().replace(/[^a-z0-9]/g, "");
     const lv = { po: new Map(), bac: new Map(), bc: new Map(), c: new Map() }; const push = (m, k, v) => { if (!m.has(k)) m.set(k, []); m.get(k).push(v); };
@@ -1346,25 +1369,33 @@ const LPA = (function(){
     const AOPBAL = new Set([...AOPR].filter(r => FR.get(r).P < -0.05));
     const uniq = a => [...new Set(a)];
     const fvals = new Map(), PIECES = new Map();
-    for (const [rs, li] of LINES) { const nos = [], kgs = [], shs = [], fbs = [], pss = [], mls = [];
+    for (const [rs, li] of LINES) { const nos = [], kgs = [], shs = [], fbs = [], pss = [], mls = [], ext = [];
       for (const br of li.batches) { const bi = BINFO.get(br); if (!bi) continue; let no = bi.no, kg = bi.kg; const sp = SPLIT.get(br);
         if (sp && li.dt !== null) { let dkey = null; for (const d of sp.keys()) if (dkey === null || Math.abs(d - li.dt) < Math.abs(dkey - li.dt)) dkey = d; kg = sp.get(dkey)[1]; }
         if (bi.out && KPKB.has(rs)) no = "KPK-Outside-Black"; else if (bi.out && bi.ono && !bi.pos.toUpperCase().startsWith("QAD")) no = bi.ono;
-        mls.push(bi.out ? "Outside" : "Inhouse"); nos.push(no); kgs.push(kg); shs.push(bi.shade); fbs.push(bi.fab); pss.push(bi.pos); }
+        mls.push(bi.out ? "Outside" : "Inhouse"); nos.push(no); kgs.push(kg); shs.push(bi.shade); fbs.push(bi.fab); pss.push(bi.pos); ext.push({ hs: bi.hs, db: bi.db, dd: bi.dd, fd: bi.fd, rd: bi.rd }); }
       if (nos.length > 1) { const ua = new Map(li.alloc); const us = li.batches.filter(br => BINFO.get(br)).map(br => Math.max(ua.get(br) || 0, 0));
         let tot = us.reduce((a, b) => a + b, 0) + Math.max(li.addl, 0); let fr; if (tot <= 0) { fr = nos.map(() => 1 / nos.length); } else fr = us.map(u => u / tot);
         fr[fr.length - 1] = 1 - fr.slice(0, -1).reduce((a, b) => a + b, 0);
-        PIECES.set(rs, nos.map((n, k) => [n, shs[k], fbs[k], r2(kgs[k]), pss[k], fr[k], mls[k]])); }
+        PIECES.set(rs, nos.map((n, k) => ({ no: n, sh: shs[k], fb: fbs[k], kg: r2(kgs[k]), ps: pss[k], fr: fr[k], ml: mls[k], ...ext[k] }))); }
       if (nos.length) { const q = kgs.length === 1 ? r2(kgs[0]) : kgs.map(k => k.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })).join("; ");
-        fvals.set(rs, [nos.join("; "), uniq(shs).join("; "), uniq(fbs).join("; "), q, uniq(pss).join("; "), mls.includes("Outside") ? "Outside" : "Inhouse"]); } }
+        const dj = key => ext.length === 1 ? ext[0][key] : uniq(ext.map(e => e[key]).filter(x => x !== null).map(x => { const t = serDate(x); return `${String(t.getUTCDate()).padStart(2, "0")}-${MONS[t.getUTCMonth()]}`; })).join("; ");
+        fvals.set(rs, { no: nos.join("; "), sh: uniq(shs).join("; "), fb: uniq(fbs).join("; "), kg: q, ps: uniq(pss).join("; "), hs: uniq(ext.map(e => e.hs)).join("; "), db: uniq(ext.map(e => e.db)).join("; "),
+          dd: dj("dd"), fd: dj("fd"), rd: dj("rd"), ml: mls.includes("Outside") ? "Outside" : "Inhouse" }); } }
+    const cellOut = (o, ref, val) => { if (val === null || val === undefined || val === "") return `<c r="${ref}" s="${TXT}"/>`;
+      if (o.num && typeof val === "number") return `<c r="${ref}" s="${NUMS}"><v>${val}</v></c>`;
+      if (o.date && typeof val === "number") return `<c r="${ref}" s="${DATE}"><v>${val}</v></c>`;
+      return `<c r="${ref}" s="${TXT}" t="inlineStr"><is><t>${escX(String(val))}</t></is></c>`; };
     const cellT = (ref, v) => v === null || v === undefined || v === "" ? `<c r="${ref}" s="${TXT}"/>` : `<c r="${ref}" s="${TXT}" t="inlineStr"><is><t>${escX(v)}</t></is></c>`;
     sx = sx.replace(ROWRE(), (row, rS) => { const r = +rS;
       if (r === 2) { const sty = styleOf(row, RQ, 2); const nw = { [NA]: `<c r="${NA}2"${sty} t="inlineStr"><is><t>Need Additional</t></is></c>` }; FC.forEach((cc, k) => nw[cc] = `<c r="${cc}2"${sty} t="inlineStr"><is><t>${FH[k]}</t></is></c>`); nw[SREF] = `<c r="${SREF}2"${sty} t="inlineStr"><is><t>Split Ref</t></is></c>`; return putCells(row, 2, nw); }
       if (r < 3) return row;
       let v = fvals.get(r); const nw = {};
-      if (AOPBAL.has(r) && !v) v = ["AOP Batch", "", "", "", "", MILL.get(r) || ""];
-      FC.forEach((cc, k) => { const val = v ? v[k] : (k === 5 ? (MILL.get(r) || null) : null);
-        nw[cc] = (k === 3 && typeof val === "number") ? `<c r="${cc}${r}" s="${NUMS}"><v>${val}</v></c>` : cellT(cc + r, val === null ? null : String(val)); });
+      if (AOPBAL.has(r) && !v) v = { no: "AOP Batch", ml: MILL.get(r) || "" };
+      const kl = KEEP.get(r) || {}; const kp = (v && kl.byBatch && kl.byBatch[v.no]) || (kl.byBatch && Object.keys(kl.byBatch).length ? (Object.keys(kl.byBatch).length === 1 ? Object.values(kl.byBatch)[0] : kl) : kl);
+      OUTC.forEach((o, k) => { let val = v ? v[o.k] : (o.k === "ml" ? (MILL.get(r) || null) : null);
+        if (o.keep) val = kp[o.k] ?? null;
+        nw[FC[k]] = cellOut(o, FC[k] + r, val); });
       const lab = AOPR.has(r) ? null : (res.get(r) || null); nw[NA] = cellT(NA + r, lab);
       return putCells(row, r, nw); });
     // split lines that need 2+ batches into one row per batch; renumber rows and shift formulas
@@ -1381,24 +1412,27 @@ const LPA = (function(){
         while ((q = cr.exec(hm[2]))) { const col = q[1]; let cx = q[0].replace(/<c r="[A-Z]+\d+"/, `<c r="${col}${cur}"`);
           if (cur !== r0) cx = cx.replace(/<f([^>]*)>([\s\S]*?)<\/f>/, (all, fa, ft) => `<f${fa}>${escX(shiftFormula(decode(ft), cur - r0, 0))}</f>`);
           cells.set(col, cx); }
-        if (pcs) { if (k === 0) nSplitLines++; const [no_, sh_, fb_, kg_, ps_, fr_, ml_] = pcs[k];
+        if (pcs) { if (k === 0) nSplitLines++; const pc = pcs[k];
           for (const qc of QC) { const cx = cells.get(qc); if (!cx || cx.includes("<f")) continue; const vm = /<v>([^<]*)<\/v>/.exec(cx); if (!vm) continue; const tv = parseFloat(vm[1]); if (isNaN(tv)) continue;
-            const sh = pcs.map(p => p[5]); const r4 = x => parseFloat(Number(x).toFixed(4));
+            const sh = pcs.map(p => p.fr); const r4 = x => parseFloat(Number(x).toFixed(4));
             const nv = k < kn - 1 ? r4(tv * sh[k]) : r4(tv - sh.slice(0, -1).reduce((a, s) => a + r4(tv * s), 0));
             cells.set(qc, cx.replace(/<v>[^<]*<\/v>/, `<v>${nv}</v>`)); }
-          [no_, sh_, fb_, kg_, ps_, ml_].forEach((vv, k2) => { const cc = FC[k2]; cells.set(cc, k2 === 3 ? `<c r="${cc}${cur}" s="${NUMS}"><v>${vv}</v></c>` : cellT(cc + cur, String(vv))); });
+          const kl = KEEP.get(r0) || {}; const kp = (kl.byBatch && kl.byBatch[pc.no]) || (kl.byBatch && Object.keys(kl.byBatch).length ? {} : kl);
+          OUTC.forEach((o, k2) => { let vv = pc[o.k]; if (o.keep) vv = kp[o.k] ?? null; cells.set(FC[k2], cellOut(o, FC[k2] + cur, vv)); });
           if (k < kn - 1) cells.set(NA, `<c r="${NA}${cur}" s="${TXT}"/>`);
           cells.set(SREF, `<c r="${SREF}${cur}" s="${TXT}" t="inlineStr"><is><t>SPLIT-${r0}</t></is></c>`); }
         NEWROWS.push(head + [...cells.entries()].sort((a, b) => colNum(a[0]) - colNum(b[0])).map(e => e[1]).join("") + hm[3]); } }
     sx = sx.slice(0, i0) + NEWROWS.join("") + sx.slice(i1);
     const LASTROW = cur;
-    sx = sx.replace(/<dimension ref="([A-Z]+\d+):[A-Z]+\d+"/, (m, a) => `<dimension ref="${a}:${FC[5]}${LASTROW}"`);
-    if (sx.includes("</cols>")) { const w = [17, 38, 24, 38, 12, 20, 14]; let add = ""; const covered = n => [...sx.matchAll(/<col min="(\d+)" max="(\d+)"/g)].some(m => +m[1] <= n && n <= +m[2]); for (let k = 0; k < 7; k++) { const n = lastL + 1 + k; if (!covered(n)) add += `<col min="${n}" max="${n}" width="${w[k]}" customWidth="1"/>`; } { const n = lastL + 8; if (!covered(n)) add += `<col min="${n}" max="${n}" width="12" hidden="1" customWidth="1"/>`; } sx = sx.replace("</cols>", add + "</cols>"); }
-    sx = sx.replace(/<autoFilter ref="A2:[A-Z]+\d+"/, `<autoFilter ref="A2:${FC[5]}${LASTROW}"`);
+    sx = sx.replace(/<dimension ref="([A-Z]+\d+):[A-Z]+\d+"/, (m, a) => `<dimension ref="${a}:${SREF}${LASTROW}"`);
+    if (sx.includes("</cols>")) { const w = [17, 38, 24, 38, 12, 20, 13, 18, 11, 11, 11, 32, 32, 14]; let add = ""; const covered = n => [...sx.matchAll(/<col min="(\d+)" max="(\d+)"/g)].some(m => +m[1] <= n && n <= +m[2]);
+      for (let k = 0; k < w.length; k++) { const n = lastL + 1 + k; if (!covered(n)) add += `<col min="${n}" max="${n}" width="${w[k]}" customWidth="1"/>`; }
+      { const n = colNum(SREF); if (!covered(n)) add += `<col min="${n}" max="${n}" width="12" hidden="1" customWidth="1"/>`; } sx = sx.replace("</cols>", add + "</cols>"); }
+    sx = sx.replace(/<autoFilter ref="A2:[A-Z]+\d+"/, `<autoFilter ref="A2:${LASTC}${LASTROW}"`);
     // conditional formats / data validations / merges are row-based: move their row numbers with the split
     const mapRow = n => { if (!PIECES.size) return n; let best = n, add = 0; for (const [r0, pcs] of PIECES) if (r0 < n) add += pcs.length - 1; return Math.min(1048576, n + add); };
     if (PIECES.size) sx = sx.replace(/(<(?:conditionalFormatting|dataValidation|mergeCell)\b[^>]*?(?:sqref|ref)=")([^"]+)(")/g, (m, a, refs, z) => a + refs.split(" ").map(rg => rg.replace(/([A-Z]+)(\d+)/g, (q, cc, n) => cc + mapRow(+n))).join(" ") + z);
-    return { sheetXml: sx, lastRow: LASTROW, lastCol: FC[5], naCol: NA, rowMap: rmap, batchwise: bwBlob,
+    return { sheetXml: sx, lastRow: LASTROW, lastCol: LASTC, naCol: NA, rowMap: rmap, batchwise: bwBlob,
       summary: { marked: mark.size, details: [...mark.values()].filter(v => v[1]).length, needAdd: [...out.values()].filter(v => v[0] === "Need Additional").length,
         needAddM: [...out.entries()].filter(([, v]) => v[0] === "Need Additional").reduce((s, [r, v]) => s + v[1] * (isprint.get(r) ? 3 : 1), 0),
         noBatch: [...out.values()].filter(v => v[0] === "No Batch Found").length, splitLines: nSplitLines, splitRows: [...PIECES.values()].reduce((a, p) => a + p.length, 0),
@@ -1572,7 +1606,7 @@ async function run(){
       prog(72,"Batch allocation…");
       try{
         const allRows=[...rowEls.keys()].filter(r=>r>=3).sort((a,b)=>a-b);
-        ALLOC=await LPA.run({docZip, fpXml:out, fpSST:F.sst, lastDataCol:"AX", status:t=>status(t),
+        ALLOC=await LPA.run({docZip, fpXml:out, fpSST:F.sst, lastDataCol:"AX", keep:F.keep, status:t=>status(t),
           fp:{rows, allRows, header:[...getCells(2)].map(([cc,el])=>[cc,cellInfo(el,F.sst).v]).filter(([,v])=>v!==null&&v!==""),
               get:(r,cc)=>{const v=val(r,cc).v; return v===undefined?null:v}, L:r=>L.get(r)??0, N:r=>mval(r)-(L.get(r)??0), P:r=>mval(r)-(L.get(r)??0)+(O.get(r)??0)}});
         out=ALLOC.sheetXml;
