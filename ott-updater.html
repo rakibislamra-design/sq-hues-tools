@@ -224,6 +224,22 @@ td.fail.hov:hover{background:var(--red-soft)}
 .pubsteps li{line-height:1.9}
 .pubsteps .dlb{padding:5px 12px;font-size:13px;vertical-align:middle}
 .newupd{display:inline-flex;align-items:center;gap:8px}
+/* top bar: last update + site key; header right: downloads + new update */
+.topnav{flex-wrap:nowrap}
+.navr{display:flex;align-items:center;gap:12px;margin-left:auto;min-width:0}
+.topnav .viewbar{flex:0 1 auto;min-width:0}
+.topnav .viewbanner{background:transparent;border:0;padding:0;color:#fff;font-size:13px;gap:12px;flex-wrap:nowrap;white-space:nowrap;min-width:0}
+.topnav .viewbanner b{font:600 12px var(--f-mono);letter-spacing:.06em;text-transform:uppercase;opacity:.75}
+.topnav .gear{opacity:.8;border-color:rgba(255,255,255,.45);width:32px;height:32px}
+.topnav .gear:hover,.topnav .gear:focus-visible{opacity:1;background:rgba(255,255,255,.14);border-color:#fff}
+.topnav .gear svg{stroke:#fff}
+.hdract{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.hdrdl{display:contents}
+.hdract .vdl,.hdract .newupd{font-size:13.5px;padding:7px 13px;min-height:0}
+.hdract .vdl svg{width:16px;height:16px}
+#hdrDate{color:var(--q);font-weight:600}
+@media (max-width:900px){.topnav .viewbanner>span:last-child{display:none}}
+@media (max-width:640px){.topnav .viewbanner{display:none}}
 .vdl{display:inline-flex;align-items:center;gap:8px;text-decoration:none;font:600 14px var(--f-body);background:var(--accent);color:var(--accent-ink);border-radius:9px;padding:8px 14px}
 .vdl.alt{background:var(--surface);color:var(--q);border:1.5px solid var(--q)}
 .vdl.off{opacity:.6;cursor:default;border-style:dashed}
@@ -342,18 +358,20 @@ td.fail.hov:hover{background:var(--red-soft)}
       <a class="homebtn" href="./"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg>Home</a>
       <span>SQ Hues Tools</span><span class="sep">›</span><span class="here">OTT Fabric Plan Updater</span>
     </div>
-    <a class="navlink" href="./">All tools →</a>
+    <div class="navr">
+      <div class="viewbar" id="viewBar" hidden><div class="viewbanner" id="viewBanner"></div></div>
+      <button type="button" class="gear" id="gearBtn" aria-label="Site settings" title="Site settings (owner)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+    </div>
   </nav>
   <header>
     <div class="brand">
       <div class="mark" aria-hidden="true">Q</div>
       <div>
-        <div class="tag">SQ Hues · Fabric Planning</div>
+        <div class="tag">SQ Hues · Fabric Planning · <span id="hdrDate"></span></div>
         <h1>Fabric Daily Line Plan Hit %</h1>
       </div>
     </div>
-    <div class="hdate" id="hdrDate" aria-label="Today"></div>
-    <div class="hdr-right"><button type="button" class="gear" id="gearBtn" aria-label="Site settings" title="Site settings (owner)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button><a class="back" id="backLink" href="./">← All tools</a><div class="tag">Quality Seeks Quality</div></div>
+    <div class="hdr-right"><div class="hdract" id="hdrAct" hidden><span class="hdrdl" id="hdrDl"></span><button class="ghost newupd" id="newUpdBtn" type="button">＋ Run a new update</button></div><a class="back" id="backLink" href="./">← All tools</a><div class="tag">Quality Seeks Quality</div></div>
   </header>
 
   <div class="setdlg" id="setDlg" role="dialog" aria-label="Site settings" hidden>
@@ -365,10 +383,6 @@ td.fail.hov:hover{background:var(--red-soft)}
     <div class="setrow"><span class="status" id="setStatus"></span><span><button type="button" class="ghost sm" id="keyRemove">Remove key</button> <button type="button" class="ghost sm" id="setClose">Close</button> <button type="button" class="primary sm" id="keySave">Save key</button></span></div>
   </div>
 
-  <div class="viewbar" id="viewBar" hidden>
-    <div class="viewbanner" id="viewBanner"></div>
-    <button class="ghost newupd" id="newUpdBtn" type="button">＋ Run a new update</button>
-  </div>
 
   <section class="inputs" aria-label="Input files">
     <div class="drop" id="dropFP">
@@ -493,7 +507,6 @@ td.fail.hov:hover{background:var(--red-soft)}
   </section>
 
   <section id="ppSec" class="dem" hidden aria-label="Daily Line Plan vs Performance">
-    <div class="row2"><h2>Daily Line Plan vs Performance <span class="stamp" data-stamp></span></h2><span class="status" id="ppNote"></span></div>
     <iframe id="ppFrame" title="Daily Line Plan vs Performance"></iframe>
   </section>
 
@@ -2785,7 +2798,7 @@ function buildSnapshot(){
   return {v:1,articles:A,ott:outputs?outputs.ottName:"",ottPath:OTT_PATH,bw:(outputs&&outputs.bw)?outputs.bwName:"",bwPath:BW_PATH,pp:DASH.pp||null,store:"data-branch",tool:"ott-fabric-plan-updater",at:DASH.at,report:DASH.report,fp:DASH.fp,doc:DASH.doc,summary:DASH.buyers,buyers:B,rows};
 }
 function setViewer(on){
-  $("viewBar").hidden=!on; $("newUpdBtn").hidden=!getKey();
+  $("viewBar").hidden=!on; $("hdrAct").hidden=!on; $("newUpdBtn").hidden=!getKey();
   document.querySelector("section.inputs").hidden=on; document.querySelector(".runbar").hidden=on;
   if(on){ $("prog").hidden=true; $("results").hidden=true; }
 }
@@ -2797,9 +2810,10 @@ function loadSnapshot(j){
   const ott=j.ott||"", bwn=j.bw||"";
   const ico='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>';
   const href=p=>j.store==="data-branch"?rawURL(p):p;
-  $("viewBanner").innerHTML=`<b>Last update</b><span>${esc(stampText(j.at).replace("Last updated ",""))}</span><span>Report date ${esc(j.report?fromSerial(toSerial(j.report)):"–")}</span>${ott?`<a class="vdl" data-p="${esc(j.ottPath)}" data-n="${esc(ott)}" href="${esc(href(j.ottPath))}" download="${esc(ott)}">${ico}<span>Download Fabric Plan file</span></a>`:""}${bwn?`<a class="vdl alt" data-p="${esc(j.bwPath)}" data-n="${esc(bwn)}" href="${esc(href(j.bwPath))}" download="${esc(bwn)}">${ico}<span>Download Batch wise line plan</span></a>`:`<span class="vdl alt off" title="Appears after the next update run with “Also run batch allocation” ticked">${ico}<span>Batch wise line plan · after next update</span></span>`}`;
+  $("viewBanner").innerHTML=`<b>Last update</b><span>${esc(stampText(j.at).replace("Last updated ",""))}</span><span>Report ${esc(j.report?fromSerial(toSerial(j.report)):"–")}</span>`;
+  $("hdrDl").innerHTML=`${ott?`<a class="vdl" data-p="${esc(j.ottPath)}" data-n="${esc(ott)}" href="${esc(href(j.ottPath))}" download="${esc(ott)}">${ico}<span>Fabric Plan file</span></a>`:""}${bwn?`<a class="vdl alt" data-p="${esc(j.bwPath)}" data-n="${esc(bwn)}" href="${esc(href(j.bwPath))}" download="${esc(bwn)}">${ico}<span>Batch wise line plan</span></a>`:`<span class="vdl alt off" title="Appears after the next update run with “Also run batch allocation” ticked">${ico}<span>Batch wise line plan · after next update</span></span>`}`;
   setViewer(true);
-  if(j.store==="data-branch") document.querySelectorAll("#viewBanner a.vdl").forEach(a=>a.addEventListener("click",async ev=>{ ev.preventDefault(); const lab=a.querySelector("span"), t=lab.textContent; lab.textContent="Downloading…";
+  if(j.store==="data-branch") document.querySelectorAll("#hdrDl a.vdl").forEach(a=>a.addEventListener("click",async ev=>{ ev.preventDefault(); const lab=a.querySelector("span"), t=lab.textContent; lab.textContent="Downloading…";
     try{ const r=await fetch(rawURL(a.dataset.p)+"?ts="+Date.now(),{cache:"no-store"}); if(!r.ok)throw 0; const blob=await r.blob(); const u=URL.createObjectURL(blob), x=document.createElement("a"); x.href=u; x.download=a.dataset.n; document.body.appendChild(x); x.click(); setTimeout(()=>{URL.revokeObjectURL(u);x.remove()},4000); }
     catch(e){ location.href=rawURL(a.dataset.p); } finally{ lab.textContent=t; } }));
   return true;
@@ -2997,7 +3011,7 @@ $("keySave").addEventListener("click",()=>{ const v=$("siteKey").value.trim(); i
 $("keyRemove").addEventListener("click",()=>{ try{localStorage.removeItem("sqhues.sitekey")}catch(e){} $("siteKey").value=""; $("setStatus").textContent="Key removed · auto-save is off"; $("newUpdBtn").hidden=true; });
 $("newUpdBtn").addEventListener("click",()=>{ setViewer(false); $("closeUpd").hidden=false; $("fileFP").focus(); });
 $("closeUpd").addEventListener("click",()=>{ $("closeUpd").hidden=true; setViewer(true); window.scrollTo({top:0,behavior:"smooth"}); });
-(()=>{ const d=new Date(); $("hdrDate").innerHTML=`<span>${d.toLocaleDateString("en-GB",{weekday:"long"})}</span><b>${d.toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"})}</b>`; })();
+(()=>{ const d=new Date(); $("hdrDate").textContent=`${d.toLocaleDateString("en-GB",{weekday:"long"})} ${d.toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"})}`; })();
 drawSummary(null);
 fetchSnapshot();
 refresh();
