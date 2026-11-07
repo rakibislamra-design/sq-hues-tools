@@ -1017,7 +1017,7 @@ const LPA = (function(){
   }
 
   /* ---------- colour scoring ---------- */
-  const STOP = new Set(["aop","tcx","tpx","tpg","pantone","base","the","and","gusset","spec","mmf","archroma","sp27","su26","su25","au26","sum25","t61","t71","t71su26","lhg"]);
+  const STOP = new Set(["aop","tcx","tpx","tpg","pantone","base","the","and","gusset","feeder","feeders","spec","mmf","archroma","sp27","su26","su25","au26","sum25","t61","t71","t71su26","lhg"]);
   const PRINT = /aop|csp\d|csu\d|t61|t71|print|floral|flora|dot|stripe|gingham|bouquet|ditsy|blooms|botanical|spot|dinosaur|animal|buds|petals|geometric|tropical/;
   const tokCache = new Map();
   function toks(x0) {
@@ -1031,6 +1031,7 @@ const LPA = (function(){
   const found = (w, ws) => ws.join("").includes(w) || ws.reduce((m, v) => Math.max(m, smRatio(w, v)), 0) >= 0.8;
   const isAop = x => PRINT.test(pyStr(x).toLowerCase());
   const isGus = x => /gusset|aop-g/.test(pyStr(x).toLowerCase());
+  const isYd = x => /(^|[^a-z])yd([^a-z]|$)|yarn[\s-]*dye/.test(pyStr(x).toLowerCase());
   const csCache = new Map();
   function cscore(a, b) {
     const ck = pyStr(a) + "\u0001" + pyStr(b); if (csCache.has(ck)) return csCache.get(ck);
@@ -1043,6 +1044,7 @@ const LPA = (function(){
       else s = smRatio(na, nb) * 0.6;
       s += isAop(a) === pyStr(b).toLowerCase().includes("aop") ? 0.05 : -0.05;
       s += isGus(a) === isGus(b) ? 0.03 : -0.03;
+      if (isYd(a) !== isYd(b)) s -= 0.3;   // yarn-dyed (YD) colour only matches a YD batch, and a plain colour a plain batch
       res = Math.max(0, Math.min(s + 0.001 * smRatio(na, nb), 1.0));
     }
     csCache.set(ck, res); return res;
