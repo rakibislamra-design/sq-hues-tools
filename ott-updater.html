@@ -907,7 +907,8 @@ async function readFP(file){
   let doc=new DOMParser().parseFromString(xml,"application/xml");
   if(doc.getElementsByTagName("parsererror").length) throw new Error("Could not read the Fab Plan-Final sheet XML.");
   // a file from an earlier run with batch allocation: join its split rows back into one line and drop the old allocation columns
-  if(/Need Additional/.test(xml)){
+  // (the header can be an inline string from our tool or a shared string once Excel has saved the file)
+  if(/Need Additional/i.test(xml)||sst.some(x=>/^\s*need additional\s*$/i.test(String(x??"")))){
     unshareFormulas(doc);
     const mg=mergeSplitRows(new XMLSerializer().serializeToString(doc),sst);
     if(mg.changed){ doc=new DOMParser().parseFromString(mg.xml,"application/xml"); if(doc.getElementsByTagName("parsererror").length) throw new Error("Could not re-read the Fab Plan-Final sheet after joining split rows."); }
@@ -1481,7 +1482,9 @@ const LPA = (function(){
     sx = sx.slice(0, i0) + NEWROWS.join("") + sx.slice(i1);
     const LASTROW = cur;
     sx = sx.replace(/<dimension ref="([A-Z]+\d+):[A-Z]+\d+"/, (m, a) => `<dimension ref="${a}:${SREF}${LASTROW}"`);
-    if (sx.includes("</cols>")) { const w = [17, 38, 24, 38, 12, 20, 13, 18, 11, 11, 11, 32, 32, 14]; let add = ""; const covered = n => [...sx.matchAll(/<col min="(\d+)" max="(\d+)"/g)].some(m => +m[1] <= n && n <= +m[2]);
+    if (sx.includes("</cols>")) { const w = [17, 38, 24, 38, 12, 20, 13, 18, 11, 11, 11, 32, 32, 14]; let add = "";
+      // widths / hidden flags left from an earlier run (or an older column layout) are cleared from Need Additional onwards, so Split Ref is always the hidden one
+      { const cut = lastL + 1; sx = sx.replace(/<col\b([^>]*?)\/>/g, (m, a) => { const mn = +((/min="(\d+)"/.exec(a) || [])[1]), mx = +((/max="(\d+)"/.exec(a) || [])[1]); if (!mn || mx < cut) return m; if (mn >= cut) return ""; return `<col${a.replace(/max="\d+"/, `max="${cut - 1}"`)}/>`; }); } const covered = n => [...sx.matchAll(/<col min="(\d+)" max="(\d+)"/g)].some(m => +m[1] <= n && n <= +m[2]);
       for (let k = 0; k < w.length; k++) { const n = lastL + 1 + k; if (!covered(n)) add += `<col min="${n}" max="${n}" width="${w[k]}" customWidth="1"/>`; }
       { const n = colNum(SREF); if (!covered(n)) add += `<col min="${n}" max="${n}" width="12" hidden="1" customWidth="1"/>`; } sx = sx.replace("</cols>", add + "</cols>"); }
     sx = sx.replace(/<autoFilter ref="A2:[A-Z]+\d+"/, `<autoFilter ref="A2:${LASTC}${LASTROW}"`);
