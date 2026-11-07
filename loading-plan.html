@@ -385,7 +385,9 @@ header.fover::after{background:rgba(239,230,235,.92)}
 .mgcfl{max-height:34vh;overflow:auto;font-size:12px;border-top:1px solid #EEE6EA;padding-top:6px;margin-bottom:10px}.mgcfl div{padding:2px 0}
 .mgl{max-height:52vh;overflow:auto;margin:10px 0}.mgc{border:1px solid #E4D8DE;border-radius:8px;padding:8px 10px;margin-bottom:8px}
 .mgh{display:flex;justify-content:space-between;gap:10px;align-items:center;font-size:12.5px;margin-bottom:4px}.mgt{font-size:12px;color:#3A2A33;white-space:nowrap}
-.mgcur{font-size:12px;margin:6px 0 10px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}.mgp{background:#F4EFF2;border-radius:12px;padding:2px 8px}
+.mgsel{font-size:12px;margin:6px 0 4px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}.mgsel:empty{display:none}.mgp.sel{background:#E9F3EC;color:#2f5d43}
+.mgcur{font-size:12px;margin:4px 0 10px}.mgcur summary{cursor:pointer;margin-bottom:4px}.mgcur .mgp{display:inline-block;margin:2px 4px 2px 0}
+.mgcol{display:inline-flex;gap:5px;align-items:center;margin-left:8px}.mgcol select{font:12px var(--f-ui);padding:2px 4px;border:1px solid #D9CBD2;border-radius:6px;max-width:220px}.mgp{background:#F4EFF2;border-radius:12px;padding:2px 8px}
 #dlg .lnk{border:0;background:none;color:#AF4F5A;font-weight:600;cursor:pointer;padding:0 0 0 4px}
 /* quick type chips */
 .qf{display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap;margin-left:10px}
@@ -503,7 +505,7 @@ header.fover::after{background:rgba(239,230,235,.92)}
       <button class="qi" data-act="export"><span>⤓</span>Export File<em>Loading plan with your plan</em></button>
       <button class="qi" data-act="update"><span>⟳</span>Update File<em>Loading plan + DOC 280+217 + Line Plan</em></button>
       <div class="qsep"></div><a class="qi" href="index.html"><span>←</span>SQ Hues Tools</a>
-      <div class="qver">Version 07 Nov 22:44</div>
+      <div class="qver">Version 07 Nov 22:52</div>
     </div>
   </div>
   <div class="hcol">
@@ -1444,24 +1446,32 @@ function mergeSuggest(){ const groups=new Map();
 function openMerge(){
   const sug=mergeSuggest(); const d=$('dlg'); d.className='wide';
   const cur0=Object.entries(MERGE).map(([gid,g])=>({gid,v:C.get('MG:'+gid)})).filter(o=>o.v);
-  const row=(c,i,j)=>`<tr><td><input type="checkbox" data-s="${i}" data-c="${j}"></td><td class="mcx">${esc(c.mc)}</td><td class="bnx">${c.m.map(b=>esc(b)).join('<br>')}</td><td class="num">${fmt(Math.round(c.q))}</td><td class="ldx">${c.p.map(x=>String(x.ld||'').trim()?esc(x.ld):'<span class="uw">LD pending</span>').join('<br>')}</td><td>${(S.plan[c.mc]||[]).includes(c.id)?'Planned · SL '+((S.plan[c.mc]||[]).indexOf(c.id)+1)+(c.body.pd?' · '+dshort(c.body.pd):''):'Not planned'}</td><td class="ldx">${c.p.map(x=>`<span class="${x.st==='CAN DYE'?'okt':'uw'}">${esc(x.st||'–')}</span>`).join('<br>')}</td><td>${esc(dshort(c.body.lp)||c.body.lpt||'')}</td><td>${esc(c.body.pt||'')}</td></tr>`;
+  const row=(c,i,j)=>`<tr><td><input type="checkbox" data-s="${i}" data-c="${j}"></td><td class="mcx">${esc(c.mc)}</td><td class="bnx">${c.m.map(b=>esc(b)).join('<br>')}</td><td class="num">${fmt(Math.round(c.q))}</td><td class="ldx">${c.p.map(x=>String(x.ld||'').trim()?esc(x.ld):'<span class="uw">LD pending</span>').join('<br>')}</td><td>${(S.plan[c.mc]||[]).includes(c.id)?'Planned · SL '+((S.plan[c.mc]||[]).indexOf(c.id)+1)+(c.body.pd?' · '+dshort(c.body.pd):''):'Not planned'}</td><td>${esc(dshort(c.body.lp)||c.body.lpt||'')}</td><td>${esc(c.body.pt||'')}</td></tr>`;
   d.innerHTML=`<div class="dlgt"><h3 style="color:#664356">⧉ Merge batches</h3><button class="dlgx" id="dlgX" aria-label="Close">×</button></div>
     <div class="note" style="background:#F4EFF2">Same <b>buyer + shade + fabrication</b>, packed together up to a machine's capacity (750 kg MC up to 770 kg). A merged set is <b>one batch</b> in the plan: one SL, one load, on the machine its total kg fits; its priority follows the regular Auto-order rules (best member). Tick the batches you want together (2 or more) — or tick the set to take all of it — then Merge selected.</div>
-    ${sug.length?`<div class="mgf"><span class="mut">Buyer</span><button class="mgfb on" data-by="">All <small>${sug.length}</small></button>${[...new Set(sug.map(g=>String(g.cs[0].body.by||'').trim()))].sort().map(b=>`<button class="mgfb" data-by="${esc(b)}">${esc(b)} <small>${sug.filter(g=>String(g.cs[0].body.by||'').trim()===b).length}</small></button>`).join('')}<label class="mgall"><input type="checkbox" id="mgAll"> Tick all shown</label></div>`:''}
-    ${sug.length?`<div class="mgl">${sug.map((g,i)=>{ const [by,sh,fb]=[g.cs[0].body.by,g.cs[0].body.sh,g.cs[0].p.map(x=>x.fb).join(' + ')]; return `<div class="mgc" data-i="${i}" data-by="${esc(String(by||'').trim())}"><div class="mgh"><label><input type="checkbox" data-s="${i}"> <b>${esc(by)}</b> · ${esc(sh)} · <span class="mut">${esc(fb)}</span></label><span class="mgt" data-t="${i}">${g.cs.length} → 1 load · <b>${fmt(Math.round(g.q))} kg</b> on <b>${g.mc} kg MC</b> (${g.load.toFixed(0)}%)</span></div>
-      <table class="apt"><tr><th></th><th>M/C now</th><th>Batch No</th><th class="num">kg</th><th>LD / Matching</th><th>Plan status</th><th>Batch Status</th><th>Line Plan</th><th>Plan Type</th></tr>${g.cs.map((c,j)=>row(c,i,j)).join('')}</table></div>`; }).join('')}</div>`:'<div class="mut" style="padding:14px 4px">No merge suggestions — no two batches of the same buyer, shade and fabrication fit one machine together.</div>'}
-    ${cur0.length?`<div class="mgcur"><b>Merged now (${cur0.length})</b> ${cur0.map(o=>`<span class="mgp">${esc(o.v.body.by)} · ${esc(o.v.body.sh)} · ${o.v.merged.length} combos · ${fmt(Math.round(o.v.q))} kg → ${o.v.mc} kg <button class="lnk" data-un="${o.gid}">Unmerge</button></span>`).join('')}</div>`:''}
+    ${sug.length?`<div class="mgf"><span class="mut">Buyer</span><button class="mgfb on" data-by="">All <small>${sug.length}</small></button>${[...new Set(sug.map(g=>String(g.cs[0].body.by||'').trim()))].sort().map(b=>`<button class="mgfb" data-by="${esc(b)}">${esc(b)} <small>${sug.filter(g=>String(g.cs[0].body.by||'').trim()===b).length}</small></button>`).join('')}<span class="mgcol"><span class="mut">Color</span><select id="mgSh"><option value="">All colors</option></select></span><label class="mgall"><input type="checkbox" id="mgAll"> Tick all shown</label></div>`:''}
+    ${sug.length?`<div class="mgl">${sug.map((g,i)=>{ const [by,sh,fb]=[g.cs[0].body.by,g.cs[0].body.sh,g.cs[0].p.map(x=>x.fb).join(' + ')]; return `<div class="mgc" data-i="${i}" data-by="${esc(String(by||'').trim())}" data-sh="${esc(String(sh||'').trim())}"><div class="mgh"><label><input type="checkbox" data-s="${i}"> <b>${esc(by)}</b> · ${esc(sh)} · <span class="mut">${esc(fb)}</span></label><span class="mgt" data-t="${i}">${g.cs.length} → 1 load · <b>${fmt(Math.round(g.q))} kg</b> on <b>${g.mc} kg MC</b> (${g.load.toFixed(0)}%)</span></div>
+      <table class="apt"><tr><th></th><th>M/C now</th><th>Batch No</th><th class="num">kg</th><th>LD / Matching</th><th>Plan status</th><th>Line Plan</th><th>Plan Type</th></tr>${g.cs.map((c,j)=>row(c,i,j)).join('')}</table></div>`; }).join('')}</div>`:'<div class="mut" style="padding:14px 4px">No merge suggestions — no two batches of the same buyer, shade and fabrication fit one machine together.</div>'}
+    <div class="mgsel" id="mgSel"></div>
+    ${cur0.length?`<details class="mgcur"><summary><b>Merged now (${cur0.length})</b></summary> ${cur0.map(o=>`<span class="mgp">${esc(o.v.body.by)} · ${esc(o.v.body.sh)} · ${o.v.merged.length} combos · ${fmt(Math.round(o.v.q))} kg → ${o.v.mc} kg <button class="lnk" data-un="${o.gid}">Unmerge</button></span>`).join('')}</details>`:''}
     <div class="dlgb"><span class="mut" style="font-size:11.5px" id="mgSum"></span><span><button class="hb2" id="dlgN">Close</button> <button class="okb" id="mgOk"${sug.length?'':' disabled'}>Merge selected</button></span></div>`;
   $('dlgW').hidden=false;
   const pick=()=>sug.map((g,i)=>{ const on=d.querySelector(`.mgh input[data-s="${i}"]`).checked; const cs=g.cs.filter((c,j)=>d.querySelector(`tr input[data-s="${i}"][data-c="${j}"]`).checked); const q=cs.reduce((a,c)=>a+c.q,0); return {on:on&&cs.length>=2,cs,q,mc:LPEngine.mcKey(q)}; });
   const upd=()=>{ const P=pick(); P.forEach((p,i)=>{ const t=d.querySelector(`[data-t="${i}"]`); if(!t) return; t.innerHTML=!p.cs.length?`<span class="mut">possible: ${sug[i].cs.length} → 1 load · ${fmt(Math.round(sug[i].q))} kg on ${sug[i].mc} kg MC</span>`:p.cs.length<2?'<span class="uw">tick 2 or more</span>':(p.mc==='NBP'||!MCS.includes(p.mc))?`<span class="uw">${fmt(Math.round(p.q))} kg — fits no machine</span>`:`${p.cs.length} → 1 load · <b>${fmt(Math.round(p.q))} kg</b> on <b>${p.mc} kg MC</b> (${(p.q/CAP[p.mc]*100).toFixed(0)}%)`; });
-    const ok=P.filter(p=>p.on&&MCS.includes(p.mc)); $('mgSum').textContent=ok.length?`${ok.length} selected · saves ${ok.reduce((a,p)=>a+p.cs.length-1,0)} load${ok.reduce((a,p)=>a+p.cs.length-1,0)===1?'':'s'}`:`Nothing ticked yet — ${sug.length} possible merge${sug.length===1?'':'s'}`; if($('mgOk')) $('mgOk').disabled=!ok.length; };
+    const ok=P.filter(p=>p.on&&MCS.includes(p.mc));
+    $('mgSel').innerHTML=ok.length?`<b>To be merged (${ok.length})</b> `+ok.map(p=>`<span class="mgp sel">${esc(p.cs[0].body.by)} · ${esc(p.cs[0].body.sh)} · ${p.cs.length} combos · ${fmt(Math.round(p.q))} kg → ${p.mc} kg</span>`).join(''):'';
+    $('mgSum').textContent=ok.length?`${ok.length} selected · saves ${ok.reduce((a,p)=>a+p.cs.length-1,0)} load${ok.reduce((a,p)=>a+p.cs.length-1,0)===1?'':'s'}`:`Nothing ticked yet — ${sug.length} possible merge${sug.length===1?'':'s'}`; if($('mgOk')) $('mgOk').disabled=!ok.length; };
   d.addEventListener('change',e=>{ const t=e.target;
     if(t.id==='mgAll'){ d.querySelectorAll('.mgc:not([hidden]) input[type=checkbox]').forEach(x=>x.checked=t.checked); }
     else if(t.dataset.s!=null&&t.dataset.c==null){ d.querySelectorAll(`tr input[data-s="${t.dataset.s}"]`).forEach(x=>x.checked=t.checked); }   // set box = all its batches
     else if(t.dataset.c!=null){ const n=d.querySelectorAll(`tr input[data-s="${t.dataset.s}"]:checked`).length; d.querySelector(`.mgh input[data-s="${t.dataset.s}"]`).checked=n>=2; }   // 2 or more batches ticked = this set merges
     upd(); }); upd();
-  d.querySelectorAll('.mgfb').forEach(b=>b.onclick=()=>{ d.querySelectorAll('.mgfb').forEach(x=>x.classList.toggle('on',x===b)); const by=b.dataset.by; d.querySelectorAll('.mgc').forEach(c=>c.hidden=!!by&&c.dataset.by!==by); if($('mgAll')) $('mgAll').checked=false; });
+  let fBy='', fSh='';
+  const applyF=()=>{ d.querySelectorAll('.mgc').forEach(c=>c.hidden=(!!fBy&&c.dataset.by!==fBy)||(!!fSh&&c.dataset.sh!==fSh)); if($('mgAll')) $('mgAll').checked=false; };
+  const fillSh=()=>{ const sel=$('mgSh'); if(!sel) return; const shs={}; sug.forEach(g=>{ const by=String(g.cs[0].body.by||'').trim(), sh=String(g.cs[0].body.sh||'').trim(); if(!fBy||by===fBy) shs[sh]=(shs[sh]||0)+1; });
+    sel.innerHTML='<option value="">All colors</option>'+Object.keys(shs).sort().map(k=>`<option value="${esc(k)}">${esc(k)} (${shs[k]})</option>`).join(''); sel.value=shs[fSh]?fSh:''; fSh=sel.value; };
+  d.querySelectorAll('.mgfb').forEach(b=>b.onclick=()=>{ d.querySelectorAll('.mgfb').forEach(x=>x.classList.toggle('on',x===b)); fBy=b.dataset.by; fillSh(); applyF(); });
+  if($('mgSh')){ fillSh(); $('mgSh').onchange=e=>{ fSh=e.target.value; applyF(); }; }
   $('dlgX').onclick=$('dlgN').onclick=()=>{ $('dlgW').hidden=true; };
   d.querySelectorAll('[data-un]').forEach(b=>b.onclick=()=>{ unmerge([ 'MG:'+b.dataset.un ]); openMerge(); });
   if($('mgOk')) $('mgOk').onclick=()=>{ const P=pick().filter(p=>p.on&&MCS.includes(p.mc)); if(!P.length) return;
