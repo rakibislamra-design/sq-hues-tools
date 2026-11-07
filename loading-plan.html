@@ -375,6 +375,12 @@ header.fover::after{background:rgba(239,230,235,.92)}
 #dlg button.held{opacity:.55;cursor:not-allowed;background:#EEE;color:#8A3540;border-color:#E3C8CB}
 .lead .pin{display:inline-flex;align-items:center;margin-left:-2px;flex:none;transform:rotate(-8deg)}
 .cb.arm{outline:2px dashed #AF4F5A;outline-offset:-2px}
+.qfc.mgb{color:#fff;background:#8C6A7C;border-color:#8C6A7C}.qfc.mgb small{color:#F1E6EC}.qfc.mgb:hover{background:#664356}
+.cb.mgd>.lead{box-shadow:inset 3px 0 0 #8C6A7C}.cb.mgd .lines{background-image:linear-gradient(90deg,rgba(140,106,124,.07),rgba(140,106,124,0) 40%)}
+.mgl{max-height:56vh;overflow:auto;margin:10px 0}.mgc{border:1px solid #E4D8DE;border-radius:8px;padding:8px 10px;margin-bottom:8px}
+.mgh{display:flex;justify-content:space-between;gap:10px;align-items:center;font-size:12.5px;margin-bottom:4px}.mgt{font-size:12px;color:#3A2A33;white-space:nowrap}
+.mgcur{font-size:12px;margin:6px 0 10px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}.mgp{background:#F4EFF2;border-radius:12px;padding:2px 8px}
+#dlg .lnk{border:0;background:none;color:#AF4F5A;font-weight:600;cursor:pointer;padding:0 0 0 4px}
 /* quick type chips */
 .qf{display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap;margin-left:10px}
 .qfc{font:600 12px var(--f-ui);border:1px solid var(--hdr-line);background:var(--surface);color:var(--fg);border-radius:14px;padding:3px 10px;cursor:pointer;white-space:nowrap;display:inline-flex;gap:5px;align-items:baseline}
@@ -491,7 +497,7 @@ header.fover::after{background:rgba(239,230,235,.92)}
       <button class="qi" data-act="export"><span>⤓</span>Export File<em>Loading plan with your plan</em></button>
       <button class="qi" data-act="update"><span>⟳</span>Update File<em>Loading plan + DOC 280+217 + Line Plan</em></button>
       <div class="qsep"></div><a class="qi" href="index.html"><span>←</span>SQ Hues Tools</a>
-      <div class="qver">Version 01 Nov 18:26</div>
+      <div class="qver">Version 07 Nov 22:10</div>
     </div>
   </div>
   <div class="hcol">
@@ -1416,6 +1422,45 @@ function mk(id,m,outside,from){
   c.text=p.map(x=>[x.b,x.sh,x.by,x.po,x.fb,x.pt].join(' ')).join(' ').toLowerCase();
   return c;
 }
+// ---------- Merge batches: same buyer + shade + fabrication, packed up to a machine's capacity ----------
+let MERGE=store.get('mclp-merge')||{}; const saveMerge=()=>store.set('mclp-merge',MERGE);
+const mkey=c=>[c.body.by,c.body.sh,c.p.map(x=>x.fb).join(' + ')].map(v=>String(v||'').trim().toLowerCase().replace(/\s+/g,' ')).join('|');
+const MAXLOAD=770;   // top of the 750 kg band
+function mergeSuggest(){ const groups=new Map();
+  for(const c of C.values()){ if(c.merged||!(c.q>0)) continue; if(c.p.some(x=>isHold(x))) continue; const k=mkey(c); if(!groups.has(k)) groups.set(k,[]); groups.get(k).push(c); }
+  const out=[];
+  for(const [k,cs] of groups){ if(cs.length<2) continue;
+    // first-fit decreasing into loads of up to 770 kg; a load is only suggested when its total falls in a machine band and it saves at least one load
+    const bins=[]; for(const c of cs.slice().sort((a,b)=>b.q-a.q)){ if(c.q>=521){ continue; } let bb=bins.find(b=>b.q+c.q<=MAXLOAD); if(!bb){ bb={q:0,cs:[]}; bins.push(bb); } bb.q+=c.q; bb.cs.push(c); }
+    for(const b of bins){ if(b.cs.length<2) continue; const mc=LPEngine.mcKey(b.q); if(mc==='NBP'||!MCS.includes(mc)) continue;
+      const before=b.cs.length; out.push({key:k,cs:b.cs.sort((x,y)=>cmpAuto(x,y)),q:b.q,mc,save:before-1,load:b.q/CAP[mc]*100}); } }
+  return out.sort((a,b)=>b.q-a.q); }
+function openMerge(){
+  const sug=mergeSuggest(); const d=$('dlg'); d.className='wide';
+  const cur0=Object.entries(MERGE).map(([gid,g])=>({gid,v:C.get('MG:'+gid)})).filter(o=>o.v);
+  const row=(c,i,j)=>`<tr><td><input type="checkbox" data-s="${i}" data-c="${j}" checked></td><td class="mcx">${esc(c.mc)}</td><td class="bnx">${c.m.map(b=>esc(b)).join('<br>')}</td><td class="num">${fmt(Math.round(c.q))}</td><td>${(S.plan[c.mc]||[]).includes(c.id)?'Planned SL '+((S.plan[c.mc]||[]).indexOf(c.id)+1):'Not planned'}</td><td>${esc(dshort(c.body.lp)||c.body.lpt||'')}</td><td>${esc(c.body.pt||'')}</td></tr>`;
+  d.innerHTML=`<div class="dlgt"><h3 style="color:#664356">⧉ Merge batches</h3><button class="dlgx" id="dlgX" aria-label="Close">×</button></div>
+    <div class="note" style="background:#F4EFF2">Same <b>buyer + shade + fabrication</b>, packed together up to a machine's capacity (750 kg MC up to 770 kg). A merged set is <b>one batch</b> in the plan: one SL, one load, on the machine its total kg fits; its priority follows the regular Auto-order rules (best member). Untick a batch to leave it out.</div>
+    ${sug.length?`<div class="mgl">${sug.map((g,i)=>{ const [by,sh,fb]=[g.cs[0].body.by,g.cs[0].body.sh,g.cs[0].p.map(x=>x.fb).join(' + ')]; return `<div class="mgc" data-i="${i}"><div class="mgh"><label><input type="checkbox" data-s="${i}" checked> <b>${esc(by)}</b> · ${esc(sh)} · <span class="mut">${esc(fb)}</span></label><span class="mgt" data-t="${i}">${g.cs.length} → 1 load · <b>${fmt(Math.round(g.q))} kg</b> on <b>${g.mc} kg MC</b> (${g.load.toFixed(0)}%)</span></div>
+      <table class="apt"><tr><th></th><th>M/C now</th><th>Batch No</th><th class="num">kg</th><th>Status</th><th>Line Plan</th><th>Plan Type</th></tr>${g.cs.map((c,j)=>row(c,i,j)).join('')}</table></div>`; }).join('')}</div>`:'<div class="mut" style="padding:14px 4px">No merge suggestions — no two batches of the same buyer, shade and fabrication fit one machine together.</div>'}
+    ${cur0.length?`<div class="mgcur"><b>Merged now (${cur0.length})</b> ${cur0.map(o=>`<span class="mgp">${esc(o.v.body.by)} · ${esc(o.v.body.sh)} · ${o.v.merged.length} combos · ${fmt(Math.round(o.v.q))} kg → ${o.v.mc} kg <button class="lnk" data-un="${o.gid}">Unmerge</button></span>`).join('')}</div>`:''}
+    <div class="dlgb"><span class="mut" style="font-size:11.5px" id="mgSum"></span><span><button class="hb2" id="dlgN">Close</button> <button class="okb" id="mgOk"${sug.length?'':' disabled'}>Merge selected</button></span></div>`;
+  $('dlgW').hidden=false;
+  const pick=()=>sug.map((g,i)=>{ const on=d.querySelector(`.mgh input[data-s="${i}"]`).checked; const cs=g.cs.filter((c,j)=>d.querySelector(`tr input[data-s="${i}"][data-c="${j}"]`).checked); const q=cs.reduce((a,c)=>a+c.q,0); return {on:on&&cs.length>=2,cs,q,mc:LPEngine.mcKey(q)}; });
+  const upd=()=>{ const P=pick(); P.forEach((p,i)=>{ const t=d.querySelector(`[data-t="${i}"]`); if(!t) return; t.innerHTML=p.cs.length<2?'<span class="uw">needs 2 or more</span>':(p.mc==='NBP'||!MCS.includes(p.mc))?`<span class="uw">${fmt(Math.round(p.q))} kg — fits no machine</span>`:`${p.cs.length} → 1 load · <b>${fmt(Math.round(p.q))} kg</b> on <b>${p.mc} kg MC</b> (${(p.q/CAP[p.mc]*100).toFixed(0)}%)`; });
+    const ok=P.filter(p=>p.on&&MCS.includes(p.mc)); $('mgSum').textContent=ok.length?`${ok.length} merge${ok.length>1?'s':''} · saves ${ok.reduce((a,p)=>a+p.cs.length-1,0)} load${ok.reduce((a,p)=>a+p.cs.length-1,0)===1?'':'s'}`:'Nothing selected'; if($('mgOk')) $('mgOk').disabled=!ok.length; };
+  d.addEventListener('change',upd); upd();
+  $('dlgX').onclick=$('dlgN').onclick=()=>{ $('dlgW').hidden=true; };
+  d.querySelectorAll('[data-un]').forEach(b=>b.onclick=()=>{ unmerge([ 'MG:'+b.dataset.un ]); openMerge(); });
+  if($('mgOk')) $('mgOk').onclick=()=>{ const P=pick().filter(p=>p.on&&MCS.includes(p.mc)); let n=0;
+    for(const p of P){ const gid=Date.now().toString(36)+(n++); MERGE[gid]={ids:p.cs.map(c=>c.id),mc:p.mc};
+      // a member already planned keeps the set planned: give every batch of the set the plan date
+      const anyPl=p.cs.some(c=>(S.plan[c.mc]||[]).includes(c.id)); if(anyPl) for(const c of p.cs) if(!(S.plan[c.mc]||[]).includes(c.id)) setPlanDate(c,true); }
+    saveMerge(); save(); build(); for(const k of MCS) autoSort(k); save(); $('dlgW').hidden=true; refreshView(); toast(`${P.length} merged set${P.length>1?'s':''} made — each is one batch now.`); };
+}
+function unmerge(ids){ for(const id of ids){ if(!String(id).startsWith('MG:')) continue; const gid=id.slice(3); const v=C.get(id); delete MERGE[gid]; delete PIN[id];
+    if(v){ const k=v.mc; const L=S.plan[k]||[]; const i=L.indexOf(id); if(i>=0){ L.splice(i,1,...v.merged); for(const m of v.merged) S.over[m]=k; } } }
+  saveMerge(); savePin(); save(); build(); refreshView(); }
 function build(){
   for(const b in S.ed){ const x=D.batches[b]; if(x) Object.assign(x,S.ed[b]); }
   for(const b in S.cx){ const x=D.batches[b]; if(x) for(const L in S.cx[b]) setCell(x,L,S.cx[b][L]); }
@@ -1428,6 +1473,15 @@ function build(){
     C.set(c.id,mk(c.id,m,c.outside,null));
     for(const g of solo) C.set('S|'+g,mk('S|'+g,[g],'',c.id));
   }
+  // merged units: combos joined by Merge batches act as one batch (one SL, one load) on the chosen machine
+  for(const gid of Object.keys(MERGE)){ const g=MERGE[gid]; const mem=g.ids.filter(id=>C.has(id)&&!C.get(id).merged);
+    if(mem.length<2){ delete MERGE[gid]; continue; }
+    const cs=mem.map(id=>C.get(id)).sort((a,b)=>cmpAuto(a,b));   // best priority first: the unit follows the regular rules through it
+    const v=mk('MG:'+gid,cs.flatMap(c=>c.m),'',null); v.merged=cs.map(c=>c.id); v.file=MCS.includes(g.mc)?g.mc:v.auto; v.mc=(S.over[v.id]&&MCS.includes(S.over[v.id]))?S.over[v.id]:v.file;
+    for(const c of cs) C.delete(c.id); C.set(v.id,v);
+    for(const k of MCS){ const L=S.plan[k]||[]; const i=L.findIndex(id=>v.merged.includes(id)); if(i<0) continue; const rest=L.filter(id=>!v.merged.includes(id)); rest.splice(Math.min(i,rest.length),0,v.id); S.plan[k]=rest; }
+    if(v.merged.some(id=>PIN[id])) PIN[v.id]=1; }
+  saveMerge();
   // planned = has a Plan Date; keep the user's order, add any dated combo that is missing (file SL order)
   for(const k of Object.keys(S.over)) if(!C.has(k)||S.over[k]===C.get(k).file) delete S.over[k];
   for(const k of Object.keys(S.plan)) if(!MCS.includes(k)) delete S.plan[k];
@@ -1556,7 +1610,8 @@ let QF=new Set(store.get('mclp-qf')||[]);
 const QFDEF=[['FOC','FOC',c=>c.p.some(x=>/FOC/i.test((x.pt||'')+' '+(x.cat||'')))],['HANGER','Hanger',c=>c.p.some(x=>/HANGER/i.test((x.pt||'')+' '+(x.cat||'')))],['AOP','AOP',c=>c.p.some(x=>/AOP/i.test((x.sh||'')+' '+(x.pt||'')))],['LP','Line Plan',c=>c.p.some(x=>x.lp||x.lpt||/LINE\s*PLAN/i.test(x.pt||''))],['URG','Urgent',c=>c.p.some(x=>/URGENT/i.test(x.pt||''))],['NKQ','Not in KQ',c=>c.p.some(x=>/not\s*in\s*kq/i.test((x.cat||'')+' '+(x.rmk||'')))],['LDP','LD Pending',c=>c.p.some(x=>!String(x.ld||'').trim())],['PROB','Problematic Batch',c=>overReq(c)]];
 function qfPass(c){ if(!QF.size) return true; for(const [k,,f] of QFDEF) if(QF.has(k)&&f(c)) return true; return false; }
 function drawQF(){ const pool=[...C.values()].filter(c=>cur==='ALL'||c.mc===cur);
-  $('qf').innerHTML=QFDEF.map(([k,n,f])=>{ const cnt=pool.filter(f).length; return `${k==='NKQ'?'<span class="qgap"></span>':''}<button class="qfc${QF.has(k)?' on':''}${k==='PROB'||k==='LDP'||k==='NKQ'?' prob':''}" data-q="${k}" title="${k==='NKQ'?'Knit done in 280 but no Greige from and no knit qty — not in the knit queue':k==='LDP'?'Combos with no LD / Matching given':k==='PROB'?'Combos that take their order item above the 102% Req Qty Kg (planned ones already over, not planned ones if added)':'Show only '+n+' combos'} — click again to clear · Ctrl+click to add more">${n}<small>${cnt}</small></button>`; }).join(''); }
+  const nSug=mergeSuggest().length;
+  $('qf').innerHTML=QFDEF.map(([k,n,f])=>{ const cnt=pool.filter(f).length; return `${k==='NKQ'?'<span class="qgap"></span>':''}<button class="qfc${QF.has(k)?' on':''}${k==='PROB'||k==='LDP'||k==='NKQ'?' prob':''}" data-q="${k}" title="${k==='NKQ'?'Knit done in 280 but no Greige from and no knit qty — not in the knit queue':k==='LDP'?'Combos with no LD / Matching given':k==='PROB'?'Combos that take their order item above the 102% Req Qty Kg (planned ones already over, not planned ones if added)':'Show only '+n+' combos'} — click again to clear · Ctrl+click to add more">${n}<small>${cnt}</small></button>`; }).join('')+`<span class="qgap"></span><button class="qfc mgb" id="mgBtn" title="Same buyer + shade + fabrication that fit one machine together">⧉ Merge batches<small>${nSug}</small></button>`; }
 function passes(c,skip){ if(!qfPass(c)) return false; for(const k in FILT){ if(k===skip) continue; const set=FILT[k]; if(!set) continue; if(!(k==='s'||COLS.some(cc=>cc.k===k))) continue; if(!cval(c,k).some(v=>set.includes(v))) return false; } return true; }
 const sp=(v,cls)=>`<span${cls?' class="'+cls+'"':''} title="${esc(v)}">${esc(v)}</span>`;
 // Load Day for planned batches: SL order ÷ (MCs × batches per MC per day), working days from the plan start; every planned batch gets its date
@@ -1595,9 +1650,9 @@ function box(c,sl,alt,ns){
   const l=loadPct(c);
   const lead=sl?`<span class="hdl" title="Drag to reorder">⋮⋮</span><span class="slw"><input class="sn" type="number" min="1" value="${sl}" aria-label="SL"><span class="dot${c.can?' on':''}"></span></span>${PIN[c.id]?PINSVG:''}`:`<span class="tick"></span><span class="slw"><span class="ns" title="Suggested serial (Auto-order rules)">${ns||''}</span><span class="dot${c.can?' on':''}"></span></span>`;
   const po=[...new Set(c.p.map(x=>x.po).filter(Boolean))].join(' / '), lpd=[...new Set(c.p.map(x=>dshort(x.lp)||x.lpt).filter(Boolean))].join(' / ');
-  const tip=`Customer PO: ${po||'–'}\nLine Plan: ${lpd||'–'}\n${c.can?'Can dye':'Not ready: '+(c.body.rm||'')}${c.m.length===2?' · body + gusset':''}${c.outside?' · partner '+c.outside:''} · combo ${fmt(c.q)} kg${l!=null?' · load '+l.toFixed(0)+'%':''} · click to ${sl?'take out of':'add to'} the plan`;
+  const tip=`Customer PO: ${po||'–'}\nLine Plan: ${lpd||'–'}\n${c.can?'Can dye':'Not ready: '+(c.body.rm||'')}${c.merged?' · MERGED: '+c.merged.length+' combos as one batch':c.m.length===2?' · body + gusset':''}${c.outside?' · partner '+c.outside:''} · combo ${fmt(c.q)} kg${l!=null?' · load '+l.toFixed(0)+'%':''} · click to ${sl?'take out of':'add to'} the plan`;
   const okp=!sl&&c.p.every(x=>x.kn==='KOK'&&String(x.ld||'').trim()&&!isHold(x));
-  return `<div class="cb${c.id===KF?' kf':''}${sl?' pl':''}${okp?' okp':''}${SELSET.has(c.id)?' msel':''}${c.can?' can':''}${alt?' alt':''}" data-id="${esc(c.id)}"${sl?' draggable="true"':''} title="${esc(tip)}"><div class="lead">${lead}</div><div class="lines">${c.p.map(x=>line(x,c)).join('')}</div></div>`;
+  return `<div class="cb${c.merged?' mgd':''}${c.id===KF?' kf':''}${sl?' pl':''}${okp?' okp':''}${SELSET.has(c.id)?' msel':''}${c.can?' can':''}${alt?' alt':''}" data-id="${esc(c.id)}"${sl?' draggable="true"':''} title="${esc(tip)}"><div class="lead">${lead}</div><div class="lines">${c.p.map(x=>line(x,c)).join('')}</div></div>`;
 }
 function drawChrome(){
   const ids=plan();
@@ -2095,7 +2150,7 @@ $('autoPlan').addEventListener('click',()=>{
     toast(`Auto plan added ${added.length} combo${added.length===1?'':'s'}${skipped?` · ${skipped} skipped (over 102% Req Qty Kg)`:''}.`,'Undo',()=>{ for(const id of added){ const c=C.get(id); if(!c) continue; S.plan[c.mc]=(S.plan[c.mc]||[]).filter(x=>x!==id); setPlanDate(c,false); } save(); refreshView(); toast('Auto plan undone.'); });
   };
 });
-$('qf').addEventListener('click',e=>{ const b=e.target.closest('[data-q]'); if(!b) return; const k=b.dataset.q;
+$('qf').addEventListener('click',e=>{ if(e.target.closest('#mgBtn')){ openMerge(); return; } const b=e.target.closest('[data-q]'); if(!b) return; const k=b.dataset.q;
   if(e.ctrlKey||e.metaKey){ QF.has(k)?QF.delete(k):QF.add(k); }        // Ctrl+click: pick several
   else { const only=QF.size===1&&QF.has(k); QF.clear(); if(!only) QF.add(k); }
   store.set('mclp-qf',[...QF]); refreshView(); });
@@ -2129,7 +2184,7 @@ function openCM(id,x,y){
   const c=C.get(id); if(!c) return; const wm=wrongMc(c);
   const cm=$('cm');
   const grp=SELSET.has(id)&&SELSET.size>1?[...SELSET].filter(x=>C.has(x)):[id]; cm.dataset.ids=JSON.stringify(grp);
-  cm.innerHTML=`<div class="cmx"><b>${grp.length>1?grp.length+' combos selected':esc(c.body.b.replace(/^SQHUE-FY\d\d-\d\d-/,''))}</b><button class="cmc" title="Close" aria-label="Close">×</button></div><button class="cmd" data-act="del">🗑 Delete from plan${grp.length>1?' ('+grp.length+')':''}</button>${(()=>{ const pl=grp.filter(id=>{const cc=C.get(id);return cc&&(S.plan[cc.mc]||[]).includes(id);}); return pl.some(id=>!PIN[id])?`<button class="cmp" data-act="pin">📌 Pin at ${pl.length>1?'their':'this'} SL — Auto-order won’t move ${pl.length>1?'them':'it'}</button>`:''; })()}${grp.some(id=>PIN[id])?`<button class="cmd" data-act="unpin">📌 Unpin — let Auto-order place ${grp.length>1?'them':'it'}</button>`:''}<div class="cmh">Send to MC <span class="mut">· ${grp.length>1?grp.length+' combos':fmt(Math.round(c.q))+' kg on '+c.mc+' kg'}</span></div>`+MCS.map(k=>`<button data-k="${k}" ${k===c.mc?'disabled':''}>${k} kg${k===c.auto?' <em>suits this weight</em>':''}${k===c.file&&k!==c.mc?' <em>file M/C</em>':''}${k===c.mc?' <em>current</em>':''}</button>`).join('');
+  cm.innerHTML=`<div class="cmx"><b>${grp.length>1?grp.length+' combos selected':esc(c.body.b.replace(/^SQHUE-FY\d\d-\d\d-/,''))}</b><button class="cmc" title="Close" aria-label="Close">×</button></div><button class="cmd" data-act="del">🗑 Delete from plan${grp.length>1?' ('+grp.length+')':''}</button>${(()=>{ const pl=grp.filter(id=>{const cc=C.get(id);return cc&&(S.plan[cc.mc]||[]).includes(id);}); return pl.some(id=>!PIN[id])?`<button class="cmp" data-act="pin">📌 Pin at ${pl.length>1?'their':'this'} SL — Auto-order won’t move ${pl.length>1?'them':'it'}</button>`:''; })()}${grp.some(id=>String(id).startsWith('MG:'))?`<button class="cmp" data-act="unmerge">⧉ Unmerge — back to separate batches</button>`:''}${grp.some(id=>PIN[id])?`<button class="cmd" data-act="unpin">📌 Unpin — let Auto-order place ${grp.length>1?'them':'it'}</button>`:''}<div class="cmh">Send to MC <span class="mut">· ${grp.length>1?grp.length+' combos':fmt(Math.round(c.q))+' kg on '+c.mc+' kg'}</span></div>`+MCS.map(k=>`<button data-k="${k}" ${k===c.mc?'disabled':''}>${k} kg${k===c.auto?' <em>suits this weight</em>':''}${k===c.file&&k!==c.mc?' <em>file M/C</em>':''}${k===c.mc?' <em>current</em>':''}</button>`).join('');
   cm.dataset.id=id; cm.hidden=false;
   const w=cm.offsetWidth,h=cm.offsetHeight; cm.style.left=Math.min(innerWidth-w-8,x)+'px'; cm.style.top=Math.min(innerHeight-h-8,y)+'px';
 }
@@ -2138,6 +2193,7 @@ $('cm').addEventListener('click',e=>{
   if(e.target.closest('.cmc')){ $('cm').hidden=true; return; }
   const ids=JSON.parse($('cm').dataset.ids||'[]');
   if(e.target.closest('button[data-act="del"]')){ $('cm').hidden=true; deleteCombos(ids); return; }
+  if(e.target.closest('button[data-act="unmerge"]')){ $('cm').hidden=true; unmerge(ids); toast('Unmerged — back to separate batches.'); return; }
   if(e.target.closest('button[data-act="pin"]')){ $('cm').hidden=true; const pl=ids.filter(id=>{const cc=C.get(id);return cc&&(S.plan[cc.mc]||[]).includes(id);}); pinIds(pl); refreshView(); toast(`Pinned ${pl.length>1?pl.length+' combos':'at SL '+((S.plan[C.get(pl[0]).mc]||[]).indexOf(pl[0])+1)} — Auto-order keeps ${pl.length>1?'them':'it'} there.`); return; }
   if(e.target.closest('button[data-act="unpin"]')){ $('cm').hidden=true; for(const id of ids) delete PIN[id]; savePin(); refreshView(); toast('Unpinned — Auto-order will place '+(ids.length>1?'them':'it')+'.'); return; }
   const b=e.target.closest('button[data-k]'); if(!b||b.disabled) return; $('cm').hidden=true;
