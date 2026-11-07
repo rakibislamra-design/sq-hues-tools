@@ -567,8 +567,7 @@ td.fail.hov:hover{background:var(--red-soft)}
     <details><summary><span class="n">B</span>Batch allocation (optional, ticked by default)</summary><div class="in">
       <p>After the update, every line with a shortage (Balance to RFD below 0) is matched to <b>280 WIP batches</b> by PO + fabric + shade / AOP design. Closed / PO Pending stock and Final Reject batches are never used.</p>
       <p>New columns after AX: <code>Need Additional</code> · <code>Batch No</code> · <code>Color</code> · <code>Fabrication</code> · <code>Plan Qty Kg</code> · <code>Batch Position</code> · <code>H/S Status</code> (280 H/s Pending) · <code>Dye Batch</code> (280 Dyebatch No) · <code>Dye Plan</code> · <code>Fin Plan</code> · <code>RFD Plan</code> · <code>Discussion</code> · <code>Remarks</code> (filled by you; kept when the file is uploaded again) · <code>Dyeing Mill</code>. A line needing 2+ batches is split into one row per batch; total Req Qty stays the same.</p>
-      <p><code>Dyeing Mill</code>: a value already in the uploaded file (typed by you or from an earlier run) is kept as it is; the tool fills only blank cells. Segment follows it.</p>
-      <p>Last column <code>Segment</code> = AOP (Category AOP) / Outside / Inhouse (Dyeing Mill). It feeds the Segment slicer on the Date Wise Pivot.</p>
+      <p><code>Dyeing Mill</code>: a value already in the uploaded file (typed by you or from an earlier run) is kept as it is; the tool fills only blank cells. It feeds the Dyeing Mill slicer on the Date Wise Pivot.</p>
       <p>Rules: AOP lines show <code>AOP Batch</code>; outside batches still at the mill show the 280 Order No; KPK black outside = <code>KPK-Outside-Black</code>.</p>
       <p>Downloads: the final Fabric Plan (update + allocation) and <b>Line plan batch wise file_&lt;date&gt;.xlsx</b>. If yesterday's file already has these columns, they are rebuilt, not repeated.</p>
     </div></details>
@@ -576,7 +575,7 @@ td.fail.hov:hover{background:var(--red-soft)}
     <details><summary><span class="n">4</span>Fixed cells: other sheets</summary><div class="in">
       <table>
         <tr class="own"><td>C7</td><td><b>Buyer Wise OTT Hit Rate</b>: daily date. The tool sets it to report date − 1<span class="tagw">TOOL</span></td></tr>
-        <tr class="own"><td>Whole sheet</td><td><b>Date Wise Pivot -Hues</b>: rebuilt each run. Title “SQ Hues Line plan vs Performance”, values in Mtr + Req Qty (Kg), Achievement % = (RFD + Recovered) ÷ Req, dates of the plan month only, Segment slicer, daily plan-to-performance pivot chart (data on hidden sheet <code>Chart Data</code>). Refreshes on open<span class="tagw">TOOL</span></td></tr>
+        <tr class="own"><td>Whole sheet</td><td><b>Date Wise Pivot -Hues</b>: rebuilt each run. Title “SQ Hues Line plan vs Performance”, values in Mtr + Req Qty (Kg), Achievement % = (RFD + Recovered) ÷ Req, dates of the plan month only, Dyeing Mill slicer (Inhouse / Outside), daily plan-to-performance pivot chart (data on hidden sheet <code>Chart Data</code>). Refreshes on open<span class="tagw">TOOL</span></td></tr>
         <tr><td>AP</td><td><b>DOC 217</b>: Taps key (PO + colour + article)<span class="tagf">KEY</span></td></tr>
         <tr><td>AQ</td><td><b>DOC 217</b>: Rfd qty<span class="tagf">KEY</span></td></tr>
         <tr><td>AR</td><td><b>DOC 217</b>: Balance<span class="tagf">KEY</span></td></tr>
@@ -1395,8 +1394,7 @@ const LPA = (function(){
     // batch block after Need Additional; Discussion / Remarks are free-text and carried over from the uploaded file
     const OUTC = [{ h: "Batch No", k: "no" }, { h: "Color", k: "sh" }, { h: "Fabrication", k: "fb" }, { h: "Plan Qty Kg", k: "kg", num: 1 }, { h: "Batch Position", k: "ps" },
       { h: "H/S Status", k: "hs" }, { h: "Dye Batch", k: "db" }, { h: "Dye Plan", k: "dd", date: 1, keep: 1 }, { h: "Fin Plan", k: "fd", date: 1, keep: 1 }, { h: "RFD Plan", k: "rd", date: 1, keep: 1 },
-      { h: "Discussion", k: "disc", keep: 1 }, { h: "Remarks", k: "rem", keep: 1 }, { h: "Dyeing Mill", k: "ml" }, { h: "Segment", k: "sg" }];
-    // Segment (pivot slicer): Category AOP -> AOP, else the Dyeing Mill of the row (Outside / Inhouse)
+      { h: "Discussion", k: "disc", keep: 1 }, { h: "Remarks", k: "rem", keep: 1 }, { h: "Dyeing Mill", k: "ml" }];
     const segOf = (r, ml) => /aop/i.test(String(opt.fp.get(r, "R") ?? "")) ? "AOP" : (/outside/i.test(String(ml ?? "")) ? "Outside" : "Inhouse");
     // Dyeing Mill already filled in the uploaded file (by hand or by an earlier run) is kept as it is; only blank cells are filled
     const keptMill = kp => (kp && kp.ml !== undefined && kp.ml !== null && String(kp.ml).trim() !== "") ? String(kp.ml).trim() : null;
@@ -1483,7 +1481,7 @@ const LPA = (function(){
     sx = sx.slice(0, i0) + NEWROWS.join("") + sx.slice(i1);
     const LASTROW = cur;
     sx = sx.replace(/<dimension ref="([A-Z]+\d+):[A-Z]+\d+"/, (m, a) => `<dimension ref="${a}:${SREF}${LASTROW}"`);
-    if (sx.includes("</cols>")) { const w = [17, 38, 24, 38, 12, 20, 13, 18, 11, 11, 11, 32, 32, 14, 11]; let add = ""; const covered = n => [...sx.matchAll(/<col min="(\d+)" max="(\d+)"/g)].some(m => +m[1] <= n && n <= +m[2]);
+    if (sx.includes("</cols>")) { const w = [17, 38, 24, 38, 12, 20, 13, 18, 11, 11, 11, 32, 32, 14]; let add = ""; const covered = n => [...sx.matchAll(/<col min="(\d+)" max="(\d+)"/g)].some(m => +m[1] <= n && n <= +m[2]);
       for (let k = 0; k < w.length; k++) { const n = lastL + 1 + k; if (!covered(n)) add += `<col min="${n}" max="${n}" width="${w[k]}" customWidth="1"/>`; }
       { const n = colNum(SREF); if (!covered(n)) add += `<col min="${n}" max="${n}" width="12" hidden="1" customWidth="1"/>`; } sx = sx.replace("</cols>", add + "</cols>"); }
     sx = sx.replace(/<autoFilter ref="A2:[A-Z]+\d+"/, `<autoFilter ref="A2:${LASTC}${LASTROW}"`);
@@ -1500,7 +1498,7 @@ const LPA = (function(){
 })();
 
 /* ---------- main run ---------- */
-/* ---------- Date Wise Pivot -Hues: rebuilt on every run (fresh pivot cache, Mtr captions, Kg, Achievement %, Segment slicer, plan-to-performance pivot chart) ---------- */
+/* ---------- Date Wise Pivot -Hues: rebuilt on every run (fresh pivot cache, Mtr captions, Kg, Achievement %, Dyeing Mill slicer, plan-to-performance pivot chart) ---------- */
 const HPV = (function(){
   const X = s => String(s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   const NS_MAIN = "http://schemas.openxmlformats.org/spreadsheetml/2006/main", NS_R = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
@@ -1674,9 +1672,9 @@ const HPV = (function(){
 
     // field names: header text, unique (Excel needs unique cache field names)
     const used = new Set(); const names = D.hdr.map((h, i) => { let n = String(h ?? "").replace(/\s+/g, " ").trim() || `Column${i + 1}`; let k = n, j = 2; while (used.has(k.toLowerCase())) k = n + j++; used.add(k.toLowerCase()); return k; });
-    const segIdx = names.findIndex((n, i) => i > 49 && n.toLowerCase() === "segment"); const hasSeg = segIdx >= 0;
+    const segIdx = names.findIndex((n, i) => i > 49 && n.toLowerCase() === "dyeing mill"); const hasSeg = segIdx >= 0;
 
-    // shared items: date field S (dates, then text, blank last) and Segment
+    // shared items: date field S (dates, then text, blank last) and Dyeing Mill (slicer)
     const sKey = v => v === null ? "m" : typeof v === "number" ? "d" + Math.round(v) : "s" + String(v);
     const sMap = new Map(); for (const x of D.rows) { const v = x.vals[iS]; const k = sKey(typeof v === "number" ? Math.round(v) : v); if (!sMap.has(k)) sMap.set(k, typeof v === "number" ? Math.round(v) : v); }
     const sItems = [...sMap.values()].sort((a, b) => { const ra = a === null ? 2 : typeof a === "number" ? 0 : 1, rb = b === null ? 2 : typeof b === "number" ? 0 : 1; return ra - rb || (ra === 0 ? a - b : ra === 1 ? String(a).localeCompare(String(b)) : 0); });
@@ -1813,7 +1811,7 @@ const HPV = (function(){
     /* -- drawing: slicer (top) + chart (below), right of the table -- */
     const c0 = 3 + DF1.length; // first column after the spacer (0-based col index for drawing anchors)
     const anchor = (fc, fr, tc, tr) => `<xdr:from><xdr:col>${fc}</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>${fr}</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:to><xdr:col>${tc}</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>${tr}</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to>`;
-    const slicerAnchor = hasSeg ? `<xdr:twoCellAnchor editAs="oneCell">${anchor(c0, 2, c0 + 7, 8)}<mc:AlternateContent xmlns:mc="${NS_MC}"><mc:Choice xmlns:a14="http://schemas.microsoft.com/office/drawing/2010/main" Requires="a14"><xdr:graphicFrame macro=""><xdr:nvGraphicFramePr><xdr:cNvPr id="2" name="Segment"/><xdr:cNvGraphicFramePr/></xdr:nvGraphicFramePr><xdr:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/></xdr:xfrm><a:graphic><a:graphicData uri="http://schemas.microsoft.com/office/drawing/2010/slicer"><sle:slicer xmlns:sle="http://schemas.microsoft.com/office/drawing/2010/slicer" name="Segment"/></a:graphicData></a:graphic></xdr:graphicFrame></mc:Choice><mc:Fallback><xdr:sp macro="" textlink=""><xdr:nvSpPr><xdr:cNvPr id="0" name=""/><xdr:cNvSpPr><a:spLocks noTextEdit="1"/></xdr:cNvSpPr></xdr:nvSpPr><xdr:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="4572000" cy="1100000"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:solidFill><a:prstClr val="white"/></a:solidFill><a:ln w="1"><a:solidFill><a:prstClr val="green"/></a:solidFill></a:ln></xdr:spPr><xdr:txBody><a:bodyPr vertOverflow="clip" horzOverflow="clip"/><a:lstStyle/><a:p><a:r><a:rPr lang="en-US" sz="1100"/><a:t>This shape represents a slicer. Slicers are supported in Excel 2010 or later.</a:t></a:r></a:p></xdr:txBody></xdr:sp></mc:Fallback></mc:AlternateContent><xdr:clientData/></xdr:twoCellAnchor>` : "";
+    const slicerAnchor = hasSeg ? `<xdr:twoCellAnchor editAs="oneCell">${anchor(c0, 2, c0 + 7, 8)}<mc:AlternateContent xmlns:mc="${NS_MC}"><mc:Choice xmlns:a14="http://schemas.microsoft.com/office/drawing/2010/main" Requires="a14"><xdr:graphicFrame macro=""><xdr:nvGraphicFramePr><xdr:cNvPr id="2" name="Dyeing Mill"/><xdr:cNvGraphicFramePr/></xdr:nvGraphicFramePr><xdr:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/></xdr:xfrm><a:graphic><a:graphicData uri="http://schemas.microsoft.com/office/drawing/2010/slicer"><sle:slicer xmlns:sle="http://schemas.microsoft.com/office/drawing/2010/slicer" name="Dyeing Mill"/></a:graphicData></a:graphic></xdr:graphicFrame></mc:Choice><mc:Fallback><xdr:sp macro="" textlink=""><xdr:nvSpPr><xdr:cNvPr id="0" name=""/><xdr:cNvSpPr><a:spLocks noTextEdit="1"/></xdr:cNvSpPr></xdr:nvSpPr><xdr:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="4572000" cy="1100000"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:solidFill><a:prstClr val="white"/></a:solidFill><a:ln w="1"><a:solidFill><a:prstClr val="green"/></a:solidFill></a:ln></xdr:spPr><xdr:txBody><a:bodyPr vertOverflow="clip" horzOverflow="clip"/><a:lstStyle/><a:p><a:r><a:rPr lang="en-US" sz="1100"/><a:t>This shape represents a slicer. Slicers are supported in Excel 2010 or later.</a:t></a:r></a:p></xdr:txBody></xdr:sp></mc:Fallback></mc:AlternateContent><xdr:clientData/></xdr:twoCellAnchor>` : "";
     const chTop = hasSeg ? 9 : 2;
     const chartAnchor = `<xdr:twoCellAnchor editAs="oneCell">${anchor(c0, chTop, c0 + 16, chTop + 24)}<xdr:graphicFrame macro=""><xdr:nvGraphicFramePr><xdr:cNvPr id="3" name="Plan to performance"/><xdr:cNvGraphicFramePr/></xdr:nvGraphicFramePr><xdr:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/></xdr:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" r:id="rId1"/></a:graphicData></a:graphic></xdr:graphicFrame><xdr:clientData/></xdr:twoCellAnchor>`;
     const drPath = "xl/drawings/sqhDrawing1.xml";
@@ -1828,18 +1826,18 @@ const HPV = (function(){
     if (hasSeg) {
       const scPath = "xl/slicerCaches/sqhSlicerCache1.xml", slPath = "xl/slicers/sqhSlicer1.xml";
       const scRid = "rId" + nextRid++; wbRels.push({ id: scRid, type: "http://schemas.microsoft.com/office/2007/relationships/slicerCache", target: "slicerCaches/sqhSlicerCache1.xml" });
-      const order = segItems.map((v, k) => [v, k]).filter(([v]) => v !== null).sort((a, b) => ["Inhouse", "Outside", "AOP"].indexOf(a[0]) - ["Inhouse", "Outside", "AOP"].indexOf(b[0]));
-      z.file(scPath, `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n<slicerCacheDefinition xmlns="${NS_X14}" xmlns:mc="${NS_MC}" mc:Ignorable="x" xmlns:x="${NS_MAIN}" name="Slicer_Segment" sourceName="${X(names[segIdx])}"><pivotTables><pivotTable tabId="${pv.id}" name="PivotTable1"/><pivotTable tabId="${cdId}" name="PivotTable2"/></pivotTables><data><tabular pivotCacheId="${cacheId}" sortOrder="ascending" crossFilter="showItemsWithDataAtTop"><items count="${segItems.length}">${order.map(([, k]) => `<i x="${k}" s="1"/>`).join("")}${segItems.includes(null) ? `<i x="${segItems.indexOf(null)}" s="1" nd="1"/>` : ""}</items></tabular></data></slicerCacheDefinition>`);
-      z.file(slPath, `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n<slicers xmlns="${NS_X14}" xmlns:mc="${NS_MC}" mc:Ignorable="x" xmlns:x="${NS_MAIN}"><slicer name="Segment" cache="Slicer_Segment" caption="Segment · Inhouse / Outside / AOP" columnCount="${Math.max(1, order.length)}" rowHeight="241300" style="SlicerStyleLight1"/></slicers>`);
+      const order = segItems.map((v, k) => [v, k]).filter(([v]) => v !== null).sort((a, b) => { const o = v => { const i = ["Inhouse", "Outside"].indexOf(v); return i < 0 ? 9 : i; }; return o(a[0]) - o(b[0]) || String(a[0]).localeCompare(String(b[0])); });
+      z.file(scPath, `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n<slicerCacheDefinition xmlns="${NS_X14}" xmlns:mc="${NS_MC}" mc:Ignorable="x" xmlns:x="${NS_MAIN}" name="Slicer_Dyeing_Mill" sourceName="${X(names[segIdx])}"><pivotTables><pivotTable tabId="${pv.id}" name="PivotTable1"/><pivotTable tabId="${cdId}" name="PivotTable2"/></pivotTables><data><tabular pivotCacheId="${cacheId}" sortOrder="ascending" crossFilter="showItemsWithDataAtTop"><items count="${segItems.length}">${order.map(([, k]) => `<i x="${k}" s="1"/>`).join("")}${segItems.includes(null) ? `<i x="${segItems.indexOf(null)}" s="1" nd="1"/>` : ""}</items></tabular></data></slicerCacheDefinition>`);
+      z.file(slPath, `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n<slicers xmlns="${NS_X14}" xmlns:mc="${NS_MC}" mc:Ignorable="x" xmlns:x="${NS_MAIN}"><slicer name="Dyeing Mill" cache="Slicer_Dyeing_Mill" caption="Dyeing Mill" columnCount="${Math.max(1, order.length)}" rowHeight="241300" style="SlicerStyleLight1"/></slicers>`);
       addCT(scPath, CT.sc); addCT(slPath, CT.sl);
       const ext = `<ext uri="{BBE1A952-AA13-448e-AADC-164F8A28A991}" xmlns:x14="${NS_X14}"><x14:slicerCaches><x14:slicerCache r:id="${scRid}"/></x14:slicerCaches></ext>`;
       wb = /<extLst>/.test(wb) ? wb.replace("<extLst>", "<extLst>" + ext) : wb.replace("</workbook>", `<extLst>${ext}</extLst></workbook>`);
-      const dn = `<definedName name="Slicer_Segment">#N/A</definedName>`;
+      const dn = `<definedName name="Slicer_Dyeing_Mill">#N/A</definedName>`;
       if (/<definedNames>/.test(wb)) wb = wb.replace("<definedNames>", "<definedNames>" + dn);
       else wb = /<calcPr\b/.test(wb) ? wb.replace(/<calcPr\b/, `<definedNames>${dn}</definedNames><calcPr`) : wb.replace(/<pivotCaches>/, `<definedNames>${dn}</definedNames><pivotCaches>`);
     }
     z.file(wbPath, wb); z.file(relsPath(wbPath), relsXml(wbRels)); z.file("[Content_Types].xml", ct);
-    return { ok: true, sx, note: `pivot rebuilt · ${vis.length} dates · ${D.rows.length} source rows${hasSeg ? " · Segment slicer" : ""}${sFix.size ? ` · ${sFix.size} Agreed RFD dates given date format` : ""}`, rows: vis.length, hasSeg };
+    return { ok: true, sx, note: `pivot rebuilt · ${vis.length} dates · ${D.rows.length} source rows${hasSeg ? " · Dyeing Mill slicer" : ""}${sFix.size ? ` · ${sFix.size} Agreed RFD dates given date format` : ""}`, rows: vis.length, hasSeg };
   }
   return { build };
 })();
@@ -2018,7 +2016,7 @@ async function run(){
     DEM.forEach((x,i)=>{ const r=rows[i]; const cat=String(val(r,"R").v??""); const ml=ALLOC&&ALLOC.mill?ALLOC.mill.get(r):null;
       x.g=/aop/i.test(cat)?2:(ml==="Outside"?1:(ml==="Inhouse"?0:(ALLOC?0:null))); });
     const z=F.zip;
-    // Date Wise Pivot -Hues: fresh pivot (cache, captions, Kg, Achievement %, Segment slicer, pivot chart) so it opens already up to date
+    // Date Wise Pivot -Hues: fresh pivot (cache, captions, Kg, Achievement %, Dyeing Mill slicer, pivot chart) so it opens already up to date
     let PIV=null; prog(76,"Rebuilding the Date Wise Pivot…");
     try{ PIV=await HPV.build(z,out,{sst:F.sst,srcLast:ALLOC?ALLOC.lastCol:"AX",fileName:outNames().ott,report:toSerial($("runDate").value)}); if(PIV&&PIV.ok) out=PIV.sx; else console.warn("pivot not rebuilt:",PIV&&PIV.note); }
     catch(e){ console.error("pivot rebuild failed",e); PIV={ok:false,note:e.message||String(e)}; }
