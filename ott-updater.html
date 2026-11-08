@@ -904,7 +904,7 @@ function mergeSplitRows(xml,sst){
           if(v!==null&&v!==""){ nb[k]=v; hasNb=true; } }
         kv.noBatch=hasNb?nb:{}; }
       // Dyeing Mill follows the row (not the batch): keep each row's value in row order
-      if(KCOL.ml){ kv.mlRows=grp.map(oo=>tv(oo,KCOL.ml)); if(kv.mlRows.some(Boolean)) any=true; }
+      if(KCOL.ml){ kv.mlRows=grp.map(oo=>tv(oo,KCOL.ml)); if(bnCol) kv.bnRows=grp.map(oo=>tv(oo,bnCol)); if(kv.mlRows.some(Boolean)) any=true; }
       if(any) keep.set(cur,kv); }
     let cs=o.cs.filter(c=>colNum(c.col)<naCol);
     if(sumInto.has(o.r)){ const grp=sumInto.get(o.r).map(r=>byR.get(r));
@@ -1129,10 +1129,15 @@ const LPA = (function(){
     const g2 = (r, col) => { const m = G2.rows.get(r); return m ? (m.has(col) ? m.get(col) : null) : null; };
 
     /* ---- batches (b) ---- */
-    let B = [];
+    let B = []; const CAPPED = new Map();
     for (const [r, cells] of G2.rows) { if (r <= H2) continue; const cp = cells.get(c.cp); if (!notna(cp)) continue;
       const e = toNum(cells.get(c.exp)), k = toNum(cells.get(c.ekg));
-      B.push({ r, cp: sid(cp), exp: isNaN(e) ? 0 : e, ekg: isNaN(k) ? 0 : k, fabRaw: cells.get(c.fab) ?? null }); }
+      const w = toNum(cells.get(c.W));
+      let ex = isNaN(e) ? 0 : e, ek = isNaN(k) ? 0 : k;
+      // 280 sometimes carries a whole PO/colour "Expected Qty" on one small batch (e.g. a 500 kg Additional batch showing 11,955 m):
+      // a batch cannot give more than its own plan kg, so cap it there and scale the metres the same way
+      if (w > 0 && ek > w * 2) { const f = w / ek; ex *= f; ek = w; CAPPED.set(r, ex); }
+      B.push({ r, cp: sid(cp), exp: ex, ekg: ek, fabRaw: cells.get(c.fab) ?? null }); }
     B.sort((a, b) => a.r - b.r);
     const ratioBy = new Map(); const allR = [];
     for (const x of B) if (x.exp > 0 && x.ekg > 0) { const rt = x.exp / x.ekg; allR.push(rt); if (notna(x.fabRaw)) { const k = pyStr(x.fabRaw); if (!ratioBy.has(k)) ratioBy.set(k, []); ratioBy.get(k).push(rt); } }
@@ -1369,7 +1374,7 @@ const LPA = (function(){
       const outside = notna(g2(r, c.om)) && String(g2(r, c.om)).trim() !== "" && !wocS.toLowerCase().includes("additional");
       const pos = String(g2(r, c.fin) ?? "").trim().toUpperCase();
       const u = new Map([...(USAGE.get(r) || new Map())].filter(([d, v]) => d !== "NaT" && v >= 0.5));
-      const ek = num(g2(r, c.ekg)); let em = num(g2(r, c.exp)); if (em <= 0) em = DERIVED[r] || 0;
+      const ek = num(g2(r, c.ekg)); let em = CAPPED.has(r) ? CAPPED.get(r) : num(g2(r, c.exp)); if (em <= 0) em = DERIVED[r] || 0;
       const dOf = col => { const v = col ? g2(r, col) : null; return typeof v === "number" ? Math.floor(v) : null; };
       const tOf = col => { const v = col ? g2(r, col) : null; return v === null ? "" : String(v); };
       BINFO.set(r, { hs: tOf(c.hs), db: tOf(c.dyeb), dd: dOf(c.dd), fd: dOf(c.fd), rd: dOf(c.rd), no: g2(r, c.bn) === null ? "" : String(g2(r, c.bn)), shade: g2(r, c.shade) === null ? "" : String(g2(r, c.shade)), fab: g2(r, c.fab) === null ? "" : String(g2(r, c.fab)),
@@ -1439,8 +1444,18 @@ const LPA = (function(){
       if (no && kl.byBatch && kl.byBatch[no]) return kl.byBatch[no];
       return first ? (kl.noBatch || {}) : {}; };
     // Dyeing Mill: by row position in the line; a filled cell is never changed, only blank cells are filled
-    const millRow = (kl, k, single) => { if (!kl) return null; const a = kl.mlRows; if (!a) return keptMill(kl);
-      const v = (a[k] || "").trim(); if (v) return v; if (single) { const f = a.find(x => String(x || "").trim()); return f ? String(f).trim() : null; } return null; };
+    // …except a value the tool itself wrote for the row's old batch: when the batch changes and the cell still shows exactly the old batch's mill, it follows the new batch
+    const NO2OUT = new Map(); for (const x of B) { const no = g2(x.r, c.bn), ono = g2(x.r, c.ono); const wo = pyStr(g2(x.r, c.woc)).toLowerCase();
+      const out = notna(g2(x.r, c.om)) && String(g2(x.r, c.om)).trim() !== "" && !wo.includes("additional");
+      if (no !== null && String(no).trim()) NO2OUT.set(String(no).trim(), out); if (out && ono !== null && String(ono).trim()) NO2OUT.set(String(ono).trim(), true); }
+    const autoMill = no => { const ps = String(no || "").split(";").map(x => x.trim()).filter(Boolean); if (!ps.length) return null; let out = false;
+      for (const p of ps) { if (/kpk-outside/i.test(p)) { out = true; continue; } if (!NO2OUT.has(p)) return null; out = out || NO2OUT.get(p); } return out ? "Outside" : "Inhouse"; };
+    const nmM = v => /outside/i.test(v) ? "Outside" : /in-?\s*house/i.test(v) ? "Inhouse" : String(v).trim();
+    const staleAuto = (kl, i, v, newNo) => { const ob = kl.bnRows ? String(kl.bnRows[i] || "").trim() : ""; if (!ob || !newNo || String(newNo).trim() === ob) return false;
+      const am = autoMill(ob); return am !== null && am === nmM(v); };
+    const millRow = (kl, k, single, newNo) => { if (!kl) return null; const a = kl.mlRows; if (!a) return keptMill(kl);
+      const v = (a[k] || "").trim(); if (v) return staleAuto(kl, k, v, newNo) ? null : v;
+      if (single) { const i = a.findIndex(x => String(x || "").trim()); if (i < 0) return null; const f = String(a[i]).trim(); return staleAuto(kl, i, f, newNo) ? null : f; } return null; };
     const keptMill = kp => (kp && kp.ml !== undefined && kp.ml !== null && String(kp.ml).trim() !== "") ? String(kp.ml).trim() : null;
     const NA = colStr(lastL + 1); const FC = OUTC.map((o, k) => colStr(lastL + 2 + k)); const SREF = colStr(lastL + 2 + OUTC.length); const LASTC = FC[FC.length - 1];
     const FH = OUTC.map(o => o.h); const KEEP = opt.keep || new Map();
@@ -1478,7 +1493,7 @@ const LPA = (function(){
         const dj = key => ext.length === 1 ? ext[0][key] : uniq(ext.map(e => e[key]).filter(x => x !== null).map(x => { const t = serDate(x); return `${String(t.getUTCDate()).padStart(2, "0")}-${MONS[t.getUTCMonth()]}`; })).join("; ");
         fvals.set(rs, { no: nos.join("; "), sh: uniq(shs).join("; "), fb: uniq(fbs).join("; "), kg: q, ps: uniq(pss).join("; "), hs: uniq(ext.map(e => e.hs)).join("; "), db: uniq(ext.map(e => e.db)).join("; "),
           dd: dj("dd"), fd: dj("fd"), rd: dj("rd"), ml: mls.includes("Outside") ? "Outside" : "Inhouse" }); } }
-    for (const [r, kl] of KEEP) { const m = millRow(kl, 0, true); if (m) MILL.set(r, /outside/i.test(m) ? "Outside" : /inhouse|in-house|in house/i.test(m) ? "Inhouse" : m); }
+    for (const [r, kl] of KEEP) { const m = millRow(kl, 0, true, fvals.has(r) ? fvals.get(r).no : null); if (m) MILL.set(r, /outside/i.test(m) ? "Outside" : /inhouse|in-house|in house/i.test(m) ? "Inhouse" : m); }
     const cellOut = (o, ref, val) => { if (val === null || val === undefined || val === "") return `<c r="${ref}" s="${TXT}"/>`;
       if (o.num && typeof val === "number") return `<c r="${ref}" s="${NUMS}"><v>${val}</v></c>`;
       if (o.date && typeof val === "number") return `<c r="${ref}" s="${DATE}"><v>${val}</v></c>`;
@@ -1494,7 +1509,7 @@ const LPA = (function(){
       const kp = keepFor(kl, v ? v.no : null, true);
       OUTC.forEach((o, k) => { let val = v ? v[o.k] : (o.k === "ml" ? (MILL.get(r) || null) : null);
         if (o.keep) val = kp[o.k] ?? null;
-        if (o.k === "ml" && millRow(kl, 0, true)) val = millRow(kl, 0, true);
+        if (o.k === "ml") { const km = millRow(kl, 0, true, v ? v.no : null); if (km) val = km; }
         if (o.k === "sg") val = segOf(r, keptMill(kp) || (v && v.ml ? v.ml : (MILL.get(r) || null)));
         nw[FC[k]] = cellOut(o, FC[k] + r, val); });
       const lab = AOPR.has(r) ? null : (res.get(r) || null); nw[NA] = cellT(NA + r, lab);
@@ -1519,7 +1534,7 @@ const LPA = (function(){
             const nv = k < kn - 1 ? r4(tv * sh[k]) : r4(tv - sh.slice(0, -1).reduce((a, s) => a + r4(tv * s), 0));
             cells.set(qc, cx.replace(/<v>[^<]*<\/v>/, `<v>${nv}</v>`)); }
           const kl = KEEP.get(r0) || {}; const kp = keepFor(kl, pc.no, k === 0);
-          const kmb = millRow(kl, k, false);
+          const kmb = millRow(kl, k, false, pc.no);
           OUTC.forEach((o, k2) => { let vv = pc[o.k]; if (o.keep) vv = kp[o.k] ?? null; if (o.k === "ml" && kmb) vv = kmb; if (o.k === "sg") vv = segOf(r0, kmb || pc.ml); cells.set(FC[k2], cellOut(o, FC[k2] + cur, vv)); });
           if (k < kn - 1) cells.set(NA, `<c r="${NA}${cur}" s="${TXT}"/>`);
           cells.set(SREF, `<c r="${SREF}${cur}" s="${TXT}" t="inlineStr"><is><t>SPLIT-${r0}</t></is></c>`); }
