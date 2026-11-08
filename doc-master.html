@@ -787,15 +787,8 @@ body:not(.tv) #lp{display:none!important}
     const sst = parseSST(sstFile ? await sstFile.async('string') : '');
     log('Reading 280 sheet…');
     let x280 = await zip.file(sp['280'].path).async('string');
-    // Body Type column: wherever its header is (normally DB); new -> inserted at DB
-    let BTL = 'DB'; { const r2 = (/<row r="2"[\s>][\s\S]*?<\/row>/.exec(x280) || [''])[0];
-      for (const m of r2.matchAll(/<c r="([A-Z]{1,3})2"([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g)) {
-        const t = /t="(\w+)"/.exec(m[2]); const v = /<v>([^<]*)<\/v>/.exec(m[3] || '');
-        const txt = t && t[1] === 's' && v ? sst[+v[1]] : t && t[1] === 'inlineStr' ? (m[3] || '').replace(/<[^>]+>/g, '') : '';
-        if (String(txt || '').trim() === 'Body Type') { BTL = m[1]; break; } } }
-    const BTP = cl(cn(BTL) - 1);
-    const c280 = readCells(x280, new Set(['E', 'F', 'G', 'H', 'L', 'N', 'W', 'BB', BTL]), sst, 2);
-    const hdrDB = c280.get(2) ? str(c280.get(2)[BTL]) : '';
+    const c280 = readCells(x280, new Set(['E', 'F', 'G', 'H', 'L', 'N', 'W', 'BB', 'DB']), sst, 2);
+    const hdrDB = c280.get(2) ? str(c280.get(2).DB) : '';
     const already = hdrDB.trim() === 'Body Type';
     const rows280 = [...c280.entries()].filter(([r]) => r >= 3).sort((a, b) => a[0] - b[0]).map(([r, o]) => Object.assign({ _r: r }, o));
     log(`280: ${rows280.length} rows. Classifying & pairing…`);
@@ -893,7 +886,7 @@ body:not(.tv) #lp{display:none!important}
 
     // ---- 280 Body Type column at DB
     log(already ? 'Updating 280 Body Type (DB)…' : 'Inserting 280 Body Type column before DB…');
-    const INS = cn(BTL); const val = new Map(); const cnt280 = { B: 0, G: 0 };
+    const INS = cn('DB'); const val = new Map(); const cnt280 = { B: 0, G: 0 };
     for (const r of rows280) { if (!r.H) continue; const t = M.finalType(r.H); if (t) { const c = t === 'Body' ? 'B' : 'G'; val.set(r._r, c); cnt280[c]++; } }
     {
       const { head, body, tail } = splitSheet(x280);
@@ -901,7 +894,7 @@ body:not(.tv) #lp{display:none!important}
       const newBody = body.replace(rowRe(), (row, r1, r2) => {
         const rn = +(r1 || r2);
         if (row.endsWith('/>')) row = row.slice(0, -2) + '></row>';
-        if (already) row = row.replace(new RegExp(`<c r="${BTL}\\d+"[^>]*?(?:\\/>|>[\\s\\S]*?<\\/c>)`, 'g'), '');
+        if (already) row = row.replace(/<c r="DB\d+"[^>]*?(?:\/>|>[\s\S]*?<\/c>)/g, '');
         else {
           row = row.replace(/<c r="([A-Z]{1,3})(\d+)"/g, (a, c, r) => `<c r="${shiftCol(c)}${r}"`);
           row = row.replace(/spans="(\d+):(\d+)"/, (a, x, y) => `spans="${x}:${+y >= INS ? +y + 1 : Math.max(INS, +y)}"`);
@@ -909,15 +902,15 @@ body:not(.tv) #lp{display:none!important}
         let txt = null;
         if (rn === 2) txt = 'Body Type'; else if (val.has(rn)) txt = val.get(rn);
         if (txt === null) return row;
-        const sm = new RegExp('<c r="' + BTP + rn + '"[^>]*?(\\ss="\\d+")').exec(row); const sty = sm && sm[1] ? sm[1] : '';
-        const cell = `<c r="${BTL}${rn}"${sty} t="inlineStr"><is><t>${esc(txt)}</t></is></c>`;
+        const sm = new RegExp('<c r="DA' + rn + '"[^>]*?(\\ss="\\d+")').exec(row); const sty = sm && sm[1] ? sm[1] : '';
+        const cell = `<c r="DB${rn}"${sty} t="inlineStr"><is><t>${esc(txt)}</t></is></c>`;
         const re = /<c r="([A-Z]{1,3})\d+"/g; let mm, pos = -1;
         while ((mm = re.exec(row))) if (cn(mm[1]) > INS) { pos = mm.index; break; }
         return pos >= 0 ? row.slice(0, pos) + cell + row.slice(pos) : row.slice(0, -6) + cell + '</row>';
       });
       let h = head, t = tail;
       if (!already) {
-        h = h.replace(/<dimension ref="A1:([A-Z]+)(\d+)"\/>/, (a, c, r) => `<dimension ref="A1:${cn(c) >= INS ? cl(cn(c) + 1) : BTL}${r}"/>`);
+        h = h.replace(/<dimension ref="A1:([A-Z]+)(\d+)"\/>/, (a, c, r) => `<dimension ref="A1:${cn(c) >= INS ? cl(cn(c) + 1) : 'DB'}${r}"/>`);
         h = h.replace(/<cols>[\s\S]*?<\/cols>/, cols => {
           const defs = cols.match(/<col [^>]*\/>/g) || []; const keep = [];
           for (let d of defs) {
@@ -1862,24 +1855,6 @@ function newArticles(d280, grp280, c280, today) {
 }
 /* ------------------------------------------------------------ main build */
 const EXPECT_280_TEMPLATES = 60;   // AU..DB
-// the 60 calculated 280 columns (AU..DA + Extra in the standard layout) — found by their header, so a column the user
-// inserts or moves in 280 never shifts them; header renamed -> found by its row-1 'qq' formula
-const STD280 = ["Total PL %", "H/s PL", "Dye PL", "QAD PL", "Avg PL", "QAD In hand", "Batch Position", "Final Batch Position ", "Order Item", "102% RFD Bal Mtr", "Gsm", "102% Req Qty Kg", "Actual Dyed Qty", "Rfd Qty With out adjust", "Color Wise Total Dyed", "Color Wise Total RFD Kg", "Compleate %", "Customer order&Fab&Col", "Knit Status", "Left batch", "100% Req Qty Kg", "H/s Pending", "Remarks.", "Ott ", "Ageing", "Comments", "Aop", "Color Wise Total Rejected Qty", "Dye Qty Without Add", "Actual Process Loss", "Order Qty Greige", "Finish  Req Qty", "Po Process Loss", "Additional Reason", "Additional or not", "Additional or not(Batch No)", "Total ColorWise Additional Qty", "Rfd qty without add", "PO COLOR FAB-CARRY FOR COMPLEATE %", "Dyed Qty without Add/Batch Wise", "Additional %", "Finish to Finsh conversion", "Order Qty Mtr", "Rfd Qty Mtr Without Add", "Without Add Compleate %", "Additional Raw reason", "To hit 100% Add Req", "Item Wise total Add", "Left No of Batch", "Lot Info", "Line Plan ", "Line Plan Req Date", "Dye Status", "First Dyeing Date", "WIP Ageing", "From Split Batch", "Wip Ageing Slot", "Expected Qty Kg", "Expected Qty Mtr", "Extra"];
-const STD280_TMPL = ["qqIFERROR((W3-AB3)/W3,\"-\")", "qqIFERROR((W3-AJ3)/W3,\"-\")", "qqIFERROR((AJ3-AK3)/AJ3,\"-\")", "qqIFERROR((AK3-AB3)/AK3,\"-\")", "qqIFERROR((BI3-BJ3)/BI3,\"-\")", "qqAK3-AB3", "QQIF(W3<QQ0.01,\"CLOSED\",IF(D3QQ\"Final Reject\",\"Final Reject\",IF(U3>0,\"RFD DONE\",IF(IFERROR(SEARCH(\"Adjust\",AF3),0)>0,\"QAD-Inhouse\",IF(T3>0,IF(J3QQ\"Re-process\",IF(AC3>0,\"CLOSED\",IF(S3>0,\"QAD\",IF(R3>0,\"FINISHING\",\"DYEING\"))),\"QAD-Outside\"),IF(C3>0,IF(CC3>0,IF(S3>0,\"QAD-Inhouse\",IF(R3>0,\"FINISHING\",IF(BM3<QQ0,\"DYEING\",\"KNITTING\"))),IF(AC3>0,\"RFD DONE\",IF(T3>0,\"QAD-Outside\",IF(AS3>0,\"DYEING\",IF(BM3<QQ0,\"OUTSIDE DYEING\",\"OUTSIDE KNITTING\"))))),IF(S3>0,\"QAD-Inhouse\",IF(R3>0,\"FINISHING\",IF(BM3<QQ0,\"DYEING\",\"KNITTING\")))))))))", "qqIFNA(IF(VLOOKUP(H3,'280 (2)'!H:BB,47,FALSE)qq\"CLOSED\",\"CLOSED\",IF(BD3>0,IF(BA3qq\"RFD DONE\",\"PO PENDING\",BA3),IF(OR(BA3qq\"RFD DONE\",BA3qq\"Final Reject\",BA3qq\"CLOSED\"),\"CLOSED\",BA3))),BA3)", "qqTRIM(IF(RIGHT(H3,3)qq\"| 1\", TRIM(LEFT(H3,FIND(\"| 1\",H3,LEN(H3)-4)-1)),\"-\"))", "qqIFERROR(VLOOKUP(BC3,'217'!E:AE,27,FALSE),0)", "qqTRIM(IF(ISNUMBER(SEARCH(\"160\",N3)),160,\r\nIF(ISNUMBER(SEARCH(\"120\",N3)),120,\r\nIF(ISNUMBER(SEARCH(\"140\",N3)),140,\r\nIF(ISNUMBER(SEARCH(\"180\",N3)),180,\r\nIF(ISNUMBER(SEARCH(\"110\",N3)),110,\r\nIF(ISNUMBER(SEARCH(\"150\",N3)),150,\r\nIF(ISNUMBER(SEARCH(\"235\",N3)),235,\r\nIF(ISNUMBER(SEARCH(\"135\",N3)),135,\r\nIF(ISNUMBER(SEARCH(\"190\",N3)),190,\r\nIF(ISNUMBER(SEARCH(\"155\",N3)),155,\r\nIF(ISNUMBER(SEARCH(\"210\",N3)),210,\r\nIF(ISNUMBER(SEARCH(\"165\",N3)),165,\r\nIF(ISNUMBER(SEARCH(\"230\",N3)),230,\r\nIF(ISNUMBER(SEARCH(\"245\",N3)),245,\r\nIF(ISNUMBER(SEARCH(\"200\",N3)),200,\r\nIF(ISNUMBER(SEARCH(\"185\",N3)),185,\r\n\"Not Found\")))))))))))))))))", "qqIFNA(VLOOKUP(BC3,'217'!E:AU,43,FALSE),0)", "qqIFERROR(IF(SEARCH(\"AOP\",M3),IF(AB3>0,W3,0),IF(AC3>0,W3,0)),IF(AC3>0,W3,0))", "qqIFERROR(IF(SEARCH(\"AOP\",M3),IF(AB3>0,AB3,0),IF(AC3>0,AB3,0)),IF(AC3>0,AB3,0))", "qqSUMIFS(BG:BG,F:F,F3,L:L,L3,N:N,N3)", "qqSUMIFS(BH:BH,F:F,F3,L:L,L3,N:N,N3)", "qqINDEX('217'!AF:AF,MATCH('280'!CG3,'217'!BA:BA,0))", "qqF3&N3&L3", "qqIFERROR(VLOOKUP(H3,'Knit Q'!E:AB,24,FALSE),0)", "qqIF(OR(BB3qq\"CLOSED\",BB3qq\"PO PENDING\",BB3qq\"Final Reject\"),0,1)", "qqIF(INDEX('217'!AW:AW,MATCH('280'!CG3,'217'!BA:BA,0))<0,-INDEX('217'!AW:AW,MATCH('280'!CG3,'217'!BA:BA,0)),INDEX('217'!AW:AW,MATCH('280'!CG3,'217'!BA:BA,0)))", "QQIF(BB3QQ\"KNITTING\",\"Under Operation\",IFNA(VLOOKUP(H3,HS!E:M,9,FALSE),\"H/S OK\"))", "qqIFNA(IF(VLOOKUP(H3,'280 (2)'!H:BQ,62,FALSE)qq\"Urgent\",\"Urgent\",IF(BR3<qqTODAY(),\"OTT\",0)),0)", "qqINT(A3)", "qqTODAY()-AO3", "qqIFERROR(IF(ISBLANK(VLOOKUP(H3,'280 (2)'!H:BT,65,FALSE)),\"\",VLOOKUP(H3,'280 (2)'!H:BT,65,FALSE)),\"\")", "qqIF(IFERROR(SEARCH(\"AOP\",M3),0),\"AOP\",\"\")", "qqSUMIFS(W:W,F:F,F3,L:L,L3,N:N,N3,D:D,\"Final Reject\",G:G,G3)", "qqSUMIFS(CH:CH,G:G,G3,L:L,L3,N:N,N3)", "qq(BW3-CF3)/BW3", "qqSUMIFS(W:W,G:G,G3,L:L,L3,N:N,N3)-CE3", "qqSUMIFS('217'!L:L,'217'!AZ:AZ,'280'!G3,'217'!G:G,'280'!L3,'217'!H:H,'280'!N3)", "qqIFERROR(((BY3-BZ3)/BY3),\"\")", "qqIFERROR(VLOOKUP(H3,'280 (2)'!H:CL,73,FALSE),\"\")", "qqIF(CD3>\"1\",\"Additional\",0)", "qqTRIM(LEFT(MID(H3,FIND(\"|\",H3,FIND(\"|\",H3)+1)+1,99),\r\nIFERROR(FIND(\"/\",MID(H3,FIND(\"|\",H3,FIND(\"|\",H3)+1)+1,99))-1,99)))", "qqSUMIFS(W:W,G:G,G3,L:L,L3,N:N,N3,CC:CC,\"Additional\")", "qqSUMIFS(AB:AB,G:G,G3,L:L,L3,N:N,N3)-SUMIFS(AB:AB,G:G,G3,L:L,L3,N:N,N3,CC:CC,\"Additional\")", "qqG3&N3&L3", "qqIF(CC3qq\"Additional\",0,IF(OR(D3qq\"Final Reject\"),W3,IF(AB3>0,W3,0)))", "qqIF(CC3qq\"Additional\",W3/BY3,\"\")", "qqINDEX('217'!AS:AS,MATCH('280'!BL3,'217'!AY:AY,0))", "qqIFERROR(IF(SEARCH(\"AOP\",M3),INDEX('217'!L:L,MATCH('280'!CG3,'217'!BA:BA,0)),INDEX('217'!K:K,MATCH('280'!CG3,'217'!BA:BA,0))),INDEX('217'!K:K,MATCH('280'!CG3,'217'!BA:BA,0)))", "qqIFERROR(IF(SEARCH(\"AOP\",M3),SUMIFS(AB:AB,G:G,G3,L:L,L3,N:N,N3)-SUMIFS(AB:AB,G:G,G3,L:L,L3,N:N,N3,CC:CC,\"Additional\"),SUMIFS(AC:AC,G:G,G3,L:L,L3,N:N,N3)-SUMIFS(AC:AC,G:G,G3,L:L,L3,N:N,N3,CC:CC,\"Additional\")),SUMIFS(AC:AC,G:G,G3,L:L,L3,N:N,N3)-SUMIFS(AC:AC,G:G,G3,L:L,L3,N:N,N3,CC:CC,\"Additional\"))", "qqCL3/CK3", "qqVLOOKUP(H3,'280 (2)'!H:CN,85,FALSE)", "qq((CK3-CL3)/CJ3)+(((CK3-CL3)/CJ3)*CA3)", "qqSUMIFS(W:W,CC:CC,\"Additional\",BL:BL,BL3)", "qqSUMIFS(BN:BN,BL:BL,BL3)", "QQIFNA(IF(VLOOKUP(H3,'280 (2)'!H:CR,89,FALSE)>0,VLOOKUP(H3,'280 (2)'!H:CR,89,FALSE),IF(VLOOKUP(H3,'Y-LOT'!D:I,6,FALSE)>0,VLOOKUP(H3,'Y-LOT'!D:I,6,FALSE),'280'!O3)),O3)", "qqIFERROR(IF(ISBLANK(VLOOKUP(H3,'280 (2)'!H:CT,90,FALSE)),\"\",VLOOKUP(H3,'280 (2)'!H:CT,90,FALSE)),\"\")", "qqIFERROR(IF(ISBLANK(VLOOKUP(H3,'280 (2)'!H:CT,91,FALSE)),\"\",VLOOKUP(H3,'280 (2)'!H:CT,91,FALSE)),\"\")", "qqIFERROR(VLOOKUP(H3,'Dye Q'!F:U,16,FALSE),0)", "qqIFERROR(IF(VLOOKUP(H3,'280 (2)'!H:CV,93,FALSE)>0,VLOOKUP(H3,'280 (2)'!H:CV,93,FALSE),R3),IF(J3=\"Re-process\",VLOOKUP(CX3,'280 (2)'!H:R,11,FALSE),'280'!R3))", "qqTODAY()-CV3", "qqIF(ISNUMBER(SEARCH(\"/\",RIGHT(H3,5))),LEFT(H3,FIND(\"@\",SUBSTITUTE(H3,\"/\",\"@\",LEN(H3)-LEN(SUBSTITUTE(H3,\"/\",\"\"))))-1),H3)", "qqIF(CW4772>90,\"Above 90 Days\",IF(CW4772>30,\"30-90 Days\",IF(CW4772>20,\"20-30 Days\",IF(CW4772>10,\"10-20 Days\",\"0-10 Days\"))))", "qqW3-W3*CA3", "qqCZ3*CJ3", "qqIFERROR(IF(ISBLANK(VLOOKUP(H3,'280 (2)'!H:DB,99,FALSE)),\"\",VLOOKUP(H3,'280 (2)'!H:DB,99,FALSE)),\"\")"];
-const n280 = v => String(v ?? '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/\s+/g, ' ').trim().toLowerCase();
-function map280(sh, SST) {
-  const hdr = new Map(), tpl = new Map();
-  for (const [c, x] of (sh.rows.get(2) || ['', new Map()])[1]) { const v = n280(cellValue(x, SST)); if (v && c >= ci('AU') && !hdr.has(v)) hdr.set(v, c); }
-  for (const [c, x] of (sh.rows.get(1) || ['', new Map()])[1]) { const v = n280(cellValue(x, SST)); if (v && c >= ci('AU') && !tpl.has(v)) tpl.set(v, c); }
-  const used = new Set(), how = [];
-  const cols = STD280.map((nm, k) => {
-    let c = hdr.get(n280(nm)); if (c !== undefined && !used.has(c)) { used.add(c); return c; }
-    const t = STD280_TMPL[k] && tpl.get(n280(STD280_TMPL[k])); if (t !== undefined && t !== null && !used.has(t)) { used.add(t); how.push(`${nm.trim()} → ${cl(t)} (by formula)`); return t; }
-    return null;
-  });
-  STD280.forEach((nm, k) => { if (cols[k] === null) { const c = k < 59 ? ci('AU') + k : ci('DB'); const h = n280(cellValue(sh.get(2, c), SST)); if (!h && !used.has(c)) { cols[k] = c; used.add(c); } else how.push(`${nm.trim()}: column not found`); } });
-  return { cols, hdr, how };
-}
 async function build(files, opts = {}) {
   const log = opts.onProgress || (() => {});
   const today = opts.today !== undefined ? opts.today : (() => { const d = new Date(); return Math.round((Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) - Date.UTC(1899, 11, 30)) / 864e5); })();
@@ -1901,7 +1876,7 @@ async function build(files, opts = {}) {
   const SST = [...sstXml.matchAll(/<si>([\s\S]*?)<\/si>/g)].map(m => unx([...m[1].matchAll(/<t[^>]*>([\s\S]*?)<\/t>/g)].map(x => x[1]).join('')));
 
   // clean up a doubled 'MC No' column left by an earlier version
-  for (const [sn, hd] of [['280', 'MC No'], ['280', 'Body Type'], ['Dye Q', 'MC No']]) { const r = await dropDupColumns(zip, pathOf, SST, sn, hd, wbx); wbx = r.wbx; if (r.removed) report.warnings.push(`${sn}: removed ${r.removed} repeated ${hd} column`); }
+  for (const sn of ['280', 'Dye Q']) { const r = await dropDupColumns(zip, pathOf, SST, sn, 'MC No', wbx); wbx = r.wbx; if (r.removed) report.warnings.push(`${sn}: removed ${r.removed} repeated MC No column`); }
   note(6, 'Reading TAPS files');
   const S = {};
   for (const [k, buf] of Object.entries(files.sources)) { S[k] = readSource(buf); await tick(); }
@@ -1934,27 +1909,17 @@ async function build(files, opts = {}) {
   note(18, 'Reading current 280 sheet (280 (2) copy for comments / urgent / remarks)');
   const sh280 = new Sheet(await rd(pathOf['280'])); await tick();
   // Body Type (Dye Q Combo Planner) sits at DB once added; the old DB 'Extra' column is then at DC
-  const M280 = map280(sh280, SST); const COL280 = M280.cols; if (M280.how.length) report.layout280 = M280.how;
-  const extraCol = COL280[59] || ci('DB');
-  // old values (the '280 (2)' copy). A file written before header mapping may hold its values at the standard letters
-  // while the headers moved (a column inserted in AU:DB) -> read those from the standard letters this one time.
-  const oldRows = [...sh280.rows.keys()].sort((a, b) => a - b);
-  const aopAt = c => { let n = 0; if (!c) return 0; for (const r of oldRows) if (r >= 3 && n280(cellValue(sh280.get(r, c), SST)) === 'aop') n++; return n; };
-  const lettersMode = COL280[26] !== ci('BU') && aopAt(ci('BU')) > aopAt(COL280[26]);
-  if (lettersMode) report.warnings.push('280: values from the last update sat one column off their headers — this update puts every calculated column back under its own header.');
-  const stdIdx = { BB: 7, BQ: 22, BT: 25, CB: 33, CN: 45, CR: 49, CS: 50, CT: 51, CV: 53, DB: 59 };
-  const colOf = c => c in stdIdx ? (lettersMode && c !== 'DB' ? ci(c) : (COL280[stdIdx[c]] || ci(c))) : ci(c);
+  const hdr280 = c => String(cellValue(sh280.get(2, ci(c)), SST) || '').trim();
+  const bodyTypeAtDB = hdr280('DB') === 'Body Type';
+  // 'Extra' (old DB) moves right when Body Type (DB) and MC No (DC) are in front of it
+  const extraCol = !bodyTypeAtDB ? ci('DB') : (hdr280('DC') === 'MC No' ? ci('DD') : ci('DC'));
+  const colOf = c => c === 'DB' ? extraCol : ci(c);
   const oldCols = {}; const want = ['H', 'R', 'BB', 'BQ', 'BT', 'CB', 'CN', 'CR', 'CS', 'CT', 'CV', 'DB'];
   want.forEach(c => oldCols[c] = []);
+  const oldRows = [...sh280.rows.keys()].sort((a, b) => a - b);
   for (const r of oldRows) for (const c of want) oldCols[c].push(cellValue(sh280.get(r, colOf(c)), SST));
   const old = { H: oldCols.H, cols: oldCols };
-  // user's own columns among the calculated ones (e.g. Remarks(RFD)): kept with their batch
-  const stdSet = new Set(COL280.filter(Boolean)), userCols = [];
-  for (const [c, x] of (sh280.rows.get(2) || ['', new Map()])[1]) { const h = n280(cellValue(x, SST)); if (c >= ci('AU') && h && !stdSet.has(c) && h !== 'body type' && h !== 'mc no') userCols.push(c); }
-  const userOld = new Map();
-  if (!lettersMode && userCols.length) for (const r of oldRows) { if (r < 3) continue; const b = n280(cellValue(sh280.get(r, 8), SST)); if (!b || userOld.has(b)) continue; userOld.set(b, userCols.map(c => { const v = cellValue(sh280.get(r, c), SST); return v === '' ? null : v; })); }
-  if (userCols.length) report.user280 = userCols.map(cl);
-  const tmpl = []; for (const c of COL280) { if (!c) continue; const v = cellValue(sh280.get(1, c), SST); if (typeof v === 'string' && /^qq/i.test(v)) tmpl.push(c); }
+  const tmpl = []; for (const c of [...Array(ci('DA') - ci('AU') + 1).keys()].map(k => ci('AU') + k).concat([extraCol])) { const v = cellValue(sh280.get(1, c), SST); if (typeof v === 'string' && /^qq/i.test(v)) tmpl.push(c); }
   if (tmpl.length !== EXPECT_280_TEMPLATES) report.warnings.push(`280 row 1 has ${tmpl.length} qq templates in AU:DB (expected 60) — check the calc columns.`);
 
   note(24, 'Calculating 280 AU:DB (activated row-1 formulas → values)');
@@ -1979,10 +1944,8 @@ async function build(files, opts = {}) {
   keyOf = r => nv(cellValue(sh280.get(r, 8), SST));
   oldLast = lastDataRow(sh280, 1, 46, 3); canon = canonStyles(sh280, SB, 3, oldLast, sheetCols(sh280, 2, extraCol)); man = manualStyles(sh280, SB, canon, 3, oldLast, keyOf); nl = paste(sh280, d280, 3, 1, 46, oldLast);
   for (let r = 3; r <= nl; r++) { const v = sh280.rows.get(r); v[0] = v[0].replace(/\s(ht|customHeight)="[^"]*"/g, '') + ' ht="15" customHeight="1"'; }
-  // each calculated column goes under its own header; user columns keep their value for the same batch
-  { const runs = []; COL280.forEach((c, k) => { if (!c) return; const last = runs[runs.length - 1]; if (last && c === last.c1 + 1 && k === last.k1 + 1) { last.c1 = c; last.k1 = k; } else runs.push({ c0: c, c1: c, k0: k, k1: k }); });
-    for (const R of runs) writeValues(sh280, R.c0, R.c1, 3, c280.vals.map(v => v.slice(R.k0, R.k1 + 1)), oldLast);
-    if (userCols.length) { const bat = d280.map(r => n280(r[7])); userCols.forEach((c, j) => writeValues(sh280, c, c, 3, bat.map(b => [userOld.has(b) ? userOld.get(b)[j] : null]), oldLast)); } }
+  if (extraCol === ci('DB')) writeValues(sh280, ci('AU'), ci('DB'), 3, c280.vals, oldLast);
+  else { writeValues(sh280, ci('AU'), ci('DA'), 3, c280.vals.map(v => v.slice(0, 59)), oldLast); writeValues(sh280, extraCol, extraCol, 3, c280.vals.map(v => [v[59]]), oldLast); }
   restyled['280'] = applyCanon(sh280, canon, 3, nl); report.formatKept['280'] = putManual(sh280, man, 3, nl, keyOf);
   filterRefs['280'] = resetFilter(sh280, nl); trimmed['280'] = trimTail(sh280, nl); slimDuplicateCF(sh280); boundCF(sh280, nl); setDimension(sh280); wr(pathOf['280'], sh280.serialize()); await tick();
 
@@ -2404,15 +2367,13 @@ async function addMcNo(zip, pathOf, SST, report) {
   await putColumn(zip, pathOf, 'Dye Q', ci('AQ'), 'MC No', r => byRow.get(r) ?? null, ['AP', 'AP'], SST);
   // 280: MC No at DC (after Body Type, before Extra); batches not in Dye Q use their own plan qty
   const sh = new Sheet(await zip.file(pathOf['280']).async('string')); const vals = new Map();
-  const h2 = new Map(); for (const [c, x] of (sh.rows.get(2) || ['', new Map()])[1]) { const v = n280(cellValue(x, SST)); if (v && !h2.has(v)) h2.set(v, c); }
-  const BT = h2.get('body type') || ci('DB'), MCC = h2.get('mc no') || BT + 1, ADD = h2.get('additional or not') || ci('CC');
   for (const [r, [, cells]] of sh.rows) { if (r < 3) continue; const b = cellValue(cells.get(ci('H')), SST); if (!b) continue;
     // outside-mill batches (C filled) get no MC No — unless the outside order's batch is an Additional dyed inside (CC = Additional)
     const outside = String(cellValue(cells.get(ci('C')), SST) ?? '').trim() !== '';
-    const additional = String(cellValue(cells.get(ADD), SST) ?? '').trim().toLowerCase() === 'additional';
+    const additional = String(cellValue(cells.get(ci('CC')), SST) ?? '').trim().toLowerCase() === 'additional';
     if (outside && !additional) continue;
     vals.set(r, byBatch.has(String(b)) ? byBatch.get(String(b)) : mcNo(cellValue(cells.get(ci('W')), SST), null)); }
-  await putColumn(zip, pathOf, '280', MCC, 'MC No', r => vals.get(r) ?? null, [cl(BT), cl(BT)], SST);
+  await putColumn(zip, pathOf, '280', ci('DC'), 'MC No', r => vals.get(r) ?? null, ['DB', 'DB'], SST);
   const cnt = {}; for (const v of byRow.values()) cnt[v ?? 'blank'] = (cnt[v ?? 'blank'] || 0) + 1; report.mcNo = cnt;
 }
 
@@ -2653,19 +2614,17 @@ const normV = v => v === null || v === undefined ? '' : typeof v === 'number' ? 
 // WIP = Final Batch Position (BB) is not CLOSED / Final Reject / PO PENDING / RFD DONE. Order: Position (Z→A), then 280 order.
 const LP_NOT_WIP = new Set(['closed', 'final reject', 'final rejects', 'po pending', 'rfd done']);
 function wipRows(vals280, last280, cfg) {
-  const h2 = new Map(); for (const [c, v] of vals280.get(2) || []) { const k = n280(v); if (k && !h2.has(k)) h2.set(k, c); }
-  const AOPC = h2.get('aop') || ci('BU'), POSC = h2.get('final batch position') || ci('BB');
-  const pick = cfg.name === 'PFP Plan' ? (row => normV(row.get(AOPC)) === 'aop') : (row => normV(row.get(ci('D'))) === cfg.cat);
+  const pick = cfg.name === 'PFP Plan' ? (row => normV(row.get(ci('BU'))) === 'aop') : (row => normV(row.get(ci('D'))) === cfg.cat);
   const out = [], seen = new Set();
   for (let r = 3; r <= last280; r++) {
     const row = vals280.get(r); if (!row) continue;
     const b = normV(row.get(ci('H'))); if (!b || seen.has(b)) continue;
-    if (!pick(row) || LP_NOT_WIP.has(normV(row.get(POSC)).replace(/\s+/g, ' '))) continue;
+    if (!pick(row) || LP_NOT_WIP.has(normV(row.get(ci('BB'))).replace(/\s+/g, ' '))) continue;
     seen.add(b); out.push(r);
   }
   // QAD (Inhouse, Outside) → Finishing → Dyeing → Knitting → Outside (dyeing, knitting) → anything else
   const RANK = ['qad-inhouse', 'qad-outside', 'qad', 'finishing', 'dyeing', 'knitting', 'outside dyeing', 'outside knitting'];
-  const rank = r => { const p = String(vals280.get(r).get(POSC) ?? '').replace(/\s+/g, ' ').trim().toLowerCase(); const i = RANK.indexOf(p);
+  const rank = r => { const p = String(vals280.get(r).get(ci('BB')) ?? '').replace(/\s+/g, ' ').trim().toLowerCase(); const i = RANK.indexOf(p);
     return i >= 0 ? i : p.startsWith('qad') ? 2.5 : p.startsWith('outside') ? 7.5 : p ? 8 : 9; };
   return out.sort((a, b) => rank(a) - rank(b) || a - b);
 }
