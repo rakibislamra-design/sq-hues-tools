@@ -65,6 +65,7 @@ input[type=date],select{font:600 14px var(--f-body);color:var(--fg);background:v
 @media (max-width:900px){.cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .card{appearance:none;text-align:left;font:inherit;color:inherit;background:var(--surface);border:1px solid var(--line);border-top:5px solid var(--c);border-radius:12px;padding:12px 14px;cursor:pointer;display:grid;gap:4px}
 .card[aria-pressed="true"]{box-shadow:0 0 0 2px var(--c) inset}
+html.shot .card[aria-pressed="true"]{box-shadow:none;outline:2px solid var(--c);outline-offset:-2px}
 .card .t{font:700 13px var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 .card .p{font:800 32px/1.05 var(--f-display);color:var(--c);font-variant-numeric:tabular-nums}
 .card .s{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
@@ -156,7 +157,20 @@ td.gl,th.gl{border-left:2px solid var(--line)}
 .pk{font-weight:700}.pk.good{color:var(--good)}.pk.mid{color:var(--mid)}.pk.bad{color:var(--bad)}
 #btbl td.bp{cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px}
 #btbl td.bp:hover{background:var(--q5)}
+.grp.pres{margin-left:auto}
+.chip.dl{background:var(--q);border-color:var(--q);color:#fff}
+html.present .topnav{display:none!important}
+html.present header,html.embed.present header{display:flex!important}
+html.present body{background:var(--bg)!important}
+html.present .wrap,html.embed.present .wrap{max-width:none;padding:18px 30px 30px}
+html.present #dlBtn,html.shot .grp.pres{display:none!important}
+#hdate:not(:empty)::before{content:" · "}
+.tctl{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;margin:2px 0 10px}
+.tctl .chip{min-height:30px;padding:3px 12px;font-size:13px}
+.tctl select{max-width:220px}
+html.shot .tctl .chip:not([aria-pressed="true"]){display:none}
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
 <div class="wrap">
@@ -168,7 +182,7 @@ td.gl,th.gl{border-left:2px solid var(--line)}
   <header>
     <div class="brand">
       <div class="mark" aria-hidden="true">Q</div>
-      <div><div class="tag">SQ Hues · Fabric Planning</div><h1>Daily Line Plan vs Performance</h1></div>
+      <div><div class="tag">SQ Hues · Fabric Planning<span id="hdate"></span></div><h1>Daily Line Plan vs Performance</h1></div>
     </div>
     <div class="stamp" id="stamp"></div>
   </header>
@@ -190,6 +204,7 @@ td.gl,th.gl{border-left:2px solid var(--line)}
       <button class="chip" data-v="Outside" style="--c:var(--out)"><i></i>Outside</button>
     </div>
     <div class="grp"><span class="lab">Buyer</span><select id="buyer" aria-label="Buyer"><option value="">All buyers</option></select></div>
+    <div class="grp pres"><button class="chip" id="presBtn" title="Presentation mode (full screen)">▣ Present</button><button class="chip dl" id="dlBtn" title="Download the dashboard as a picture (presentation view)">⬇ Download</button></div>
   </section>
 
   <div id="msg" class="panel empty" hidden></div>
@@ -229,7 +244,8 @@ td.gl,th.gl{border-left:2px solid var(--line)}
         <div class="tblwrap"><table id="btbl"></table></div>
       </section>
       <section class="ch">
-        <div class="chhead"><h2>Date-wise plan vs performance</h2><span class="note">Mtr unless marked Kg · RFD includes Recovered · RFD balance = RFD − Plan · greyed days are outside the selected dates</span></div>
+        <div class="chhead"><h2 id="t4">Date-wise plan vs performance</h2></div>
+        <div class="grp tctl" role="group" aria-label="Buyer for the date-wise table" id="buyer3"></div>
         <div class="tblwrap"><table id="tbl"></table></div>
       </section>
 
@@ -294,6 +310,7 @@ function useData(j,label){
   $("srcTxt").textContent=`${PP.file||"OTT file"} · ${label}`; $("openBtn").title=`Data: ${PP.file||"OTT file"}\nUpload a newer OTT Excel file (or drop it anywhere on the page)`;
   const bs=[...PP.buyers].map((b,i)=>[b,i]).sort((a,b)=>a[0].localeCompare(b[0]));
   $("buyer").innerHTML=`<option value="">All buyers</option>`+bs.map(([b,i])=>`<option value="${i}">${esc(b)}</option>`).join(""); S.buyer="";
+  $("buyer3").innerHTML=`<span class="lab">Buyer</span><button class="chip" data-tb="">All buyers</button>`+bs.map(([b,i])=>`<button class="chip" data-tb="${i}">${esc(b)}</button>`).join(""); TB="";
   try{ const sv=JSON.parse(localStorage.getItem("sqhues.pp")||"{}"); if(sv.view&&COL[sv.view]) S.view=sv.view; }catch(e){}
   $("msg").hidden=true; setRange("month"); setRange2("month"); $("main").hidden=false; draw();
 }
@@ -359,9 +376,9 @@ function setRange(m){
   $("dFrom").value=iso(S.from); $("dTo").value=iso(S.to);
 }
 /* aggregate: per date -> {AOP:[p,r,k],Inhouse:..,Outside:..,All:..}, per buyer for range */
-function build(){
+function build(bv){
   const by=new Map(PP.dates.map(d=>[d,{AOP:[0,0,0],Inhouse:[0,0,0],Outside:[0,0,0],All:[0,0,0],buy:new Map()}]));
-  const bsel=S.buyer===""?null:+S.buyer;
+  const bb=bv===undefined?S.buyer:bv, bsel=bb===""?null:+bb;
   for(const [d,bi,mi,p,r,k] of PP.cells){ if(bsel!==null&&bi!==bsel) continue; const o=by.get(d); if(!o) continue; const m=PP.mills[mi];
     o.All[0]+=p;o.All[1]+=r;o.All[2]+=k; if(o[m]){o[m][0]+=p;o[m][1]+=r;o[m][2]+=k;}
     const bk=o.buy.get(bi)||{All:[0,0,0],AOP:[0,0,0],Inhouse:[0,0,0],Outside:[0,0,0]}; bk.All[0]+=p;bk.All[1]+=r;bk.All[2]+=k; if(bk[m]){bk[m][0]+=p;bk[m][1]+=r;bk[m][2]+=k;} o.buy.set(bi,bk); }
@@ -440,13 +457,17 @@ function drawPct(){   // Total plan vs performance for the selected dates: one r
 }
 /* ---------- tables ---------- */
 function pcBar(r,p){const w=p?Math.max(0,Math.min(100,r/p*100)):0;return `<td class="pc pcb ${p?cls(r/p):""}" style="--w:${w.toFixed(1)}%">${pctTxt(r,p)}</td>`}
+let TV="", TB="";   // date-wise table: one card (AOP / Inhouse / Outside / Cumulative) or all, and its own buyer
 function drawTable(){
-  const G=[["AOP","var(--aop)"],["Inhouse","var(--inh)"],["Outside","var(--out)"],["All","var(--all)"]];
+  const BY3=TB===""&&S.buyer===""?BYD:build(TB), tot3=k=>{ const t=[0,0,0]; for(const [d,o] of BY3) if(d>=S.from&&d<=S.to){ t[0]+=o[k][0];t[1]+=o[k][1];t[2]+=o[k][2]; } return t; };
+  document.querySelectorAll("[data-tb]").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.tb===TB)));
+  $("t4").textContent="Date-wise plan vs performance"+(TB!==""?" · "+PP.buyers[+TB]:"");
+  const G=[["AOP","var(--aop)"],["Inhouse","var(--inh)"],["Outside","var(--out)"],["All","var(--all)"]].filter(([k])=>TV===""||k===TV);
   const sub=["Plan Qty<br>(Mtr)","RFD Qty<br>(Mtr)","RFD Bal.<br>(Mtr)","RFD Bal.<br>(Kg)","Achieve<br>%"];
   let h=`<thead><tr class="g"><th rowspan="2">Agreed RFD date</th>${G.map(([k,c])=>`<th colspan="5" class="gl" style="background:${c}">${k==="All"?"Cumulative":k}</th>`).join("")}</tr><tr>${G.map(()=>sub.map((s,i)=>`<th${i===0?' class="gl"':""}>${s}</th>`).join("")).join("")}</tr></thead><tbody>`;
-  for(const [d,o] of BYD){ const rc=[!inR(d)?"dim":"",d===YD?"yd":""].join(" ").trim();
+  for(const [d,o] of BY3){ const rc=[!inR(d)?"dim":"",d===YD?"yd":""].join(" ").trim();
     h+=`<tr${rc?` class="${rc}"`:""}><td>${dm(d)}</td>${G.map(([k])=>{const [p,r,kg]=o[k];return `<td class="gl">${fmt(p)}</td><td>${fmt(r)}</td><td>${bal(r-p)}</td><td>${bal(kg)}</td>${pcBar(r,p)}`}).join("")}</tr>`; }
-  h+=`</tbody><tfoot><tr><td>Total ${dm(S.from)} – ${dm(S.to)}</td>${G.map(([k])=>{const [p,r,kg]=tot(k);return `<td class="gl">${fmt(p)}</td><td>${fmt(r)}</td><td>${bal(r-p)}</td><td>${bal(kg)}</td>${pcBar(r,p)}`}).join("")}</tr></tfoot>`;
+  h+=`</tbody><tfoot><tr><td>Total ${dm(S.from)} – ${dm(S.to)}</td>${G.map(([k])=>{const [p,r,kg]=tot3(k);return `<td class="gl">${fmt(p)}</td><td>${fmt(r)}</td><td>${bal(r-p)}</td><td>${bal(kg)}</td>${pcBar(r,p)}`}).join("")}</tr></tfoot>`;
   $("tbl").innerHTML=h;
 }
 function drawBuyers(){
@@ -576,8 +597,31 @@ document.querySelectorAll("[data-r2]").forEach(b=>b.addEventListener("click",()=
 ["dFrom","dTo"].forEach(id=>$(id).addEventListener("change",()=>{ let a=toS($("dFrom").value), z=toS($("dTo").value); if(a===null||z===null) return; if(a>z)[a,z]=[z,a]; S.from=a; S.to=z; S.mode="custom"; S.day=null; S.prev=null; draw(); }));
 document.querySelectorAll("[data-bv]").forEach(b=>b.addEventListener("click",()=>{ BV=b.dataset.bv; draw(); }));
 $("buyer").addEventListener("change",()=>{ S.buyer=$("buyer").value; draw(); });
+$("buyer3").addEventListener("click",e=>{ const b=e.target.closest&&e.target.closest("[data-tb]"); if(!b) return; TB=b.dataset.tb; drawTable(); });
 let rz; addEventListener("resize",()=>{ clearTimeout(rz); rz=setTimeout(()=>{ if(PP&&BYD){ drawDaily(); drawCum(); drawPct(); } },150); });
 load();
+
+/* ---------- present mode + picture download (same as the T33 dashboard) ---------- */
+(()=>{ const W=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"], d=new Date(); $("hdate").textContent=`${W[d.getDay()]} ${String(d.getDate()).padStart(2,"0")} ${MON[d.getMonth()]} ${d.getFullYear()}`; })();
+const PARENTP=(()=>{ try{ return typeof window.parent.ppPresent==="function"&&window.parent!==window; }catch(e){ return false; } })();
+function setPresent(on){ document.documentElement.classList.toggle("present",on); $("presBtn").textContent=on?"✕ Exit":"▣ Present";
+  if(PARENTP){ try{ window.parent.ppPresent(on); }catch(e){} }
+  else { try{ if(on&&document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(()=>{}); else if(!on&&document.fullscreenElement) document.exitFullscreen(); }catch(e){} }
+  setTimeout(()=>{ try{ draw(); }catch(e){} },60); }
+window.ppPresentOff=()=>{ if(document.documentElement.classList.contains("present")) setPresent(false); };
+$("presBtn").addEventListener("click",()=>setPresent(!document.documentElement.classList.contains("present")));
+document.addEventListener("fullscreenchange",()=>{ if(!PARENTP&&!document.fullscreenElement&&document.documentElement.classList.contains("present")) setPresent(false); });
+window.ppDownload=async()=>{ if(typeof html2canvas==="undefined"){ alert("Picture tool not available (needs internet)."); return null; }
+  const H=document.documentElement, was=H.classList.contains("present"); H.classList.add("present","shot"); try{ draw(); }catch(e){} await new Promise(r=>setTimeout(r,250));
+  try{ const el=document.querySelector(".wrap"); const cv=await html2canvas(el,{scale:2,backgroundColor:getComputedStyle(document.body).backgroundColor||"#FBFAFA",useCORS:true,windowWidth:Math.max(1500,el.scrollWidth),
+      onclone:doc=>{ const q20=getComputedStyle(document.documentElement).getPropertyValue("--q20").trim()||"#D2C7CB";   // the picture tool can't read var() inside gradients
+        const src=[...document.querySelectorAll(".pcb")]; doc.querySelectorAll(".pcb").forEach((td,i)=>{ const o=src[i], W=o?o.offsetWidth:80, Hh=o?o.offsetHeight:24, w=parseFloat(td.style.getPropertyValue("--w"))||0;
+          td.style.backgroundImage=`linear-gradient(90deg,${q20} ${w}%,transparent ${w}%)`; td.style.backgroundRepeat="no-repeat"; td.style.backgroundSize=`${Math.max(1,W-6)}px ${Math.max(1,Hh-12)}px`; td.style.backgroundPosition="3px 6px"; }); }});
+    const b=await new Promise(r=>cv.toBlob(r,"image/png")); const d=new Date(), nm=`Daily_Line_Plan_Hit_${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}.png`;
+    const a=document.createElement("a"); a.href=URL.createObjectURL(b); a.download=nm; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500); return nm; }
+  catch(e){ console.error(e); return null; }
+  finally{ H.classList.remove("shot"); if(!was) H.classList.remove("present"); try{ draw(); }catch(e){} } };
+$("dlBtn").addEventListener("click",()=>window.ppDownload());
 </script>
 </body>
 </html>
