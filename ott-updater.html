@@ -770,10 +770,19 @@ async function readAOP(zip){
 // max match inside the same PO: exact (letters+digits only) -> else the report colour holding most of the OTT colour's words (weighted by length) / string likeness
 function aopCover(otText,relKey){ const t=String(otText??"").toLowerCase().split(/[^a-z0-9]+/).filter(x=>x.length>=2); const tot=t.reduce((a,x)=>a+x.length,0); if(!tot) return 0;
   return t.reduce((a,x)=>a+(relKey.includes(x)?x.length:0),0)/tot; }
+// how much of the report colour's design name (the part before "AOP" / "ON") the OTT colour holds: a report colour with
+// design words the OTT colour lacks (e.g. "... MEADOW FLORAL STRIPE GREEN" vs OTT "... MEADOW FLORA LWHITE") is another print
+const AOPGEN=new Set(["aop","on","spec","base","tcx","print","printed"]);
+function aopDesignCover(otText,relName){ const ck=aopColKey(otText), ot=String(otText??"").toLowerCase().split(/[^a-z0-9]+/).filter(x=>x.length>=4);
+  const parts=String(relName??"").split(/\s(?:spec\s+)?aop\b|\son\s/i), d=parts[0];
+  // OTT colour that is only the base shade (e.g. "Light cream 81001 Aop" vs "... AOP ON Light Cream 81001"): keep matching as before
+  if(parts.length>1){ const base=aopColKey(parts.slice(1).join(" ")), ow=String(otText??"").toLowerCase().split(/[^a-z0-9]+/).filter(x=>x.length>=2&&!AOPGEN.has(x)); if(ow.length&&ow.every(x=>base.includes(x))) return 1; }
+  const t=d.toLowerCase().split(/[^a-z0-9]+/).filter(x=>x.length>=2&&!AOPGEN.has(x)); const tot=t.reduce((a,x)=>a+x.length,0); if(!tot) return 1;
+  return t.reduce((a,x)=>a+(ck.includes(x)||ot.some(o=>x.startsWith(o))?x.length:0),0)/tot; }
 function aopMatch(A,po,colour){ const pm=A.pool.get(aopPoKey(po)); if(!pm) return null; const ck=aopColKey(colour); if(!ck) return null;
   if(pm.has(ck)) return {key:aopPoKey(po)+"|"+ck,name:pm.get(ck).name,qty:pm.get(ck).qty,score:1};
   const nums=String(colour??"").toLowerCase().split(/[^a-z0-9]+/).filter(t=>/^\d{2,}$/.test(t));   // design / colour numbers must all be there
-  const sc=[]; for(const [k,x] of pm){ if(nums.some(t=>!k.includes(t))) continue; const v=Math.max(dice(ck,k),aopCover(colour,k),k.includes(ck)||ck.includes(k)?0.95:0); sc.push({key:aopPoKey(po)+"|"+k,name:x.name,qty:x.qty,score:v}); }
+  const sc=[]; for(const [k,x] of pm){ if(nums.some(t=>!k.includes(t))) continue; if(aopDesignCover(colour,x.name)<0.8) continue; const v=Math.max(dice(ck,k),aopCover(colour,k),k.includes(ck)||ck.includes(k)?0.95:0); sc.push({key:aopPoKey(po)+"|"+k,name:x.name,qty:x.qty,score:v}); }
   sc.sort((a,b)=>b.score-a.score); const best=sc[0];
   if(!best||best.score<0.75) return null;
   if(sc[1]&&sc[1].score>=best.score-0.001) return null;   // two report colours match equally -> don't guess
