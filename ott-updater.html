@@ -436,10 +436,10 @@ td.fail.hov:hover{background:var(--red-soft)}
 
   <div class="runbar">
     <button class="primary" id="runBtn" disabled>Run update</button>
-    <label class="lpaopt" title="After the update, match each line's balance to 280 WIP batches: batch columns, Need Additional, row split per batch and the Line plan batch wise file"><input type="checkbox" id="lpaOn" checked> Also run batch allocation</label>
+    <label class="lpaopt" title="After the update, match each line's balance to 280 WIP batches: batch columns, Need Additional, row split per batch, and planned dates written into the 280 sheet"><input type="checkbox" id="lpaOn" checked> Also run batch allocation</label>
     <span class="dlinline" id="dlInline" hidden>
       <button class="primary dlb" id="dlOTT" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Updated OTT</button>
-      <button class="ghost dlb" id="dlBW" type="button" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Batch wise file</button>
+      <button class="ghost dlb" id="dlBW" type="button" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>280+217 file</button>
       <button class="ghost dlb" id="dlLog" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Update log</button>
     </span>
     <button class="ghost" id="closeUpd" type="button" hidden>✕ Close</button>
@@ -607,7 +607,8 @@ td.fail.hov:hover{background:var(--red-soft)}
       <p><code>Dyeing Mill</code>: follows the row, not the batch. A value already in the uploaded file (typed by you or from an earlier run) is never changed; the tool fills only blank cells. Dye/Fin/RFD Plan, Discussion and Remarks follow the Batch No (a new batch starts blank). It feeds the Dyeing Mill slicer on the Date Wise Pivot.</p>
       <p><code>Remarks</code> (AG): when a batch's first line now has a different Agreed RFD Date (earlier or later) than in the uploaded file, the tool writes <code>Old Date-dd/mm</code> (its earlier date) there, after any note you typed. The note stays while the batch stays on that date, keeps the first old date if it moves again, and is removed from rows that no longer hold the batch.</p>
       <p>Rules: AOP lines show <code>AOP Batch</code>; outside batches still at the mill show the 280 Order No; KPK black outside = <code>KPK-Outside-Black</code>.</p>
-      <p>Downloads: the final Fabric Plan (update + allocation) and <b>Line plan batch wise file_&lt;date&gt;.xlsx</b>. If yesterday's file already has these columns, they are rebuilt, not repeated.</p>
+      <p>Downloads: the final Fabric Plan (update + allocation) and <b>DOC -280+217 &lt;date&gt;.xlsx</b> (the batch-wise file is no longer made). If yesterday's file already has these columns, they are rebuilt, not repeated.</p>
+      <p>280 sheet (DOC file): <code>Line Plan</code> (CS) = <code>Line plan</code> for every batch the line plan needs (other cells there are left as they are). <code>Planned Delivery Date</code> = Agreed RFD Date of the earliest line the batch is allocated to. When a batch already had a different date there, the new date is written and <code>Old date-11-Nov</code> (the previous date) goes to <code>Line Plan Remarks</code>. Batches not used by the line plan keep whatever date they have. Then, for every batch with a Planned Delivery Date: <code>Planned Rfd Date</code> = Delivery − 1 day and <code>Planned Dyeing Date</code> = Planned Rfd Date − 2 days, written only when the cell is blank or holds a date before the report date, and only when that stage isn't done yet (no RFD Date / Dyeing Date in 280). <code>Planned Knitting Date</code> is not touched.</p>
     </div></details>
 
     <details><summary><span class="n">4</span>Fixed cells: other sheets</summary><div class="in">
@@ -1470,7 +1471,7 @@ const LPA = (function(){
     if (hasTh) bz.file("xl/theme/theme1.xml", await zip.file("xl/theme/theme1.xml").async("uint8array"));
     if (hasSS) bz.file("xl/sharedStrings.xml", await zip.file("xl/sharedStrings.xml").async("uint8array"));
     bz.file("xl/worksheets/sheet1.xml", bwSheet);
-    const bwBlob = bz.generateAsync({ type: "blob", compression: "DEFLATE", compressionOptions: { level: 6 } });
+    const bwBlob = null;   // batch-wise file no longer produced (the 280+217 file with planned dates replaces it)
 
     /* ======================= Fab Plan: Need Additional + batch columns + row split ======================= */
     say("Batch allocation · writing batch columns on the Fabric Plan…"); await tick();
@@ -1620,7 +1621,59 @@ const LPA = (function(){
     // conditional formats / data validations / merges are row-based: move their row numbers with the split
     const mapRow = n => { if (!PIECES.size) return n; let best = n, add = 0; for (const [r0, pcs] of PIECES) if (r0 < n) add += pcs.length - 1; return Math.min(1048576, n + add); };
     if (PIECES.size) sx = sx.replace(/(<(?:conditionalFormatting|dataValidation|mergeCell)\b[^>]*?(?:sqref|ref)=")([^"]+)(")/g, (m, a, refs, z) => a + refs.split(" ").map(rg => rg.replace(/([A-Z]+)(\d+)/g, (q, cc, n) => cc + mapRow(+n))).join(" ") + z);
-    return { t33doc: T33DOC, mill: MILL, sheetXml: sx, lastRow: LASTROW, lastCol: LASTC, naCol: NA, rowMap: rmap, batchwise: bwBlob,
+
+    /* ======================= 280: Planned Delivery / Rfd / Dyeing dates from the line plan ======================= */
+    // Planned Delivery Date = Agreed RFD Date of the earliest line the batch is allocated to; when that changes, "Old date-11-Nov" goes to Line Plan Remarks.
+    // Then, for every batch with a Planned Delivery Date: Planned Rfd Date = Delivery - 1 and Planned Dyeing Date = Rfd - 2, only where the cell is blank
+    // or holds a date before the report date, and only for stages not done yet (no RFD Date / Dyeing Date in 280). Planned Knitting Date is left alone.
+    let docBlob = null; const PLN = { cols: false, pdd: 0, moved: 0, rfd: 0, dye: 0, lp: 0, lpCol: false };
+    try {
+      const cP = { pdd: colOpt("planneddeliverydate"), rfd: colOpt("plannedrfddate"), dye: colOpt("planneddyeingdate"), rem: colOpt("lineplanremarks"), lp: colOpt("lineplan") };   // lp: "Line Plan" (CS) = "Line plan" for every batch the line plan needs
+      PLN.lpCol = !!cP.lp;
+      if (cP.pdd && cP.rfd && cP.dye && cP.rem) {
+        PLN.cols = true; say("280 · planned delivery dates…"); await tick();
+        const today = isNum(opt.today) ? opt.today : Math.floor((Date.now() - Date.UTC(1899, 11, 30)) / 864e5);
+        const BD = new Map(); const bdAdd = (bn, d) => { if (!bn || d === null || /^aop batch$/i.test(String(bn).trim())) return; bn = String(bn).trim(); if (!BD.has(bn) || d < BD.get(bn)) BD.set(bn, d); };
+        for (const [r, v] of fvals) if (!PIECES.has(r) && v && v.no) bdAdd(v.no, dOf(r));
+        for (const [r, ps] of PIECES) for (const pc of ps) bdAdd(pc.no, dOf(r));
+        const dser = v => isNum(v) && v > 20000 && v < 80000 ? Math.floor(v) : null;
+        const blank = v => v === null || v === undefined || String(v).trim() === "";
+        const MON3 = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+        const dmy = sv => { const t = new Date(Date.UTC(1899, 11, 30) + sv * 864e5); return t.getUTCDate() + "-" + MON3[t.getUTCMonth()]; };
+        const OLDT = /\s*(?:\|\s*)?old\s*date\s*-\s*\d{1,2}[-\/][a-z0-9]{1,3}\s*/gi;
+        const NEW = new Map();
+        for (const [r, cells] of G2.rows) {
+          if (r <= H2) continue; const bn = String(cells.get(c.bn) ?? "").trim(); if (!bn) continue;
+          if (c.fin && /reject|closed/i.test(String(cells.get(c.fin) ?? ""))) continue;
+          const ch = new Map(); let pdd = dser(cells.get(cP.pdd)); const nd = BD.get(bn);
+          if (cP.lp && mark.has(r) && String(cells.get(cP.lp) ?? "").trim() !== "Line plan") { ch.set(cP.lp, "Line plan"); PLN.lp++; }
+          if (nd !== undefined && nd !== pdd) {
+            if (pdd !== null) { const base = String(cells.get(cP.rem) ?? "").replace(OLDT, " ").replace(/^\s*\|\s*|\s*\|\s*$/g, "").replace(/\s+/g, " ").trim();
+              ch.set(cP.rem, (base ? base + " | " : "") + "Old date-" + dmy(pdd)); PLN.moved++; }
+            ch.set(cP.pdd, nd); pdd = nd; PLN.pdd++;
+          }
+          if (pdd !== null) {
+            let rfdS = dser(cells.get(cP.rfd));
+            if (blank(cells.get(c.rd))) { const v = cells.get(cP.rfd); if (blank(v) || (rfdS !== null && rfdS < today)) { if (rfdS !== pdd - 1) { ch.set(cP.rfd, pdd - 1); PLN.rfd++; } rfdS = pdd - 1; } }
+            if (c.dd && blank(cells.get(c.dd))) { const v = cells.get(cP.dye), ds = dser(v); if (blank(v) || (ds !== null && ds < today)) { const nv = (rfdS !== null ? rfdS : pdd - 1) - 2; if (ds !== nv) { ch.set(cP.dye, nv); PLN.dye++; } } }
+          }
+          if (ch.size) NEW.set(r, ch);
+        }
+        if (NEW.size) {
+          const setC = (rowX, r, col, v) => { const ref = col + r, re = new RegExp(`<c r="${ref}"([^>]*?)(?:/>|>[\\s\\S]*?</c>)`); const m = re.exec(rowX);
+            const st = m ? ((/ s="\d+"/.exec(m[1]) || [""])[0]) : "";
+            const cx = typeof v === "number" ? `<c r="${ref}"${st}><v>${v}</v></c>` : (v ? `<c r="${ref}"${st} t="inlineStr"><is><t xml:space="preserve">${escX(v)}</t></is></c>` : `<c r="${ref}"${st}/>`);
+            if (m) return rowX.slice(0, m.index) + cx + rowX.slice(m.index + m[0].length);
+            const n = colNum(col); const cr = /<c r="([A-Z]+)\d+"/g; let q; while ((q = cr.exec(rowX))) if (colNum(q[1]) > n) return rowX.slice(0, q.index) + cx + rowX.slice(q.index);
+            return rowX.replace(/<\/row>$/, cx + "</row>"); };
+          const x2 = x280.replace(ROWRE(), (m0, rs) => { const ch = NEW.get(+rs); if (!ch || /\/>$/.test(m0) && !/<\/row>$/.test(m0)) return m0; let rx = m0; for (const [col, v] of ch) rx = setC(rx, +rs, col, v); return rx; });
+          say("280+217 file · packing…"); await tick();
+          zip.file(p280, x2);
+          docBlob = zip.generateAsync({ type: "blob", compression: "DEFLATE", compressionOptions: { level: 5 } }).finally(() => zip.file(p280, x280));
+        }
+      }
+    } catch (e) { console.warn("280 planned dates", e); PLN.err = String(e && e.message || e); }
+    return { t33doc: T33DOC, docOut: docBlob, plan280: PLN, mill: MILL, sheetXml: sx, lastRow: LASTROW, lastCol: LASTC, naCol: NA, rowMap: rmap, batchwise: bwBlob,
       summary: { marked: mark.size, details: [...mark.values()].filter(v => v[1]).length, needAdd: [...out.values()].filter(v => v[0] === "Need Additional").length,
         needAddM: [...out.entries()].filter(([, v]) => v[0] === "Need Additional").reduce((s, [r, v]) => s + v[1] * (isprint.get(r) ? 3 : 1), 0),
         noBatch: [...out.values()].filter(v => v[0] === "No Batch Found").length, splitLines: nSplitLines, oldDate: nOldDate, splitRows: [...PIECES.values()].reduce((a, p) => a + p.length, 0),
@@ -2323,7 +2376,7 @@ async function run(){
       prog(72,"Batch allocation…");
       try{
         const allRows=[...rowEls.keys()].filter(r=>r>=3).sort((a,b)=>a-b);
-        ALLOC=await LPA.run({docZip, fpXml:out, fpSST:F.sst, lastDataCol:"AX", keep:F.keep, prevB:F.prevB, status:t=>status(t),
+        ALLOC=await LPA.run({docZip, fpXml:out, fpSST:F.sst, lastDataCol:"AX", keep:F.keep, prevB:F.prevB, status:t=>status(t), today:(()=>{const [y,m,d]=$("runDate").value.split("-").map(Number); return Math.round((Date.UTC(y,m-1,d)-Date.UTC(1899,11,30))/864e5)})(),
           fp:{rows, allRows, header:[...getCells(2)].map(([cc,el])=>[cc,cellInfo(el,F.sst).v]).filter(([,v])=>v!==null&&v!==""),
               get:(r,cc)=>{const v=val(r,cc).v; return v===undefined?null:v}, L:r=>L.get(r)??0, N:r=>mval(r)-(L.get(r)??0), P:r=>mval(r)-(L.get(r)??0)+(O.get(r)??0)}});
         out=ALLOC.sheetXml;
@@ -2372,11 +2425,11 @@ async function run(){
     const d=new Date($("runDate").value+"T00:00:00");
     const logBlob=buildLog(report,buyers,{aop:aopReport,fp:fpFile.name,doc:docFile.name,date:d,kpk:kpkReport,kpkFrom:$("kpkFrom").value});
     prog(98,"Building the update log…");
-    outputs={ott:ottBlob,log:logBlob,bw:ALLOC?ALLOC.batchwise:null,ottName:outNames().ott,logName:outNames().log,bwName:outNames().bw};
+    outputs={ott:ottBlob,log:logBlob,bw:(ALLOC&&ALLOC.docOut)?ALLOC.docOut:docFile,ottName:outNames().ott,logName:outNames().log,bwName:outNames().bw};
     try{ LAST33={ott:await t33Ott(await ottBlob.arrayBuffer()),doc:(ALLOC&&ALLOC.t33doc)||null,rdate:$("runDate").value,ottName:outNames().ott,docName:docFile.name}; }catch(e){ LAST33=null; console.warn("T33",e); }
     try{ LASTPP=(await ppRead({name:outNames().ott,arrayBuffer:()=>ottBlob.arrayBuffer()})).pp; }catch(e){ LASTPP=null; console.warn("plan vs performance",e); }
-    $("dlBW").hidden=!ALLOC;
-    render({piv:PIV,alloc:ALLOC?ALLOC.summary:null,allocErr:ALLOCERR,aop:AR?{rows:aopReport.length,lines:AR.lines,used:[...aopPools.values()].reduce((a,b)=>a+b,0),before:aopReport.reduce((s,x)=>s+x.before,0),after:aopReport.reduce((s,x)=>s+x.after,0),noMatch:aopNoMatch.length,left:[...aopLeft.values()].reduce((a,b)=>a+b,0)}:null,kpk:{noMatch:kpkNoMatch.map(r=>`row ${r} ${buyer.get(r)} · ${String(val(r,"J").v??"")}`),rows:kpkReport.length,before:kpkReport.reduce((s,x)=>s+x.before,0),after:kpkReport.reduce((s,x)=>s+x.after,0),pool:[...new Set(kpk.values())].reduce((a,k)=>a+(KP.pool.get(k)||0),0),left:kpkLeft,skippedSL:KP.skippedSL,from:$("kpkFrom").value},rows:rows.length,step2,report,nGroups,added,totBefore,totAfter,buyers,anChanged,anComparable,open,docRows:D.rows});
+    $("dlBW").hidden=false;
+    render({piv:PIV,alloc:ALLOC?{...ALLOC.summary,plan280:ALLOC.plan280}:null,allocErr:ALLOCERR,aop:AR?{rows:aopReport.length,lines:AR.lines,used:[...aopPools.values()].reduce((a,b)=>a+b,0),before:aopReport.reduce((s,x)=>s+x.before,0),after:aopReport.reduce((s,x)=>s+x.after,0),noMatch:aopNoMatch.length,left:[...aopLeft.values()].reduce((a,b)=>a+b,0)}:null,kpk:{noMatch:kpkNoMatch.map(r=>`row ${r} ${buyer.get(r)} · ${String(val(r,"J").v??"")}`),rows:kpkReport.length,before:kpkReport.reduce((s,x)=>s+x.before,0),after:kpkReport.reduce((s,x)=>s+x.after,0),pool:[...new Set(kpk.values())].reduce((a,k)=>a+(KP.pool.get(k)||0),0),left:kpkLeft,skippedSL:KP.skippedSL,from:$("kpkFrom").value},rows:rows.length,step2,report,nGroups,added,totBefore,totAfter,buyers,anChanged,anComparable,open,docRows:D.rows});
     setViewer(false);
     autoSave();
     status(`Done · ${rows.length.toLocaleString()} plan rows processed.`);
@@ -2494,7 +2547,7 @@ function render(R){
     flags.push(`<div class="flag good"><b>KPK no-PO lines</b>&nbsp;· ${R.kpk.rows} lines filled from sheet 280 (RFD from ${fd.getDate()} ${MON[fd.getMonth()]}${R.kpk.skippedSL?`, ${R.kpk.skippedSL} Sri Lanka PO rows skipped`:""}): ${fmt(R.kpk.pool)} m RFD · M ${fmt(R.kpk.before)} → ${fmt(R.kpk.after)} m${left?` · more than the plan, left over: ${esc(left)}`:""}.</div>`); }
   if(R.kpk&&R.kpk.noMatch&&R.kpk.noMatch.length) flags.push(`<div class="flag warn"><b>${R.kpk.noMatch.length} KPK line(s) with no PO</b>&nbsp;have no 120/140 gsm or colour to match, so sheet 280 can't fill them. M left as it was: ${esc(R.kpk.noMatch.slice(0,6).join("; "))}${R.kpk.noMatch.length>6?" …":""}</div>`);
   if(R.piv) flags.push(R.piv.ok?`<div class="flag good"><b>Date Wise Pivot</b>&nbsp;· ${esc(R.piv.note)} · opens already refreshed, and refreshes again when the file is opened.</div>`:`<div class="flag warn"><b>Date Wise Pivot not rebuilt</b>&nbsp;· ${esc(R.piv.note||"")}. The sheet was left as it was in the uploaded file.</div>`);
-  if(R.alloc){ const a=R.alloc; flags.push(`<div class="flag good"><b>Batch allocation</b>&nbsp;· ${a.marked} batches marked Line plan · ${a.withBatch} lines carry batch details · ${a.splitLines} lines split into ${a.splitRows} rows · Need Additional ${a.needAdd} lines (${fmt(a.needAddM)} m) · No Batch Found ${a.noBatch} lines · batch-wise file ${a.bwRows} rows, ${fmt(a.bwKg)} kg${a.oldDate?` · ${a.oldDate} batch rows moved to another date (Remarks: Old Date-dd/mm)`:""}.</div>`); }
+  if(R.alloc){ const a=R.alloc; flags.push(`<div class="flag good"><b>Batch allocation</b>&nbsp;· ${a.marked} batches marked Line plan · ${a.withBatch} lines carry batch details · ${a.splitLines} lines split into ${a.splitRows} rows · Need Additional ${a.needAdd} lines (${fmt(a.needAddM)} m) · No Batch Found ${a.noBatch} lines${a.plan280&&a.plan280.cols?` · 280: Line Plan = “Line plan” on ${a.plan280.lp} more batch rows · Planned Delivery Date set for ${a.plan280.pdd} batch rows (${a.plan280.moved} moved, “Old date” in Line Plan Remarks), Planned Rfd Date ${a.plan280.rfd}, Planned Dyeing Date ${a.plan280.dye}`:` · 280 has no Planned Delivery Date columns, so the 280+217 file is unchanged`}${a.oldDate?` · ${a.oldDate} batch rows moved to another date (Remarks: Old Date-dd/mm)`:""}.</div>`); }
   if(R.allocErr) flags.push(`<div class="flag warn"><b>Batch allocation stopped</b>&nbsp;· ${esc(R.allocErr)}. The updated Fabric Plan is still fine, just without batch columns.</div>`);
   if(R.aop) flags.push(`<div class="flag ${R.aop.rows?"good":"warn"}"><b>AOP release report</b>&nbsp;· ${R.aop.rows} AOP line(s) matched by PO + colour: ${fmt(R.aop.used)} m released · M ${fmt(R.aop.before)} → ${fmt(R.aop.after)} m${R.aop.left>EPS?` · ${fmt(R.aop.left)} m more than the plan`:""}${R.aop.noMatch?` · ${R.aop.noMatch} AOP line(s) not found in the report follow the normal update`:""}.</div>`);
   const top=R.buyers.slice().sort((a,b)=>b.added-a.added)[0];
@@ -2563,7 +2616,7 @@ function outNames(){
   const v=$("runDate").value; if(!v) return {ott:"—",log:"—"};
   const d=new Date(v+"T00:00:00"); const mon=MON[d.getMonth()], yy=String(d.getFullYear()).slice(2);
   const m=fpFile&&/Fabric_Plan_([A-Za-z]{3}\d{2})/i.exec(fpFile.name); const plan=m?m[1]:mon+yy;
-  return {ott:`Fabric_Plan_${plan}-Hues_Feedback-${ord(d.getDate())}_${mon}_${yy}_SQ.xlsx`, log:`OTT_Update_Log-${ord(d.getDate())}_${mon}_${yy}.xlsx`, bw:`Line plan batch wise file_${String(d.getDate()).padStart(2,"0")}-${mon}-${d.getFullYear()}.xlsx`};
+  return {ott:`Fabric_Plan_${plan}-Hues_Feedback-${ord(d.getDate())}_${mon}_${yy}_SQ.xlsx`, log:`OTT_Update_Log-${ord(d.getDate())}_${mon}_${yy}.xlsx`, bw:`DOC -280+217 ${String(d.getDate()).padStart(2,"0")}-${mon}-${d.getFullYear()}.xlsx`};
 }
 function refresh(){ $("outName").textContent=outNames().ott; $("runBtn").disabled=!(fpFile&&docFile);
   if(fpFile&&docFile) status("✓ Both files uploaded. Ready to run."); else if(fpFile||docFile) status(`✓ 1 of 2 uploaded. Add the ${fpFile?"DOC -280+217":"Fabric Plan"} file.`); else status("Add both files to start.");
@@ -2909,7 +2962,7 @@ function loadSnapshot(j){
   const ico='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>';
   const href=p=>j.store==="data-branch"?rawURL(p):p;
   $("viewBanner").innerHTML=`<b>Last update</b><span>${esc(stampText(j.at).replace("Last updated ",""))}</span><span>Report ${esc(j.report?fromSerial(toSerial(j.report)):"–")}</span>`;
-  $("hdrDl").innerHTML=`${ott?`<a class="vdl" data-p="${esc(j.ottPath)}" data-n="${esc(ott)}" href="${esc(href(j.ottPath))}" download="${esc(ott)}">${ico}<span>Fabric Plan file</span></a>`:""}${bwn?`<a class="vdl alt" data-p="${esc(j.bwPath)}" data-n="${esc(bwn)}" href="${esc(href(j.bwPath))}" download="${esc(bwn)}">${ico}<span>Batch wise line plan</span></a>`:`<span class="vdl alt off" title="Appears after the next update run with “Also run batch allocation” ticked">${ico}<span>Batch wise line plan · after next update</span></span>`}`;
+  $("hdrDl").innerHTML=`${ott?`<a class="vdl" data-p="${esc(j.ottPath)}" data-n="${esc(ott)}" href="${esc(href(j.ottPath))}" download="${esc(ott)}">${ico}<span>Fabric Plan file</span></a>`:""}${bwn?`<a class="vdl alt" data-p="${esc(j.bwPath)}" data-n="${esc(bwn)}" href="${esc(href(j.bwPath))}" download="${esc(bwn)}">${ico}<span>280+217 report</span></a>`:`<span class="vdl alt off" title="Appears after the next update run">${ico}<span>280+217 report · after next update</span></span>`}`;
   setViewer(true);
   if(j.store==="data-branch") document.querySelectorAll("#hdrDl a.vdl").forEach(a=>a.addEventListener("click",async ev=>{ ev.preventDefault(); const lab=a.querySelector("span"), t=lab.textContent; lab.textContent="Downloading…";
     try{ const r=await fetch(rawURL(a.dataset.p)+"?ts="+Date.now(),{cache:"no-store"}); if(!r.ok)throw 0; const blob=await r.blob(); const u=URL.createObjectURL(blob), x=document.createElement("a"); x.href=u; x.download=a.dataset.n; document.body.appendChild(x); x.click(); setTimeout(()=>{URL.revokeObjectURL(u);x.remove()},4000); }
@@ -2917,7 +2970,7 @@ function loadSnapshot(j){
   return true;
 }
 const SITE=(()=>{ const h=location.hostname; if(!/\.github\.io$/i.test(h))return null; const owner=h.split(".")[0]; const seg=location.pathname.split("/").filter(Boolean); const repo=seg.length&&!/\.html?$/i.test(seg[0])?seg[0]:`${owner}.github.io`; return {owner,repo}; })();
-const OTT_PATH="fabric-plan.xlsx", BW_PATH="batch-wise.xlsx", DATA_BRANCH="data";
+const OTT_PATH="fabric-plan.xlsx", BW_PATH="doc-280-217.xlsx", DATA_BRANCH="data";
 const rawURL=f=>SITE?`https://raw.githubusercontent.com/${SITE.owner}/${SITE.repo}/${DATA_BRANCH}/${f}`:f;
 const getKey=()=>{try{return localStorage.getItem("sqhues.sitekey")||""}catch(e){return ""}};
 function b64bytes(bytes){ let bin=""; for(let i=0;i<bytes.length;i+=0x8000) bin+=String.fromCharCode.apply(null,bytes.subarray(i,i+0x8000)); return btoa(bin); }
