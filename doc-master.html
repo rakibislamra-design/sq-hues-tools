@@ -787,15 +787,8 @@ body:not(.tv) #lp{display:none!important}
     const sst = parseSST(sstFile ? await sstFile.async('string') : '');
     log('Reading 280 sheet…');
     let x280 = await zip.file(sp['280'].path).async('string');
-    // Body Type column: wherever its header is (normally DB); new -> inserted at DB
-    let BTL = 'DB'; { const r2 = (/<row r="2"[\s>][\s\S]*?<\/row>/.exec(x280) || [''])[0];
-      for (const m of r2.matchAll(/<c r="([A-Z]{1,3})2"([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g)) {
-        const t = /t="(\w+)"/.exec(m[2]); const v = /<v>([^<]*)<\/v>/.exec(m[3] || '');
-        const txt = t && t[1] === 's' && v ? sst[+v[1]] : t && t[1] === 'inlineStr' ? (m[3] || '').replace(/<[^>]+>/g, '') : '';
-        if (String(txt || '').trim() === 'Body Type') { BTL = m[1]; break; } } }
-    const BTP = cl(cn(BTL) - 1);
-    const c280 = readCells(x280, new Set(['E', 'F', 'G', 'H', 'L', 'N', 'W', 'BB', BTL]), sst, 2);
-    const hdrDB = c280.get(2) ? str(c280.get(2)[BTL]) : '';
+    const c280 = readCells(x280, new Set(['E', 'F', 'G', 'H', 'L', 'N', 'W', 'BB', 'DB']), sst, 2);
+    const hdrDB = c280.get(2) ? str(c280.get(2).DB) : '';
     const already = hdrDB.trim() === 'Body Type';
     const rows280 = [...c280.entries()].filter(([r]) => r >= 3).sort((a, b) => a[0] - b[0]).map(([r, o]) => Object.assign({ _r: r }, o));
     log(`280: ${rows280.length} rows. Classifying & pairing…`);
@@ -893,7 +886,7 @@ body:not(.tv) #lp{display:none!important}
 
     // ---- 280 Body Type column at DB
     log(already ? 'Updating 280 Body Type (DB)…' : 'Inserting 280 Body Type column before DB…');
-    const INS = cn(BTL); const val = new Map(); const cnt280 = { B: 0, G: 0 };
+    const INS = cn('DB'); const val = new Map(); const cnt280 = { B: 0, G: 0 };
     for (const r of rows280) { if (!r.H) continue; const t = M.finalType(r.H); if (t) { const c = t === 'Body' ? 'B' : 'G'; val.set(r._r, c); cnt280[c]++; } }
     {
       const { head, body, tail } = splitSheet(x280);
@@ -901,7 +894,7 @@ body:not(.tv) #lp{display:none!important}
       const newBody = body.replace(rowRe(), (row, r1, r2) => {
         const rn = +(r1 || r2);
         if (row.endsWith('/>')) row = row.slice(0, -2) + '></row>';
-        if (already) row = row.replace(new RegExp(`<c r="${BTL}\\d+"[^>]*?(?:\\/>|>[\\s\\S]*?<\\/c>)`, 'g'), '');
+        if (already) row = row.replace(/<c r="DB\d+"[^>]*?(?:\/>|>[\s\S]*?<\/c>)/g, '');
         else {
           row = row.replace(/<c r="([A-Z]{1,3})(\d+)"/g, (a, c, r) => `<c r="${shiftCol(c)}${r}"`);
           row = row.replace(/spans="(\d+):(\d+)"/, (a, x, y) => `spans="${x}:${+y >= INS ? +y + 1 : Math.max(INS, +y)}"`);
@@ -909,15 +902,15 @@ body:not(.tv) #lp{display:none!important}
         let txt = null;
         if (rn === 2) txt = 'Body Type'; else if (val.has(rn)) txt = val.get(rn);
         if (txt === null) return row;
-        const sm = new RegExp('<c r="' + BTP + rn + '"[^>]*?(\\ss="\\d+")').exec(row); const sty = sm && sm[1] ? sm[1] : '';
-        const cell = `<c r="${BTL}${rn}"${sty} t="inlineStr"><is><t>${esc(txt)}</t></is></c>`;
+        const sm = new RegExp('<c r="DA' + rn + '"[^>]*?(\\ss="\\d+")').exec(row); const sty = sm && sm[1] ? sm[1] : '';
+        const cell = `<c r="DB${rn}"${sty} t="inlineStr"><is><t>${esc(txt)}</t></is></c>`;
         const re = /<c r="([A-Z]{1,3})\d+"/g; let mm, pos = -1;
         while ((mm = re.exec(row))) if (cn(mm[1]) > INS) { pos = mm.index; break; }
         return pos >= 0 ? row.slice(0, pos) + cell + row.slice(pos) : row.slice(0, -6) + cell + '</row>';
       });
       let h = head, t = tail;
       if (!already) {
-        h = h.replace(/<dimension ref="A1:([A-Z]+)(\d+)"\/>/, (a, c, r) => `<dimension ref="A1:${cn(c) >= INS ? cl(cn(c) + 1) : BTL}${r}"/>`);
+        h = h.replace(/<dimension ref="A1:([A-Z]+)(\d+)"\/>/, (a, c, r) => `<dimension ref="A1:${cn(c) >= INS ? cl(cn(c) + 1) : 'DB'}${r}"/>`);
         h = h.replace(/<cols>[\s\S]*?<\/cols>/, cols => {
           const defs = cols.match(/<col [^>]*\/>/g) || []; const keep = [];
           for (let d of defs) {
@@ -1883,7 +1876,7 @@ async function build(files, opts = {}) {
   const SST = [...sstXml.matchAll(/<si>([\s\S]*?)<\/si>/g)].map(m => unx([...m[1].matchAll(/<t[^>]*>([\s\S]*?)<\/t>/g)].map(x => x[1]).join('')));
 
   // clean up a doubled 'MC No' column left by an earlier version
-  for (const [sn, hd] of [['280', 'MC No'], ['280', 'Body Type'], ['Dye Q', 'MC No']]) { const r = await dropDupColumns(zip, pathOf, SST, sn, hd, wbx); wbx = r.wbx; if (r.removed) report.warnings.push(`${sn}: removed ${r.removed} repeated ${hd} column`); }
+  for (const sn of ['280', 'Dye Q']) { const r = await dropDupColumns(zip, pathOf, SST, sn, 'MC No', wbx); wbx = r.wbx; if (r.removed) report.warnings.push(`${sn}: removed ${r.removed} repeated MC No column`); }
   note(6, 'Reading TAPS files');
   const S = {};
   for (const [k, buf] of Object.entries(files.sources)) { S[k] = readSource(buf); await tick(); }
@@ -1917,26 +1910,17 @@ async function build(files, opts = {}) {
   const sh280 = new Sheet(await rd(pathOf['280'])); await tick();
   // Body Type (Dye Q Combo Planner) sits at DB once added; the old DB 'Extra' column is then at DC
   const hdr280 = c => String(cellValue(sh280.get(2, ci(c)), SST) || '').trim();
-  // 'Extra' (old DB) = the column headed Extra (columns the user adds after DA push it right)
-  let extraCol = null; for (const [c, x] of (sh280.rows.get(2) || ['', new Map()])[1]) if (c > ci('DA') && String(cellValue(x, SST) ?? '').trim() === 'Extra') { extraCol = c; break; }
-  if (!extraCol) { const bodyTypeAtDB = hdr280('DB') === 'Body Type'; extraCol = !bodyTypeAtDB ? ci('DB') : (hdr280('DC') === 'MC No' ? ci('DD') : ci('DC')); }
+  const bodyTypeAtDB = hdr280('DB') === 'Body Type';
+  // 'Extra' (old DB) moves right when Body Type (DB) and MC No (DC) are in front of it
+  const extraCol = !bodyTypeAtDB ? ci('DB') : (hdr280('DC') === 'MC No' ? ci('DD') : ci('DC'));
   const colOf = c => c === 'DB' ? extraCol : ci(c);
   const oldCols = {}; const want = ['H', 'R', 'BB', 'BQ', 'BT', 'CB', 'CN', 'CR', 'CS', 'CT', 'CV', 'DB'];
   want.forEach(c => oldCols[c] = []);
   const oldRows = [...sh280.rows.keys()].sort((a, b) => a - b);
   for (const r of oldRows) for (const c of want) oldCols[c].push(cellValue(sh280.get(r, colOf(c)), SST));
   const old = { H: oldCols.H, cols: oldCols };
-  // columns the user adds after DA with their own row-1 'qq' formula (e.g. DB:DG Past Month Req date … Line Plan Remarks,
-  // VLOOKUP(H3,'280 (2)'!H:DF,99,FALSE)): worked out per row like the other qq columns and pasted as values
-  const userTmpl = [];
-  for (const [c, x] of (sh280.rows.get(1) || ['', new Map()])[1]) {
-    if (c <= ci('DA') || c === extraCol) continue; const v = cellValue(x, SST);
-    const h = String(cellValue(sh280.get(2, c), SST) ?? '').trim();
-    if (typeof v === 'string' && /^qq/i.test(v.trim()) && h && h !== 'Body Type' && h !== 'MC No') userTmpl.push([c, '=' + v.trim().slice(2).replace(/qq/gi, '=')]);
-  }
-  const old280 = userTmpl.length ? new Map([...sh280.rows].map(([r, [a, cells]]) => [r, new Map(cells)])) : null;   // the '280 (2)' copy
   const tmpl = []; for (const c of [...Array(ci('DA') - ci('AU') + 1).keys()].map(k => ci('AU') + k).concat([extraCol])) { const v = cellValue(sh280.get(1, c), SST); if (typeof v === 'string' && /^qq/i.test(v)) tmpl.push(c); }
-  if (tmpl.length < EXPECT_280_TEMPLATES - 1) report.warnings.push(`280 row 1 has ${tmpl.length} qq templates in AU:DB (expected 60) — check the calc columns.`);
+  if (tmpl.length !== EXPECT_280_TEMPLATES) report.warnings.push(`280 row 1 has ${tmpl.length} qq templates in AU:DB (expected 60) — check the calc columns.`);
 
   note(24, 'Calculating 280 AU:DB (activated row-1 formulas → values)');
   const fix = opts.fixSlips !== false;
@@ -1962,7 +1946,6 @@ async function build(files, opts = {}) {
   for (let r = 3; r <= nl; r++) { const v = sh280.rows.get(r); v[0] = v[0].replace(/\s(ht|customHeight)="[^"]*"/g, '') + ' ht="15" customHeight="1"'; }
   if (extraCol === ci('DB')) writeValues(sh280, ci('AU'), ci('DB'), 3, c280.vals, oldLast);
   else { writeValues(sh280, ci('AU'), ci('DA'), 3, c280.vals.map(v => v.slice(0, 59)), oldLast); writeValues(sh280, extraCol, extraCol, 3, c280.vals.map(v => [v[59]]), oldLast); }
-  if (userTmpl.length) report.user280 = fill280UserCols(sh280, old280, userTmpl, nl, SST, today, report);
   restyled['280'] = applyCanon(sh280, canon, 3, nl); report.formatKept['280'] = putManual(sh280, man, 3, nl, keyOf);
   filterRefs['280'] = resetFilter(sh280, nl); trimmed['280'] = trimTail(sh280, nl); slimDuplicateCF(sh280); boundCF(sh280, nl); setDimension(sh280); wr(pathOf['280'], sh280.serialize()); await tick();
 
@@ -2256,45 +2239,6 @@ function xlEval(f, ctx) {
   const out = expr(); ws(); if (i < src.length) fail('trailing ' + src.slice(i, i + 10)); return out;
 }
 // user formula columns on Dye Q (after AP): work out every formula, paste as values (row-1 'qq' text keeps the formula for next time)
-// 280 user columns with a row-1 qq formula: evaluate per row ('280' = the new sheet, '280 (2)' = the sheet before this update)
-function fill280UserCols(sh, oldRows, userTmpl, nl, SST, today, report) {
-  const nk = v => v === null || v === undefined ? '' : typeof v === 'number' ? String(+v.toFixed(9)) : String(v).trim().toLowerCase();
-  const val = (name, c, r) => {
-    if (!name || name === '280') { const v = cellValue(sh.get(r, c), SST); return v === '' ? null : v; }
-    if (name === '280 (2)') { const m = oldRows.get(r); const v = m ? cellValue(m.get(c), SST) : null; return v === '' ? null : v; }
-    throw new Error('sheet ' + name);
-  };
-  const idx = new Map();
-  const colIndex = (name, c) => {
-    const k = (name || '280') + '|' + c; if (idx.has(k)) return idx.get(k);
-    const m = new Map(), rows = name === '280 (2)' ? [...oldRows.keys()] : [...sh.rows.keys()];
-    rows.sort((a, b) => a - b); for (const r of rows) { const v = val(name, c, r); if (v === null) continue; const t = nk(v); if (!m.has(t)) m.set(t, r); }
-    idx.set(k, m); return m;
-  };
-  const out = {}, why = new Set();
-  for (const [c, f] of userTmpl) {
-    const gen = formulaGen(f, 3, c); let ok = 0, blank = 0; const colVals = [];
-    for (let r = 3; r <= nl; r++) {
-      const ctx = {
-        today,
-        cell: (sheet, col, row) => val(sheet, ci(col), row),
-        match: (rg, key) => { if (key && key.range) key = val(key.sheet, ci(key.c1), r); if (isErr(key)) return key;
-          const rr = colIndex(rg.sheet, ci(rg.c1)).get(nk(key)); return rr === undefined || rr < (rg.r1 || 1) ? ERR('#N/A') : rr - (rg.r1 || 1) + 1; },
-        index: (rg, k, cc) => val(rg.sheet, ci(rg.c1) + cc - 1, (rg.r1 || 1) + k - 1),
-        vlookup: (rg, key, cc) => { const k = ctx.match(rg, key); if (isErr(k)) return k; return val(rg.sheet, ci(rg.c1) + cc - 1, (rg.r1 || 1) + k - 1); },
-      };
-      let v;
-      try { v = xlEval(gen(r, c), ctx); } catch (e) { why.add(`${cl(c)}: ${e.message}`); v = null; }
-      if (v === '' || v === undefined || isErr(v)) v = null;          // not found -> blank, like the other carried columns
-      if (v === null) blank++; else ok++;
-      colVals.push([v]);
-    }
-    writeValues(sh, c, c, 3, colVals, nl);
-    out[cl(c)] = ok;
-  }
-  if (why.size) report.warnings.push('280 added columns not worked out: ' + [...why].slice(0, 3).join('; '));
-  return out;
-}
 async function pasteDyeQFormulaCols(zip, pathOf, SST, today, report) {
   const rdS = async name => new Sheet(await zip.file(pathOf[name]).async('string'));
   const dq = await rdS('Dye Q');
@@ -2423,16 +2367,13 @@ async function addMcNo(zip, pathOf, SST, report) {
   await putColumn(zip, pathOf, 'Dye Q', ci('AQ'), 'MC No', r => byRow.get(r) ?? null, ['AP', 'AP'], SST);
   // 280: MC No at DC (after Body Type, before Extra); batches not in Dye Q use their own plan qty
   const sh = new Sheet(await zip.file(pathOf['280']).async('string')); const vals = new Map();
-  const n2 = v => String(v ?? '').replace(/\s+/g, ' ').trim().toLowerCase();
-  const h2 = new Map(); for (const [c, x] of (sh.rows.get(2) || ['', new Map()])[1]) { const v = n2(cellValue(x, SST)); if (v && !h2.has(v)) h2.set(v, c); }
-  const BT = h2.get('body type') || ci('DB'), MCC = h2.get('mc no') || BT + 1, ADD = h2.get('additional or not') || ci('CC');
   for (const [r, [, cells]] of sh.rows) { if (r < 3) continue; const b = cellValue(cells.get(ci('H')), SST); if (!b) continue;
     // outside-mill batches (C filled) get no MC No — unless the outside order's batch is an Additional dyed inside (CC = Additional)
     const outside = String(cellValue(cells.get(ci('C')), SST) ?? '').trim() !== '';
-    const additional = String(cellValue(cells.get(ADD), SST) ?? '').trim().toLowerCase() === 'additional';
+    const additional = String(cellValue(cells.get(ci('CC')), SST) ?? '').trim().toLowerCase() === 'additional';
     if (outside && !additional) continue;
     vals.set(r, byBatch.has(String(b)) ? byBatch.get(String(b)) : mcNo(cellValue(cells.get(ci('W')), SST), null)); }
-  await putColumn(zip, pathOf, '280', MCC, 'MC No', r => vals.get(r) ?? null, [cl(BT), cl(BT)], SST);
+  await putColumn(zip, pathOf, '280', ci('DC'), 'MC No', r => vals.get(r) ?? null, ['DB', 'DB'], SST);
   const cnt = {}; for (const v of byRow.values()) cnt[v ?? 'blank'] = (cnt[v ?? 'blank'] || 0) + 1; report.mcNo = cnt;
 }
 
