@@ -404,7 +404,7 @@ td.fail.hov:hover{background:var(--red-soft)}
       <span class="ok" id="okFP">Uploaded</span>
       <span class="badmsg" id="badFP"></span>
       <span class="tickmark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
-      <input type="file" id="fileFP" accept=".xlsx" aria-label="Fabric Plan workbook">
+      <input type="file" id="fileFP" accept=".xlsx" multiple aria-label="Fabric Plan workbook">
     </div>
     <div class="drop" id="dropDOC">
       <span class="lbl">2 · DOC -280+217</span>
@@ -412,7 +412,7 @@ td.fail.hov:hover{background:var(--red-soft)}
       <span class="ok" id="okDOC">Uploaded</span>
       <span class="badmsg" id="badDOC"></span>
       <span class="tickmark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
-      <input type="file" id="fileDOC" accept=".xlsx" aria-label="DOC 280+217 workbook">
+      <input type="file" id="fileDOC" accept=".xlsx" multiple aria-label="DOC 280+217 workbook">
     </div>
     <div class="drop opt" id="dropAOP">
       <span class="lbl">3 · AOP release report · optional</span>
@@ -420,7 +420,7 @@ td.fail.hov:hover{background:var(--red-soft)}
       <span class="ok" id="okAOP">Uploaded</span>
       <span class="badmsg" id="badAOP"></span>
       <span class="tickmark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
-      <input type="file" id="fileAOP" accept=".xlsx" aria-label="Daily Fabric Release Report AOP">
+      <input type="file" id="fileAOP" accept=".xlsx" multiple aria-label="Daily Fabric Release Report AOP">
       <button type="button" class="clr" id="clrAOP" hidden>Remove</button>
     </div>
     <div class="drop" id="dropLP">
@@ -429,7 +429,7 @@ td.fail.hov:hover{background:var(--red-soft)}
       <span class="ok" id="okLP">Uploaded</span>
       <span class="badmsg" id="badLP"></span>
       <span class="tickmark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
-      <input type="file" id="fileLP" accept=".xlsx" aria-label="Line Plan-FOC-AOP-Hanger workbook">
+      <input type="file" id="fileLP" accept=".xlsx" multiple aria-label="Line Plan-FOC-AOP-Hanger workbook">
     </div>
     <div class="panel">
       <label class="f" for="runDate">Report date (used in file name)
@@ -5257,21 +5257,36 @@ function bindDrop(dropId,inputId,nameId,kind,okId,badId){
   const drop=$(dropId),inp=$(inputId),R=RULE[kind];
   const setFile=(f,zip)=>{ if(kind==="FP"){fpFile=f}else if(kind==="AOP"){aopFile=f;aopZip=zip;$("clrAOP").hidden=!f}else if(kind==="LP"){lpFile=f;lpZip=zip}else{docFile=f;docZip=zip} };
   const reject=(f,msg)=>{ setFile(null,null); window.dispatchEvent(new CustomEvent("sq:file",{detail:{kind,names:null}})); drop.classList.remove("has","checking"); drop.classList.add("bad"); $(nameId).textContent=f?f.name:"Wrong file"; $(badId).textContent="✕ "+msg; inp.value=""; refresh(); };
-  const take=async f=>{ if(!f) return;
+  const take=async (f,pre)=>{ if(!f) return;
     drop.classList.remove("has","bad"); drop.classList.add("checking"); $(nameId).textContent=f.name; $(badId).textContent=""; setFile(null,null); refresh(); status(`Checking ${f.name}…`);
     if(!/\.xlsx$/i.test(f.name)) return reject(f,"Not an .xlsx file. Upload the "+R.label+".");
     let zip,names;
-    try{ zip=await JSZip.loadAsync(f); names=await sheetNames(zip); }catch(e){ return reject(f,"Can't open this file as an Excel workbook. Save it as .xlsx and try again."); }
+    try{ if(pre){zip=pre.zip;names=pre.names}else{ zip=await JSZip.loadAsync(f); names=await sheetNames(zip); } }catch(e){ return reject(f,"Can't open this file as an Excel workbook. Save it as .xlsx and try again."); }
     if(!names.includes(R.need)) return reject(f, names.includes(R.other)?R.otherMsg:`Wrong file: sheet “${R.need}” not found. Upload the ${R.label}.`);
     setFile(f,kind==="FP"?null:zip);
     window.dispatchEvent(new CustomEvent("sq:file",{detail:{kind,names,name:f.name}}));
     const mb=f.size/1048576; $(okId).textContent=`✓ Uploaded · ${mb>=1?mb.toFixed(1)+" MB":Math.max(1,Math.round(f.size/1024))+" KB"} · sheet ${R.need} found`;
     drop.classList.remove("checking","bad"); void drop.offsetWidth; drop.classList.add("has"); refresh(); };
-  inp.addEventListener("change",()=>take(inp.files[0]));
+  inp.addEventListener("change",()=>{ const fl=[...inp.files]; inp.value=""; routeFiles(fl,kind); });
   drop.addEventListener("dragover",e=>{e.preventDefault();drop.classList.add("over")});
   drop.addEventListener("dragleave",()=>drop.classList.remove("over"));
-  drop.addEventListener("drop",e=>{e.preventDefault();drop.classList.remove("over");if(e.dataTransfer.files.length>1){status("Drop one file per box.");}take(e.dataTransfer.files[0])});
+  drop.addEventListener("drop",e=>{e.preventDefault();e.stopPropagation();drop.classList.remove("over");routeFiles(e.dataTransfer.files,kind)});
+  TAKE[kind]=take;
 }
+/* drop one or more files anywhere: each goes to its own box by the sheets inside (Batch Wise Line Plan → 4, Fab Plan-Final → 1, AOP RFD → 3, 217 → 2) */
+const TAKE={};
+async function routeFiles(list,fallback){
+  for(const f of [...list]){
+    let kind=null,pre=null;
+    if(/\.xlsx$/i.test(f.name)){ try{ const zip=await JSZip.loadAsync(f), names=await sheetNames(zip); pre={zip,names};
+        kind=names.includes("Batch Wise Line Plan")?"LP":names.includes("Fab Plan-Final")?"FP":names.includes("AOP RFD")?"AOP":names.includes("217")?"DOC":null; }catch(e){} }
+    if(!kind){ const n=f.name.toLowerCase(); kind=/line[\s_-]*plan|hanger/.test(n)?"LP":/fabric[\s_-]*plan|feedback|ott/.test(n)?"FP":/release|aop/.test(n)?"AOP":/doc|280|217/.test(n)?"DOC":null; pre=null; }
+    if(!kind&&!fallback){ status(`✕ ${f.name}: not one of the four files.`); continue; }
+    await TAKE[kind||fallback](f,kind?pre:null);
+  }
+}
+document.addEventListener("dragover",e=>{ if(e.dataTransfer&&[...e.dataTransfer.types].includes("Files")) e.preventDefault(); });
+document.addEventListener("drop",e=>{ if(!e.dataTransfer||!e.dataTransfer.files.length) return; e.preventDefault(); routeFiles(e.dataTransfer.files,null); });
 bindDrop("dropFP","fileFP","nameFP","FP","okFP","badFP");
 bindDrop("dropDOC","fileDOC","nameDOC","DOC","okDOC","badDOC");
 bindDrop("dropAOP","fileAOP","nameAOP","AOP","okAOP","badAOP");
