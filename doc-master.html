@@ -73,7 +73,7 @@ h1{font:700 clamp(22px,2.6vw,30px)/1.1 var(--disp);margin:2px 0 4px;letter-spaci
 .taps li .c{display:inline-block;width:14px;color:var(--q40)}
 .taps li.got .c{color:var(--blue)}
 .taps li.opt{grid-column:1/-1}
-#lpDl.dim{opacity:.55}
+body.dropping #boxDoc,body.dropping #boxTaps{outline:2px dashed var(--q);outline-offset:3px}
 .side{cursor:default}
 .side:hover{border-color:var(--line)}
 .side label{display:block;color:var(--muted);font-size:13.5px}
@@ -409,7 +409,6 @@ body:not(.tv) #lp{display:none!important}
       <span id="lastInfo" class="muted"></span>
       <button class="btn" id="lastDl" type="button" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 20h14"/></svg>Download 217+280 file</button>
       <button class="btn" id="addDl" type="button" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 20h14"/></svg>Additional Req</button>
-      <button class="btn" id="lpDl" type="button" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 20h14"/></svg>Line Plan file</button>
       <div class="dlp" id="dlp" hidden><div class="dlbar"><i id="dlFill"></i></div><span id="dlTxt"></span></div>
     </div>
     <button class="btn light newrun" id="newRun" type="button" aria-expanded="false" aria-controls="updater" hidden>+ Run a new update</button>
@@ -3060,6 +3059,17 @@ function wire(box,input,onFiles){
 }
 wire($('boxDoc'),$('pickDoc'),list=>{const f=[...list].find(x=>/\.xlsx$/i.test(x.name));if(f&&list.length===1&&DocBuilder.detect(f.name)!=='lineplan'){files.master=f;outBlob=null;render();}else addFiles(list);});
 wire($('boxTaps'),$('pickTaps'),addFiles);
+// drop files anywhere on the page: each one goes to its own box by its name (DOC -> box 1, TAPS / Line Plan -> box 2)
+{ let dn=0; const hasF=e=>[...((e.dataTransfer&&e.dataTransfer.types)||[])].includes('Files');
+  const off=()=>{dn=0;document.body.classList.remove('dropping');};
+  addEventListener('dragover',e=>{if(hasF(e))e.preventDefault();});
+  addEventListener('dragenter',e=>{if(!hasF(e)||!isAdmin()||busy)return;dn++;document.body.classList.add('dropping');if($('updater').hidden)openUpdater();});
+  addEventListener('dragleave',()=>{dn=Math.max(0,dn-1);if(!dn)document.body.classList.remove('dropping');});
+  addEventListener('drop',e=>{if(!hasF(e))return;e.preventDefault();off();
+    if(e.target.closest&&e.target.closest('#boxDoc,#boxTaps'))return;          // the box handles its own drop
+    if(!isAdmin()||busy||!e.dataTransfer.files.length)return;
+    if($('updater').hidden)openUpdater();addFiles(e.dataTransfer.files);});
+  addEventListener('dragend',off); }
 
 /* ---------- run ---------- */
 function todaySerial(){const d=new Date();return Math.round((Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())-Date.UTC(1899,11,30))/864e5);}
@@ -3133,7 +3143,7 @@ function cfgLoad(){let c={};try{c=JSON.parse(localStorage.getItem(LS)||'{}')}cat
   c.branch=c.branch||'doc-master-data';if(c.auto===undefined)c.auto=true;return c;}
 let cfg=cfgLoad();
 function cfgSave(){try{localStorage.setItem(LS,JSON.stringify(cfg))}catch(e){}}
-const DATA_FILE='DOC -280+217.xlsx',ADD_FILE='DOC Additional Req.xlsx',LP_FILE='Line Plan-Foc-Aop-Hanger List.xlsx';
+const DATA_FILE='DOC -280+217.xlsx',ADD_FILE='DOC Additional Req.xlsx';
 // files are read by commit id (never stale); the branch name is only a fallback (GitHub caches it ~5 min)
 let curSha=null;
 const rawUrl=(f,v)=>`https://raw.githubusercontent.com/${encodeURIComponent(cfg.owner)}/${encodeURIComponent(cfg.repo)}/${curSha||encodeURIComponent(cfg.branch)}/${encodeURIComponent(f)}?v=${encodeURIComponent(v||Date.now())}`;
@@ -3157,7 +3167,6 @@ function showLatest(){
   $('lastWhen').textContent=fmtWhen(latest.updated);
   $('lastInfo').textContent=latest.reportDate?`Report date ${latest.reportDate}`:'';
   $('lastDl').hidden=false;
-  const lp=latest.linePlan;$('lpDl').hidden=false;$('lpDl').classList.toggle('dim',!lp);$('lpDl').title=lp?lp.name:'Not on the site yet — run an update with the Line Plan file in box 2';
   const ad=latest.additional;$('addDl').hidden=!ad;if(ad)$('addDl').title=`${ad.total.toLocaleString('en-US')} kg across ${ad.orders} orders`;
 }
 async function dlFromSite(file,name,size,b){
@@ -3180,8 +3189,6 @@ async function dlFromSite(file,name,size,b){
   b.disabled=false;b.innerHTML=html;
 }
 $('lastDl').addEventListener('click',()=>dlFromSite(DATA_FILE,latest.name||outName(new Date(latest.updated)),latest.size,$('lastDl')));
-$('lpDl').addEventListener('click',()=>{const lp=latest&&latest.linePlan;if(lp)dlFromSite(LP_FILE,lp.name,lp.size,$('lpDl'));
-  else note('The Line Plan file is not on the site yet. Run a new update with the six TAPS files and the Line Plan-Foc-Aop-Hanger file in box 2 — after it saves, this button downloads it.',true);});
 $('addDl').addEventListener('click',()=>{const ad=latest&&latest.additional;if(ad)dlFromSite(ADD_FILE,ad.name,ad.size,$('addDl'));});
 function b64(bytes){let s='';const CH=0x8000;for(let i=0;i<bytes.length;i+=CH)s+=String.fromCharCode.apply(null,bytes.subarray(i,i+CH));return btoa(s);}
 async function gh(path,opt={}){
@@ -3200,17 +3207,13 @@ async function publish(){
     const blob=await gh('/git/blobs',{method:'POST',body:JSON.stringify({content:b64(bytes),encoding:'base64'})});
     const addB=addBlob?new Uint8Array(await addBlob.arrayBuffer()):null;
     const addBlobGh=addB?await gh('/git/blobs',{method:'POST',body:JSON.stringify({content:b64(addB),encoding:'base64'})}):null;
-    // Line Plan file: the new one from this run, else keep the one already on the site
-    const lpB=lpBlob?new Uint8Array(await lpBlob.arrayBuffer()):null;
-    const lpGh=lpB?await gh('/git/blobs',{method:'POST',body:JSON.stringify({content:b64(lpB),encoding:'base64'})}):null;
-    const lpOld=!lpB&&latest&&latest.linePlan&&latest.linePlan.sha?latest.linePlan:null;
     const d=rdate();
-    const lpDash=lpGh&&lastReport&&lastReport.linePlan?lastReport.linePlan.dash:(lpOld&&latest?latest.lpDash:null);
-    const meta={lpDash,linePlan:lpGh?{name:lpName(),size:lpB.length,sha:lpGh.sha}:lpOld,summary:lastReport&&lastReport.summary,newArt:lastReport&&lastReport.newArt,updated:new Date().toISOString(),reportDate:`${pad(d.getDate())}-${MON[d.getMonth()]}-${String(d.getFullYear()).slice(2)}`,name:outName(),size:bytes.length,rows:lastReport&&lastReport.rows,ld:lastReport&&lastReport.ld,fixSlips:true,additional:addB&&lastReport&&lastReport.additional?{name:addName(),size:addB.length,total:lastReport.additional.total,orders:lastReport.additional.orders}:null};
+    // tracker data only (the Line Plan file itself is not saved to the site)
+    const lpDash=lastReport&&lastReport.linePlan?lastReport.linePlan.dash:(latest&&latest.lpDash)||null;
+    const meta={lpDash,summary:lastReport&&lastReport.summary,newArt:lastReport&&lastReport.newArt,updated:new Date().toISOString(),reportDate:`${pad(d.getDate())}-${MON[d.getMonth()]}-${String(d.getFullYear()).slice(2)}`,name:outName(),size:bytes.length,rows:lastReport&&lastReport.rows,ld:lastReport&&lastReport.ld,fixSlips:true,additional:addB&&lastReport&&lastReport.additional?{name:addName(),size:addB.length,total:lastReport.additional.total,orders:lastReport.additional.orders}:null};
     const tree=await gh('/git/trees',{method:'POST',body:JSON.stringify({tree:[
       {path:DATA_FILE,mode:'100644',type:'blob',sha:blob.sha},
       ...(addBlobGh?[{path:ADD_FILE,mode:'100644',type:'blob',sha:addBlobGh.sha}]:[]),
-      ...(meta.linePlan?[{path:LP_FILE,mode:'100644',type:'blob',sha:meta.linePlan.sha}]:[]),
       {path:'latest.json',mode:'100644',type:'blob',content:JSON.stringify(meta,null,2)}]})});
     // parentless commit + force-moved branch: the previous file is wiped, no history builds up
     const commit=await gh('/git/commits',{method:'POST',body:JSON.stringify({message:'DOC master update '+meta.updated,tree:tree.sha,parents:[]})});
