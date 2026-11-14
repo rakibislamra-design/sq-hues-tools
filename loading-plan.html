@@ -505,11 +505,11 @@ header.fover::after{background:rgba(239,230,235,.92)}
       <button class="qi" data-act="export"><span>⤓</span>Export File<em>Loading plan with your plan</em></button>
       <button class="qi" data-act="update"><span>⟳</span>Update File<em>Loading plan + DOC 280+217 + Line Plan</em></button>
       <div class="qsep"></div><a class="qi" href="index.html"><span>←</span>SQ Hues Tools</a>
-      <div class="qver">Version 07 Nov 22:52</div>
+      <div class="qver">Version 14 Nov 13:03</div>
     </div>
   </div>
   <div class="hcol">
-  <div class="row1"><nav class="mcs" id="mcs" aria-label="Machine"></nav><button class="autop" id="autoPlan" title="Add every ready combo on all machines to the plan: knit done (no KBL), LD given, no “hold” written anywhere, and not over 102% Req Qty Kg">⚡ Auto plan</button><span class="sp qsum" id="qsum"></span></div>
+  <div class="row1"><nav class="mcs" id="mcs" aria-label="Machine"></nav><button class="autop" id="autoPlan" title="Add every ready combo on all machines to the plan: knit done (no KBL), LD given, no “hold” written anywhere, and not over 102% Req Qty Kg. Block orders are never included.">⚡ Auto plan</button><span class="sp qsum" id="qsum"></span></div>
   <div class="row2">
   <span class="hb">
     <button class="hb2 home" id="home" title="Back to the top of the list (Ctrl + Home)">↑ Top</button>
@@ -1220,6 +1220,8 @@ header.fover::after{background:rgba(239,230,235,.92)}
     const isSep = o => typeof o.D === 'string' && /^\s*MC\s*NO\s*#/i.test(o.D);
     const data = R.filter(x => x.r >= 4).map(x => { const o = vals(x); return { src: x, v: o, sep: isSep(o), batch: typeof o.D === 'string' && /\|/.test(o.D) && !isSep(o) }; });
     const have = new Set(data.filter(d => d.batch).map(d => lc(d.v.D.trim())));
+    // stage 1: the batches of the Loading plan file are the starting list — nothing else is carried in
+    rep.base = have.size; rep.baseList = [...have];
 
     // --- 1 Add Plan rows
     for (const a of addList) {
@@ -2148,16 +2150,19 @@ document.addEventListener('keydown',e=>{
 });
 // ---------- Auto plan: add every ready combo (KOK, LD given, no hold, within 102% Req Qty Kg) ----------
 const isReady=c=>c.p.every(x=>x.kn==='KOK'&&String(x.ld||'').trim()&&!isHold(x));
+// block orders (Buyer Name starts with "Block", e.g. Block-Lidl) never go into Auto plan — they are planned by hand
+const isBlock=c=>c.p.some(x=>/^\s*block\b/i.test(String(x.by||'')));
 function overReq(c,extra){ if(!D.itemsKg) return false; const skip=new Set(c.m); const seen={};
   for(const x of c.p){ const it=D.itemsKg[x.ik]; if(!it) continue; const tot=it[1]+plannedKg(x.ik,skip)+((extra||{})[x.ik]||0)+(seen[x.ik]||0)+(x.q||0); seen[x.ik]=(seen[x.ik]||0)+(x.q||0); if(tot>it[0]+OVTOL) return true; } return false; }
 $('autoPlan').addEventListener('click',()=>{
   const ks=MCS; const inPl=new Set(); for(const k in S.plan) for(const id of S.plan[k]||[]) inPl.add(id);
-  const pool=[...C.values()].filter(c=>ks.includes(c.mc)&&!inPl.has(c.id)&&isReady(c)&&passes(c)).sort((a,b)=>cmpAuto(a,b,true));
+  const pool=[...C.values()].filter(c=>ks.includes(c.mc)&&!inPl.has(c.id)&&isReady(c)&&!isBlock(c)&&passes(c)).sort((a,b)=>cmpAuto(a,b,true));
   // keep only combos that do not take their order item above 102% Req Qty Kg (checked in plan order, counting the ones before)
   const extra={}, cand=[]; let nOver=0;
   for(const c of pool){ if(overReq(c,extra)){ nOver++; continue; } cand.push(c); for(const x of c.p) extra[x.ik]=(extra[x.ik]||0)+(x.q||0); }
-  const notReady=[...C.values()].filter(c=>ks.includes(c.mc)&&!inPl.has(c.id)&&!isReady(c)).length;
-  if(!cand.length){ toast('No ready combos to add'+(Object.keys(FILT).length?' with these filters':'')+'.'); return; }
+  const notReady=[...C.values()].filter(c=>ks.includes(c.mc)&&!inPl.has(c.id)&&!isReady(c)&&!isBlock(c)).length;
+  const nBlock=[...C.values()].filter(c=>ks.includes(c.mc)&&!inPl.has(c.id)&&isBlock(c)).length;
+  if(!cand.length){ toast('No ready combos to add'+(Object.keys(FILT).length?' with these filters':'')+(nBlock?` · ${nBlock} block order combo${nBlock===1?'':'s'} left out`:'')+'.'); return; }
   const OFF=new Set();
   const d=$('dlg'); d.className='wide';
   cand.sort((a,b)=>MCS.indexOf(a.mc)-MCS.indexOf(b.mc));   // machine by machine (750 → 10), Auto-order kept inside each machine (stable sort)
@@ -2165,10 +2170,10 @@ $('autoPlan').addEventListener('click',()=>{
   const sum=()=>{ const n=cand.length-OFF.size;
     const k={}; d.querySelectorAll('.apt tr[data-id]').forEach(tr=>{ const c=C.get(tr.dataset.id); const td=tr.querySelector('.sln'); if(OFF.has(tr.dataset.id)){ td.textContent=''; return; } k[c.mc]=(k[c.mc]||(S.plan[c.mc]||[]).length)+1; td.textContent=k[c.mc]; }); const ok=$('dlgY')||$('apOk'); ok.textContent=`OK — add ${n}`; ok.disabled=!n; $('apCnt').textContent=n; };
   d.innerHTML=`<div class="dlgt"><h3 style="color:#3c7a5a">⚡ Auto plan · all machines</h3><button class="dlgx" id="dlgX" aria-label="Close">×</button></div>
-    <div class="note" style="background:#EEF7EF">Add <b style="color:#3c7a5a" id="apCnt">${cand.length}</b> ready combos — knit done, LD given, no “hold” written anywhere${Object.keys(FILT).length?' (only those matching your filters)':''}. Untick any you don't want.</div>
+    <div class="note" style="background:#EEF7EF">Add <b style="color:#3c7a5a" id="apCnt">${cand.length}</b> ready combos — knit done, LD given, no “hold” written anywhere, block orders left out${Object.keys(FILT).length?' (only those matching your filters)':''}. Untick any you don't want.</div>
     <div class="aprow"><span class="mut" style="font-size:12px">${MCS.map(k=>{const n=cand.filter(c=>c.mc===k).length;return n?`${k} kg: <b>${n}</b>`:'';}).filter(Boolean).join(' · ')}</span><span><button class="btn" id="apAll">Select all</button> <button class="btn" id="apNone">Select none</button></span></div>
     <div class="aptw"><table class="apt"><thead><tr><th></th><th>M/C</th><th class="num" title="Serial it gets on that machine (after the combos already planned there)">SL</th><th>Batch No</th><th>Buyer</th><th>Shade</th><th class="num">Kg</th><th>Type</th><th>LD/Matching</th><th>Line Plan</th></tr></thead><tbody>${cand.map(rowH).join('')}</tbody></table></div>
-    <div class="mut" style="font-size:11.5px">Each goes into its own machine's plan in Auto-order sequence with today's date. Left out: <b>${nOver}</b> problematic combo${nOver===1?'':'s'} that would take the order above the 102% Req Qty Kg, and ${notReady} not-ready combo${notReady===1?'':'s'} (KBL, LD pending or hold).</div>
+    <div class="mut" style="font-size:11.5px">Each goes into its own machine's plan in Auto-order sequence with today's date. Left out: <b>${nOver}</b> problematic combo${nOver===1?'':'s'} that would take the order above the 102% Req Qty Kg, ${notReady} not-ready combo${notReady===1?'':'s'} (KBL, LD pending or hold), and <b>${nBlock}</b> block order combo${nBlock===1?'':'s'} (never auto-planned).</div>
     <div class="acts"><span style="flex:1"></span><button class="btn" id="dlgN">Cancel</button><button class="btn go" id="apOk" style="background:#EEF7EF;border-color:#5E9277;color:#3c7a5a">OK — add ${cand.length}</button></div>`;
   $('dlgW').hidden=false; $('apOk').focus();
   d.querySelector('.apt tbody').addEventListener('click',e=>{ const tr=e.target.closest('tr[data-id]'); if(!tr) return; const cb=tr.querySelector('input'); if(e.target!==cb) cb.checked=!cb.checked; const id=tr.dataset.id; if(cb.checked){ OFF.delete(id); tr.classList.remove('off'); } else { OFF.add(id); tr.classList.add('off'); } sum(); });
@@ -2314,12 +2319,12 @@ function todayName(label){ const td=new Date(), dd=td.getDate(), sfx=(dd%10===1&
   return dre.test(base)?base.replace(dre,today):base.replace(/(\.xlsx?)?$/i,`-${today}.xlsx`); }
 // ---------- Update File: Loading plan + DOC 280+217 + Line Plan → updated Loading plan ----------
 const UPD={lp:null,doc:null,line:null};
-const updKind=n=>/doc|280|217/i.test(n)?'doc':/line\s*_?plan|foc|hanger|aop/i.test(n)?'line':/loading/i.test(n)?'lp':null;
+const updKind=n=>/loading/i.test(n)?'lp':/doc|280|217/i.test(n)?'doc':/line\s*_?plan|foc|hanger|aop/i.test(n)?'line':null;
 function updTake(files){ const left=[]; for(const f of files){ if(!/\.xlsx$/i.test(f.name)){ toast(f.name+' is not an .xlsx file.'); continue; } const k=updKind(f.name); if(k&&!UPD[k]) UPD[k]=f; else left.push(f); }
   for(const f of left) for(const k of ['lp','doc','line']) if(!UPD[k]){ UPD[k]=f; break; } drawUpd(); }
 function drawUpd(){ const d=$('dlg'); if($('dlgW').hidden||!d.querySelector('.upd')) return;
   const slot=(k,t,sub)=>{ const f=UPD[k]; const use=k==='lp'&&!f&&FILE&&FILE.label===LABEL; return `<label class="us${f||use?' ok':''}" data-k="${k}"><input type="file" accept=".xlsx" hidden data-k="${k}"><b>${t}</b><span>${f?esc(f.name):use?'Use the loaded file · '+esc(LABEL):'Drop here or click to pick'}</span><em>${sub}</em>${f?`<button class="ux" data-x="${k}" title="Remove">×</button>`:''}</label>`; };
-  d.querySelector('.upd').innerHTML=slot('lp','1 · Loading plan','yesterday’s file — Master Sheet + 280')+slot('doc','2 · DOC 280+217','280 sheet + Dye Q (Add Plan column)')+slot('line','3 · Line Plan','Batch Wise Line Plan sheet');
+  d.querySelector('.upd').innerHTML=slot('lp','1 · Loading plan','starting list — only the batches in this file are kept')+slot('doc','2 · DOC 280+217','then Dye Q › Add Plan batches are added · new 280')+slot('line','3 · Line Plan','Batch Wise Line Plan sheet');
   const can=!!(UPD.lp||(FILE&&FILE.label===LABEL)); $('updGo').disabled=!can;
   $('updGo').textContent=UPD.doc||UPD.line?'Update':'Load for planning'; }
 async function openUpdate(){
@@ -2327,7 +2332,7 @@ async function openUpdate(){
   if(!FILE||FILE.label!==LABEL) FILE=await IDB.get();
   const d=$('dlg'); d.className='wide';
   d.innerHTML=`<div class="dlgt"><h3 style="color:#664356">⟳ Update the Loading plan</h3><button class="dlgx" id="dlgX" aria-label="Close">×</button></div>
-    <div class="note" style="background:#F4EFF2">Drop the files you have (all at once is fine) — any file left out is simply skipped: <b>only the Loading plan</b> = plan with yesterday's data; <b>no DOC</b> = keep the old 280, no Add Plan; <b>no Line Plan</b> = BF left as it is. The planner adds the <b>Add Plan</b> batches from Dye Q, brings in the new <b>280</b>, works out the row formulas, removes dyed batches and those no longer in Dye Q, sets <b>KOK / KBL / Not in KQ</b>, tags <b>FOC · Urgent · AOP</b> in Plan Type and takes <b>Line Plan</b> dyeing dates into BF.</div>
+    <div class="note" style="background:#F4EFF2">Drop the files you have (all at once is fine) — any file left out is simply skipped: <b>only the Loading plan</b> = plan with yesterday's data; <b>no DOC</b> = keep the old 280, no Add Plan; <b>no Line Plan</b> = BF left as it is. <b>Stage 1:</b> the planner starts with the batches in the <b>Loading plan file you drop</b> — any batch it was holding that is not in that file is removed. <b>Stage 2:</b> it adds the <b>Add Plan</b> batches from Dye Q, then brings in the new <b>280</b>, works out the row formulas, removes dyed batches and those no longer in Dye Q, sets <b>KOK / KBL / Not in KQ</b>, tags <b>FOC · Urgent · AOP</b> in Plan Type and takes <b>Line Plan</b> dyeing dates into BF.</div>
     <div class="upd"></div><div class="ulog" id="updLog"></div>
     <div class="dlgb"><span class="mut" style="font-size:11.5px">Takes about 10–20 seconds · nothing leaves this computer</span><span><button class="hb2" id="dlgN">Close</button> <button class="okb" id="updGo">Update</button></span></div>`;
   $('dlgW').hidden=false; drawUpd();
@@ -2341,11 +2346,14 @@ async function runUpdate(){
     if(!UPD.doc&&!UPD.line){ if(UPD.lp){ const f=UPD.lp; UPD.lp=null; $('dlgW').hidden=true; await loadFile(f); } else { $('dlgW').hidden=true; toast('Planning with the loaded file — nothing to update.'); } return; }
     say('Reading the files…');
     const lpBuf=UPD.lp?await UPD.lp.arrayBuffer():FILE.buf.slice(0), lpName=UPD.lp?UPD.lp.name:FILE.label;
+    const upl=!!UPD.lp, prevB=LABEL!==SEED.label?Object.keys(D.batches||{}):[];   // what the planner was holding before this update
     const docBuf=UPD.doc?await UPD.doc.arrayBuffer():null, lineBuf=UPD.line?await UPD.line.arrayBuffer():null;
     const r=await LPUpdate.updateLoadingPlan(JSZip,lpBuf,docBuf,lineBuf,{log:say,type:'uint8array'});
     const name=todayName(lpName), rp=r.report; const buf=r.out.buffer.slice(r.out.byteOffset,r.out.byteOffset+r.out.byteLength);
     const li=(k,v)=>`<li><b>${v}</b> ${k}</li>`;
+    const baseSet=new Set(rp.baseList||[]); const dropped=upl?prevB.filter(b=>!baseSet.has(String(b).trim().toLowerCase())):[]; const keepSet=new Set(dropped);
     lg.innerHTML=`<div class="urep"><div class="uh">✓ Updated in ${Math.round((Date.now()-t0)/1000)} s — <b>${esc(name)}</b> · ${rp.rows} batches</div><ul>
+      ${upl?li('batches in the Loading plan file — starting list',rp.base)+li('held in the planner but not in that file — removed',dropped.length):'<li class="uw">No Loading plan file dropped — started from the file already in the planner ('+rp.base+' batches)</li>'}
       ${rp.noDoc?'<li class="uw">No DOC 280+217 file — old 280 kept, no Add Plan</li>':li('added from Dye Q (Add Plan)',rp.added.length)}${rp.addSkipped.length?`<li class="uw">${rp.addSkipped.length} not added: ${esc(rp.addSkipped.slice(0,6).join(' · '))}${rp.addSkipped.length>6?' …':''}</li>`:''}
       ${li('removed — already dyed',rp.delDyed)}${li('removed — no longer in Dye Q',rp.delNotQ)}
       ${li('KOK — Greige from (M = P)',rp.kokGreige)}${li('KOK — knit qty (M = D)',rp.kokKnit)}${li('Not in KQ (noted in Remarks)',rp.notInKQ)}${li('KBL',rp.kbl)}
@@ -2354,6 +2362,8 @@ async function runUpdate(){
       </ul><button class="hb2" id="updDl">⤓ Download ${esc(name)}</button></div>`;
     $('updDl').onclick=()=>{ $('xls').click(); };   // same as Export: the updated file with the re-ordered plan
     UPD.lp=UPD.doc=UPD.line=null;
+    // nothing of the removed batches stays behind in this browser (split, pin, sent-to-MC, merge groups)
+    if(dropped.length){ S.split=(S.split||[]).filter(b=>!keepSet.has(b)); for(const b of dropped){ delete PIN[b]; delete PIN['S|'+b]; } for(const g of Object.keys(MERGE)){ MERGE[g].ids=MERGE[g].ids.filter(id=>!keepSet.has(String(id).replace(/^S\|/,''))); if(MERGE[g].ids.length<2) delete MERGE[g]; } savePin(); saveMerge(); }
     await loadBuf(name,buf,`Updated file loaded — ${rp.rows} batches, planned rows re-ordered by the Auto-order rules. Plan as usual, then Export.`);
     // planned rows follow today's data: Auto-order on every machine (FOC → Hanger → Line Plan by date → AOP → Urgent → rest)
     for(const k of MCS) autoSort(k); save(); refreshView();
