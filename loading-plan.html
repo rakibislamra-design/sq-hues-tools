@@ -505,7 +505,7 @@ header.fover::after{background:rgba(239,230,235,.92)}
       <button class="qi" data-act="export"><span>⤓</span>Export File<em>Loading plan with your plan</em></button>
       <button class="qi" data-act="update"><span>⟳</span>Update File<em>Loading plan + DOC 280+217 + Line Plan</em></button>
       <div class="qsep"></div><a class="qi" href="index.html"><span>←</span>SQ Hues Tools</a>
-      <div class="qver">Version 14 Nov 13:03</div>
+      <div class="qver">Version 15 Nov 07:27</div>
     </div>
   </div>
   <div class="hcol">
@@ -514,7 +514,7 @@ header.fover::after{background:rgba(239,230,235,.92)}
   <span class="hb">
     <button class="hb2 home" id="home" title="Back to the top of the list (Ctrl + Home)">↑ Top</button>
     <button class="hb2" id="refresh" title="Move ticked combos up into the plan by priority">Refresh</button>
-    <button class="hb2" id="auto" title="Sort every machine: FOC → Hanger → AOP with Line Plan backlog → Line Plan (today, tomorrow, day after, backlog, later dates nearest first) → AOP → Urgent → other Plan Type → rest">Auto-order</button>
+    <button class="hb2" id="auto" title="Sort every machine: FOC → Hanger → AOP with Line Plan backlog → Line Plan by DL delivery date (today, tomorrow, day after, backlog, later dates nearest first) → AOP → Urgent → other Plan Type → rest">Auto-order</button>
     <button class="hb2" id="clrF" title="Remove all column filters">Clear filters</button>
   </span>
   <span class="qf" id="qf"></span>
@@ -782,7 +782,7 @@ header.fover::after{background:rgba(239,230,235,.92)}
     const xm = await zip.file(sp['Master Sheet'].path).async('string');
     const cols = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','X','AF','AG','AH','AI','AJ','AM','AO','AV','AY','AZ','BA','BC','BD','BE','BF','BG'];
     // every Master column A … BH: mapped fields below, the rest kept as raw values; plus the sheet's column widths / hidden / outline groups and row-3 headers
-    const ALLC = []; for (let i = 1; i <= 60; i++) ALLC.push(cl(i));
+    const ALLC = []; for (let i = 1; i <= 61; i++) ALLC.push(cl(i));   // … BI (DL)
     const cm = readCells(xm, new Set(ALLC), sst, 4);
     const hdrRow = readCells(xm, new Set(ALLC), sst, 3).get(3) || {};
     const hdr = {}; for (const k in hdrRow) hdr[k] = str(hdrRow[k]).replace(/\s+/g, ' ').trim();
@@ -794,7 +794,7 @@ header.fover::after{background:rgba(239,230,235,.92)}
       const b = str(o.D).trim(); if (!b || !parseB(b) || batches[b]) continue;
       let t = M.finalType(b);
       if (!t) t = M.classify(parseB(b).o, o.G, o.E);
-      batches[b] = { b, row: r, mc0: str(o.A), sl: str(o.B), kq: typeof o.L === 'number' ? o.L : str(o.L), ga: str(o.M), n1: str(o.P), tb: str(o.S), lb: str(o.U), pt: str(o.C).trim(), by: str(o.E), sh: str(o.F), fb: str(o.G), ld: str(o.H), kn: str(o.I).trim().toUpperCase(), bt: str(o.J), t: t === 'Gusset' ? 'G' : 'B', q: typeof o.K === 'number' ? o.K : (parseFloat(o.K) || 0), pd: xlDate(o.N), cat: str(o.O), rmk: str(o.Q), hold: str(o.R), gsm: str(o.T), hs: str(o.X), po: str(o.AF), ott: xlDate(o.AH), age: typeof o.AV === 'number' ? Math.round(o.AV) : null, st: str(o.AY), rm: str(o.AZ), pg: str(o.BA), mill: str(o.BD), lp: xlDate(o.BF), lpt: typeof o.BF === 'string' ? o.BF.trim() : '', lab: xlDate(o.BG), db: str(o.AG), dd: xlDate(o.AI) || str(o.AI), kq2: typeof o.AJ === 'number' ? Math.round(o.AJ) : str(o.AJ), dq: typeof o.AM === 'number' ? Math.round(o.AM) : str(o.AM), and: str(o.AO), lot: str(o.BC), hsp: xlDate(o.BE) || str(o.BE) };
+      batches[b] = { b, row: r, mc0: str(o.A), sl: str(o.B), kq: typeof o.L === 'number' ? o.L : str(o.L), ga: str(o.M), n1: str(o.P), tb: str(o.S), lb: str(o.U), pt: str(o.C).trim(), by: str(o.E), sh: str(o.F), fb: str(o.G), ld: str(o.H), kn: str(o.I).trim().toUpperCase(), bt: str(o.J), t: t === 'Gusset' ? 'G' : 'B', q: typeof o.K === 'number' ? o.K : (parseFloat(o.K) || 0), pd: xlDate(o.N), cat: str(o.O), rmk: str(o.Q), hold: str(o.R), gsm: str(o.T), hs: str(o.X), po: str(o.AF), ott: xlDate(o.AH), age: typeof o.AV === 'number' ? Math.round(o.AV) : null, st: str(o.AY), rm: str(o.AZ), pg: str(o.BA), mill: str(o.BD), lp: xlDate(o.BF), dl: xlDate(o.BI), lpt: typeof o.BF === 'string' ? o.BF.trim() : '', lab: xlDate(o.BG), db: str(o.AG), dd: xlDate(o.AI) || str(o.AI), kq2: typeof o.AJ === 'number' ? Math.round(o.AJ) : str(o.AJ), dq: typeof o.AM === 'number' ? Math.round(o.AM) : str(o.AM), and: str(o.AO), lot: str(o.BC), hsp: xlDate(o.BE) || str(o.BE) };
       const raw = {}; for (const k of ALLC) { if (MAPPED.has(k)) continue; const v = o[k]; if (v === null || v === undefined || v === '') continue; raw[k] = typeof v === 'number' ? Math.round(v * 100) / 100 : str(v); } if (Object.keys(raw).length) batches[b].raw = raw;
       queue.push(b);
     }
@@ -1186,7 +1186,7 @@ header.fover::after{background:rgba(239,230,235,.92)}
     }
 
     // --- Line plan: Batch No → Dyeing Date
-    const lineMap = new Map();
+    const lineMap = new Map(), dlMap = new Map();   // Batch No → Dyeing Date / Delivery Date (DL)
     if (lineBuf) {
       log('Reading the Line Plan file…');
       const pz = await JSZip.loadAsync(lineBuf); const psp = await sheetPaths(pz);
@@ -1194,14 +1194,15 @@ header.fover::after{background:rgba(239,230,235,.92)}
       if (!pn) throw new Error('The Line Plan file has no "Batch Wise Line Plan" sheet.');
       const psst = parseSST(pz.file('xl/sharedStrings.xml') ? await pz.file('xl/sharedStrings.xml').async('string') : '');
       const px = await pz.file(psp[pn].path).async('string');
-      ROW_RE.lastIndex = 0; let m, bC = null, dC = null, hr = 0;
+      ROW_RE.lastIndex = 0; let m, bC = null, dC = null, lC = null, hr = 0;
       while ((m = ROW_RE.exec(px))) {
         const r = +(/\br="(\d+)"/.exec(m[1]) || [])[1]; const o = {}; for (const c of splitCells(m[2])) { const v = cellValue(c.attrs, c.inner, psst); if (v !== undefined) o[c.col] = v; }
         if (!bC) { const ks = Object.keys(o).sort((p, q) => cn(p) - cn(q)); const nm = k => typeof o[k] === 'string' ? o[k].replace(/\s+/g, ' ').trim().toLowerCase() : '';
-          const b = ks.find(k => nm(k) === 'batch no'), d = ks.find(k => nm(k) === 'dyeing date'); if (b && d) { bC = b; dC = d; hr = r; } continue; }
+          const b = ks.find(k => nm(k) === 'batch no'), d = ks.find(k => nm(k) === 'dyeing date'); if (b && d) { bC = b; dC = d; lC = ks.find(k => nm(k) === 'delivery date') || null; hr = r; } continue; }
         const b = o[bC]; if (typeof b !== 'string' || !b.trim()) continue; const k = lc(b.trim());
         const d = o[dC]; const prev = lineMap.get(k);
         if (prev === undefined || (typeof prev !== 'number' && typeof d === 'number')) lineMap.set(k, typeof d === 'number' ? d : null);
+        if (lC) { const dl = o[lC]; const n = typeof dl === 'number' ? dl : (typeof dl === 'string' && /^\d{5}(\.\d+)?$/.test(dl.trim()) ? +dl : null); if (n && (!dlMap.has(k) || n < dlMap.get(k))) dlMap.set(k, n); }
       }
       if (!bC) throw new Error('Could not find "Batch No" and "Dyeing Date" headers in Batch Wise Line Plan.');
     }
@@ -1310,6 +1311,7 @@ header.fover::after{background:rgba(239,230,235,.92)}
         let k = lc(o.D.trim());
         // a gusset (or body) not on the line plan takes its partner's line plan date
         if (!lineMap.has(k) && PM) { const pb = PM.partner(o.D.trim()); if (pb && lineMap.has(lc(pb))) { k = lc(pb); rep.lpPartner = (rep.lpPartner || 0) + 1; } }
+        { const dl = dlMap.get(k); if (dl) { set.BI = Math.floor(dl); rep.dl = (rep.dl || 0) + 1; } else if (o.BI !== undefined && o.BI !== '') set.BI = ''; }   // DL = Delivery Date from the line plan
         if (lineMap.has(k)) { const dt = lineMap.get(k); if (typeof dt === 'number') { set.BF = Math.floor(dt); rep.lpDate++; } else { set.BF = 'Line Plan-TBC'; rep.lpTBC++; } }
         else if (o.BF !== undefined && o.BF !== '') { set.BF = ''; rep.lpCleared++; }
       }
@@ -1361,17 +1363,21 @@ header.fover::after{background:rgba(239,230,235,.92)}
         if (f != null) { const nf = shiftF(f, nr - d.src.r, 0); const inner = (c.inner || '').replace(/<f\b[^>]*?(?:\/>|>[^<]*<\/f>)/, `<f>${xesc(nf)}</f>`); cells.push(`<c r="${ref}"${c.attrs}>${inner}</c>`); }
         else cells.push(c.inner == null ? `<c r="${ref}"${c.attrs}/>` : `<c r="${ref}"${c.attrs}>${c.inner}</c>`);
       }
-      for (const k of Object.keys(want).filter(k => !done.has(k) && !d.src.cells.some(c => c.col === k))) cells.push(cellXml(k + nr, null, want[k].v, want[k].f));
+      for (const k of Object.keys(want).filter(k => !done.has(k) && !d.src.cells.some(c => c.col === k))) { const sty = k === 'BI' ? styleOf((d.src.cells.find(c => c.col === 'BF') || d.src.cells.find(c => c.col === 'N') || {}).attrs) : null; cells.push(cellXml(k + nr, sty, want[k].v, want[k].f)); }
       cells.sort((p, q) => cn(/r="([A-Z]+)/.exec(p)[1]) - cn(/r="([A-Z]+)/.exec(q)[1]));
       const attrs = d.src.attrs.replace(/\br="\d+"/, `r="${nr}"`).replace(/\sspans="[^"]*"/, '');
       rowsXml.push(`<row${attrs}>${cells.join('')}</row>`);
     }
     const lastRow = next - 1; rep.rows = keep.filter(d => d.batch).length;
     // rows 1–3 as they are (K2 subtotal range follows the data)
+    const hasDL = keep.some(d => d.set && 'BI' in d.set);
     const topXml = head3.map(x => { const cells = x.cells.map(c => { let inner = c.inner; if (inner && /<f>/.test(inner)) inner = inner.replace(/<f>([^<]*)<\/f>/, (m0, f) => '<f>' + f.replace(/(SUBTOTAL\(\d+,\s*[A-Z]+\$?\d+:[A-Z]+\$?)\d+/g, `$1${lastRow}`) + '</f>');
-      return inner == null ? `<c r="${c.col}${x.r}"${c.attrs}/>` : `<c r="${c.col}${x.r}"${c.attrs}>${inner}</c>`; }).join(''); return `<row${x.attrs}>${cells}</row>`; });
+      return inner == null ? `<c r="${c.col}${x.r}"${c.attrs}/>` : `<c r="${c.col}${x.r}"${c.attrs}>${inner}</c>`; });
+      if (x.r === 3 && hasDL) { const i = x.cells.findIndex(c => c.col === 'BI'); const bh = x.cells.find(c => c.col === 'BH') || x.cells.find(c => c.col === 'BF'); const hc = cellXml('BI3', bh ? styleOf(bh.attrs) : null, 'DL'); if (i >= 0) cells[i] = hc; else cells.push(hc); }
+      return `<row${x.attrs.replace(/\sspans="[^"]*"/, '')}>${cells.join('')}</row>`; });
     let newHead = mHead.replace(/<dimension ref="([A-Z]+\d+):([A-Z]+)\d+"\/>/, `<dimension ref="$1:$2${lastRow}"/>`);
     let newTail = mTail.replace(/(<autoFilter ref="[A-Z]+\d+:[A-Z]+)\d+"/, `$1${lastRow}"`);
+    if (hasDL) { newTail = newTail.replace(/(<autoFilter ref="[A-Z]+\d+:)BH(\d+")/, '$1BI$2'); newHead = newHead.replace(/<dimension ref="([A-Z]+\d+):BH(\d+)"\/>/, '<dimension ref="$1:BI$2"/>'); }
     const newMaster = newHead + '<sheetData>' + topXml.join('') + rowsXml.join('') + newTail;
 
     // --- assemble the workbook
@@ -1496,6 +1502,7 @@ function unmerge(ids){ for(const id of ids){ if(!String(id).startsWith('MG:')) c
     if(v){ const k=v.mc; const L=S.plan[k]||[]; const i=L.indexOf(id); if(i>=0){ L.splice(i,1,...v.merged); for(const m of v.merged) S.over[m]=k; } } }
   saveMerge(); savePin(); save(); build(); refreshView(); }
 function build(){
+  HASDL=Object.values(D.batches||{}).some(x=>x.dl);
   for(const b in S.ed){ const x=D.batches[b]; if(x) Object.assign(x,S.ed[b]); }
   for(const b in S.cx){ const x=D.batches[b]; if(x) for(const L in S.cx[b]) setCell(x,L,S.cx[b][L]); }
   C=new Map(); const split=new Set(S.split);
@@ -1535,9 +1542,9 @@ const plan=()=>cur==='ALL'?[].concat(...MCS.map(k=>S.plan[k]||[])):(S.plan[cur]=
 const mlist=c=>S.plan[c.mc]=S.plan[c.mc]||[];          // the plan list of a combo's own machine
 const inView=c=>cur==='ALL'||c.mc===cur;
 // ---------- column model: same columns, widths and outline groups as the Master Sheet ----------
-const LET=(()=>{const o=[];for(let i=1;i<=60;i++){let n=i,s='';while(n){const r=(n-1)%26;s=String.fromCharCode(65+r)+s;n=Math.floor((n-1)/26);}o.push(s);}return o;})();
+const LET=(()=>{const o=[];for(let i=1;i<=61;i++){let n=i,s='';while(n){const r=(n-1)%26;s=String.fromCharCode(65+r)+s;n=Math.floor((n-1)/26);}o.push(s);}return o;})();
 const DEFH={A:'M/C No',C:'Plan Type',D:'Batch No',E:'Buyer Name',F:'Shade',G:'Fabrics Type',H:'LD/Matching',I:'Knitting status',J:'Batch Type',K:'Batch qty',L:'Knit Q',M:'Greige allowcation',N:'Plan Date',O:'Workorder Category',P:'Note 1',Q:'Remrks',R:'Hold remarks',S:'Total Batch',T:'Gsm',U:'Left batch',X:'H/s Status',AF:'Customer Po',AG:'Dye Batch',AH:'OTT Date',AI:'Dye Date',AJ:'Knit Q',AM:'Dye Q',AO:'And',AV:'Ageing',AY:'Batch Status',AZ:'Remarks',BA:'Plan Given',BC:'Lot',BD:'Knit Mill',BE:'H/s Plan',BF:'Line Plan',BG:'Lab Fabric Plan'};
-const DATEF={N:'pd',AH:'ott',BF:'lp',BG:'lab'};
+const DATEF={N:'pd',AH:'ott',BF:'lp',BG:'lab',BI:'dl'};
 // ---- double-click to type in any cell (kept in S.cx, written into the same cell on Export) ----
 const NOEDIT={A:'M/C — use right-click › Send to MC',B:'SL — type it in the SL box',D:'Batch No is the key of the row',K:'Batch qty drives the 102% check',N:'Plan Date — tick / untick the row',BH:'Load Date is worked out by the planner'};
 const MONI={jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
@@ -1589,6 +1596,7 @@ function buildCols(){
   const rows=[]; let run=null;
   for(const L of LET){
     if(L==='B'){ run=null; continue; }                       // SL NO = the SL column on the left
+    if(L==='BI'&&!hd.BI) continue;                           // DL only when the file has it
     const info=ci[L]||{w:12,h:false,o:0};
     let h=(hd[L]||DEFH[L]||L), gid=null;
     if(L==='BH') h='Load Date';                              // export writes the expected load date here
@@ -1976,11 +1984,12 @@ document.addEventListener('dragover',e=>{
 // Auto-order: 1 FOC · 2 Hanger (both by Plan Date) · AOP with a passed Line Plan date (oldest first) · 3 Line Plan: today, tomorrow, day after, backlog, later
 //             4 AOP (shade says AOP) · 5 Urgent · 6 other Plan Type comments · 7 rest — groups 4–7 by Plan Date, then OTT
 const addDays=n=>{const d=new Date();d.setDate(d.getDate()+n);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
-const AUTO_NOTE='Auto-ordered: FOC → Hanger → AOP with Line Plan backlog → Line Plan (today, tomorrow, day after, backlog, later dates nearest first) → AOP → Urgent → other Plan Type → rest. Pinned SLs stay where you put them.';
+const AUTO_NOTE='Auto-ordered: FOC → Hanger → AOP with Line Plan backlog → Line Plan by DL delivery date (today, tomorrow, day after, backlog, later dates nearest first) → AOP → Urgent → other Plan Type → rest. Pinned SLs stay where you put them.';
+let HASDL=false;   // the file has a DL (Delivery Date) column filled → Line Plan order follows DL instead of BF
 function autoKey(c,simple){
   const t0=addDays(0),t1=addDays(1),t2=addDays(2);
   const first=f=>c.p.map(f).filter(Boolean).sort()[0]||'';
-  const lp=first(x=>x.lp), pd=first(x=>x.pd)||'9999', ott=first(x=>x.ott)||'9999';
+  const lp=HASDL?first(x=>x.dl):first(x=>x.lp), pd=first(x=>x.pd)||'9999', ott=first(x=>x.ott)||'9999';
   const has=re=>c.p.some(x=>re.test(x.pt||'')||re.test(x.cat||''));
   let g,sub=0,d=pd;
   if(has(/FOC/i)) g=0;
@@ -2194,7 +2203,7 @@ $('qf').addEventListener('click',e=>{ if(e.target.closest('#mgBtn')){ openMerge(
 // hover a row: small card with Customer PO and Line Plan date
 (()=>{ const tp=document.createElement('div'); tp.id='rtip'; tp.hidden=true; document.body.appendChild(tp); let cur=null, t=null;
   const show=(cb,e)=>{ const c=C.get(cb.dataset.id); if(!c) return; const po=[...new Set(c.p.map(x=>x.po).filter(Boolean))], lp=[...new Set(c.p.map(x=>dshort(x.lp)||x.lpt).filter(Boolean))];
-    tp.innerHTML=`<div><span>Customer PO</span><b>${esc(po.join(' / ')||'–')}</b></div><div><span>Line Plan</span><b class="${lp.length?'lp':''}">${esc(lp.join(' / ')||'–')}</b></div>`; tp.hidden=false; place(e); };
+    tp.innerHTML=`<div><span>Customer PO</span><b>${esc(po.join(' / ')||'–')}</b></div><div><span>Line Plan</span><b class="${lp.length?'lp':''}">${esc(lp.join(' / ')||'–')}</b></div>${(()=>{const dl=[...new Set(c.p.map(x=>dshort(x.dl)).filter(Boolean))];return dl.length?`<div><span>DL</span><b class="lp">${esc(dl.join(' / '))}</b></div>`:'';})()}`; tp.hidden=false; place(e); };
   const place=e=>{ const w=tp.offsetWidth,h=tp.offsetHeight; let x=e.clientX+14, y=e.clientY-h-12; if(y<6) y=e.clientY+18; if(x+w>innerWidth-6) x=innerWidth-w-6; tp.style.left=x+'px'; tp.style.top=y+'px'; };
   $('list').addEventListener('mousemove',e=>{ const cb=e.target.closest('.cb[data-id]'); if(cb!==cur){ cur=cb; tp.hidden=true; clearTimeout(t); if(cb) t=setTimeout(()=>show(cb,e),250); return; } if(!tp.hidden) place(e); });
   $('list').addEventListener('mouseleave',()=>{ cur=null; clearTimeout(t); tp.hidden=true; });
