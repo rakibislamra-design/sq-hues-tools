@@ -371,7 +371,8 @@ header.fover::after{background:rgba(239,230,235,.92)}
 #rtip{position:fixed;z-index:60;pointer-events:none;background:#fff;border:1px solid #D9CBD2;border-left:3px solid #664356;border-radius:6px;box-shadow:0 6px 18px rgba(40,20,30,.16);padding:6px 10px;font:12px var(--f-ui);color:#1F1F1F;max-width:620px}
 #rtip .rpb{display:block;border-top:1px solid #EEE6EA;margin-top:5px;padding-top:5px;color:#AF4F5A}#rtip .rpb b{display:block;font-weight:700;color:#AF4F5A}#rtip .rpb em{font-style:normal;font-size:11px;color:var(--muted)}
 #rtip .rpt{border-collapse:collapse;margin-top:3px;font-size:11.5px}#rtip .rpt th{font-weight:600;color:var(--muted);font-size:10.5px;padding:1px 5px;text-align:right;white-space:nowrap}#rtip .rpt td{padding:1px 5px;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}#rtip .rpt td:first-child{text-align:left}#rtip .rpt td.bad{color:#AF4F5A;font-weight:700}#rtip .rpn{display:block;font-size:10.5px;color:var(--muted);margin-top:3px}
-#dlg .mgm{background:#FAF7F9;border-color:#C9B5C0}.mgah{font:600 11.5px var(--f-ui);color:#664356;margin:8px 0 2px}.mgah.mut{color:var(--muted);font-weight:400}#dlg .mgat tr td{background:#fff}.mgadd{display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-top:5px;font-size:12px}.mgadd .okb{padding:4px 12px;font-size:12px}.mgtag{display:inline-block;background:#8C6A7C;color:#fff;border-radius:10px;padding:0 7px;font:600 11px var(--f-ui)}#dlg .mgrm{color:#664356;font-weight:600}.mgm .lnk{font-size:12px}.mgshow{margin-right:8px}.mgshow .hb2{font-size:11.5px}.mgshow small{opacity:.75}.mwshow{margin-left:auto;margin-right:0}#dlg tr.mwm td{background:#F6EFF3}
+#dlg .mgm{background:#FAF7F9;border-color:#C9B5C0}.mgf2{display:flex;align-items:center;gap:8px;margin:8px 0 2px;font-size:12px;flex-wrap:nowrap}.mgf2 .mgfl{color:var(--muted);flex:none;width:40px}.mgf2 .mgshow{flex:none;margin-right:6px}.mgbs{display:flex;flex-wrap:wrap;gap:5px}.mgf2 select{font:12px var(--f-ui);padding:3px 6px;border:1px solid #D9CBD2;border-radius:6px;min-width:240px}.mgf2 .mgall{margin-left:auto}
+#dlg table.mgtb{table-layout:fixed;width:100%}#dlg table.mgtb td,#dlg table.mgtb th{overflow:hidden;text-overflow:ellipsis}#dlg .mgh{display:flex;align-items:center;justify-content:space-between;gap:12px}#dlg .mghl{display:flex;align-items:center;gap:5px;min-width:0;flex-wrap:wrap}#dlg .mgt{flex:none;text-align:right;font-size:12.5px}.cupt{background:#EEF3F8;color:#366083;border-radius:8px;padding:0 6px;font-size:11px;font-weight:600}#dlg .mgm.fresh{box-shadow:0 0 0 2px #8C6A7C}.mgah{font:600 11.5px var(--f-ui);color:#664356;margin:8px 0 2px}.mgah.mut{color:var(--muted);font-weight:400}#dlg .mgat tr td{background:#fff}.mgadd{display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-top:5px;font-size:12px}.mgadd .okb{padding:4px 12px;font-size:12px}.mgtag{display:inline-block;background:#8C6A7C;color:#fff;border-radius:10px;padding:0 7px;font:600 11px var(--f-ui)}#dlg .mgrm{color:#664356;font-weight:600}.mgm .lnk{font-size:12px}.mgshow{margin-right:8px}.mgshow .hb2{font-size:11.5px}.mgshow small{opacity:.75}.mwshow{margin-left:auto;margin-right:0}#dlg tr.mwm td{background:#F6EFF3}
 #dlg .mwq{flex:none;height:30px;min-height:0;font:12.5px var(--f-ui);border:1px solid #D9CBD2;border-radius:6px;padding:5px 9px;width:100%;box-sizing:border-box;background:#fff;color:var(--fg)}
 #dlg td.pox{font-size:11.5px;white-space:nowrap}
 #rtip div{display:flex;gap:10px;align-items:baseline;padding:1px 0}#rtip span{color:var(--muted);font-size:11px;min-width:76px}#rtip b{font-weight:600}#rtip b.lp{color:#664356}
@@ -511,7 +512,7 @@ header.fover::after{background:rgba(239,230,235,.92)}
       <button class="qi" data-act="export"><span>⤓</span>Export File<em>Loading plan with your plan</em></button>
       <button class="qi" data-act="update"><span>⟳</span>Update File<em>Loading plan + DOC 280+217 + Line Plan</em></button>
       <div class="qsep"></div><a class="qi" href="index.html"><span>←</span>SQ Hues Tools</a>
-      <div class="qver">Version 16 Nov 21:02</div>
+      <div class="qver">Version 16 Nov 21:27</div>
     </div>
   </div>
   <div class="hcol">
@@ -1479,7 +1480,7 @@ let MERGE=store.get('mclp-merge')||{}; const saveMerge=()=>store.set('mclp-merge
 // T33 orders: the Customer PO says "Cup" or "Without Cup" — cup merges only with cup, without cup only with without cup
 const cupOf=c=>{ if(!/T\s*33/i.test(String(c.body.by||''))) return ''; const t=c.p.map(x=>x.po||'').join(' '); return /without\s*cup/i.test(t)?'no-cup':/\bcup\b/i.test(t)?'cup':''; };
 const POS=c=>[...new Set(c.p.map(x=>String(x.po||'').trim()).filter(Boolean))].map(esc).join('<br>');
-const BY=c=>String(c.body.by||'').trim().replace(/^block\s*[-–]\s*/i,'').trim();   // block orders share the buyer key: Block - M & S - T33 = M & S - T33
+const BY=c=>String(c.body.by||'').trim();   // buyer exactly as uploaded: Block - M & S - T33 stays separate from M & S - T33
 const gkey=c=>[BY(c),String(c.body.sh||'').trim(),[...new Set(c.p.map(x=>String(x.fb||'').trim()))].sort().join(' + '),cupOf(c)].map(v=>v.toLowerCase().replace(/\s+/g,' ')).join('|');
 const mkey=c=>[BY(c),c.body.sh,c.p.map(x=>x.fb).join(' + '),cupOf(c)].map(v=>String(v||'').trim().toLowerCase().replace(/\s+/g,' ')).join('|');
 const MAXLOAD=770;   // top of the 750 kg band
@@ -1492,69 +1493,92 @@ function mergeSuggest(){ const groups=new Map();
     for(const b of bins){ if(b.cs.length<2) continue; const mc=LPEngine.mcKey(b.q); if(mc==='NBP'||!MCS.includes(mc)) continue;
       const before=b.cs.length; out.push({key:k,cs:b.cs.sort((x,y)=>cmpAuto(x,y)),q:b.q,mc,save:before-1,load:b.q/CAP[mc]*100}); } }
   return out.sort((a,b)=>b.q-a.q); }
-function openMerge(opt){
-  const sug=mergeSuggest(); const d=$('dlg'); d.className='wide';
+function openMerge(opt){ opt=opt||{};
+  // Merge batches: every not-merged combo (body + gusset = one combo), grouped by buyer + color + fabric (T33: Cup / Without Cup too).
+  // Pick buyers (one or more), tick combos in a group, watch the load %, Merge selected → confirm → one batch on the machine its kg fits.
+  const d=$('dlg'); d.className='wide';
+  const plSL=c=>{ const L=S.plan[c.mc]||[], i=L.indexOf(c.id); return i<0?'':i+1; };
+  const plTxt=c=>{ const s=plSL(c); return s?`Planned · SL ${s}`+(c.body.pd?' · '+dshort(c.body.pd):''):'Not planned'; };
+  const ldTxt=c=>c.p.map(x=>String(x.ld||'').trim()?esc(x.ld):'<span class="uw">LD pending</span>').join('<br>');
+  const COLG='<colgroup><col style="width:30px"><col style="width:62px"><col style="width:300px"><col style="width:62px"><col style="width:230px"><col style="width:190px"><col></colgroup>';
+  const HEAD='<tr><th></th><th>M/C</th><th>Batch No</th><th class="num">kg</th><th>LD / Matching</th><th>Plan status</th><th>Customer PO</th></tr>';
+  const cupTag=c=>{ const k=cupOf(c); return k==='cup'?' <span class="cupt">Cup</span>':k==='no-cup'?' <span class="cupt">Without Cup</span>':''; };
   const cur0=Object.entries(MERGE).map(([gid,g])=>({gid,v:C.get('MG:'+gid)})).filter(o=>o.v);
-  const candOf=v=>{ const k=gkey(v); return [...C.values()].filter(c=>!c.merged&&c.q>0&&!c.p.some(x=>isHold(x))&&gkey(c)===k).sort((a,b)=>cmpAuto(a,b)); };
+  if(opt.fresh) cur0.sort((a,b)=>(b.gid===opt.fresh)-(a.gid===opt.fresh));
+  const free=[...C.values()].filter(c=>!c.merged&&c.q>0&&!c.p.some(x=>isHold(x)));
+  const gm=new Map(); for(const c of free){ const k=gkey(c); if(!gm.has(k)) gm.set(k,[]); gm.get(k).push(c); }
+  for(const [k,cs] of gm){ const mn=Math.min(...cs.map(c=>c.q)); gm.set(k,cs.filter(c=>cs.some(o=>o!==c&&c.q+o.q<=MAXLOAD))); }   // a combo that cannot share a load with any other of its color is left out
+  const G=[...gm.values()].filter(cs=>cs.length>=2).map(cs=>({cs:cs.sort((a,b)=>cmpAuto(a,b)),by:BY(cs[0]),sh:String(cs[0].body.sh||'').trim(),q:cs.reduce((s,c)=>s+c.q,0)}))
+    .sort((a,b)=>a.by.localeCompare(b.by)||a.sh.localeCompare(b.sh));
+  const candOf=v=>{ const k=gkey(v); return free.filter(c=>gkey(c)===k&&v.q+c.q<=MAXLOAD).sort((a,b)=>cmpAuto(a,b)); };
   const addRows=o=>{ const cs=candOf(o.v); if(!cs.length) return `<div class="mgah mut">No other unmerged batch of this color.</div>`;
-    return `<div class="mgah">Same color, not merged — tick to add to this set</div><table class="apt mgat">${cs.map(c=>`<tr><td><input type="checkbox" data-ag="${o.gid}" data-id="${esc(c.id)}"></td><td class="mcx">${esc(c.mc)}</td><td class="bnx">${c.m.map(esc).join('<br>')}</td><td class="num">${fmt(Math.round(c.q))}</td><td class="ldx">${c.p.map(x=>String(x.ld||'').trim()?esc(x.ld):'<span class="uw">LD pending</span>').join('<br>')}</td><td>${(S.plan[c.mc]||[]).includes(c.id)?'Planned · SL '+((S.plan[c.mc]||[]).indexOf(c.id)+1)+(c.body.pd?' · '+dshort(c.body.pd):''):'Not planned'}</td><td class="pox">${POS(c)}</td></tr>`).join('')}</table><div class="mgadd"><span data-at="${o.gid}" class="mut">tick batches to add</span> <button class="okb" data-add="${o.gid}" disabled>Add to set</button></div>`; };
-  const mgBox=o=>{ const v=o.v, L=S.plan[v.mc]||[], sl=L.indexOf(v.id), st=sl>=0?`Merged · SL ${sl+1}`+(v.body.pd?' · '+dshort(v.body.pd):''):'Merged · not planned';
-    return `<div class="mgc mgm" hidden data-by="${esc(BY(v))}" data-sh="${esc(String(v.body.sh||'').trim())}"><div class="mgh"><span><span class="mgtag">Merged</span> <b>${esc(v.body.by)}</b> · ${esc(v.body.sh)} · <span class="mut">${esc([...new Set(v.p.map(x=>x.fb))].join(' + '))}</span></span><span class="mgt">${sl>=0?`<b>SL ${sl+1}</b> · `:''}${v.merged.length} combos · <b>${fmt(Math.round(v.q))} kg</b> on <b>${v.mc} kg MC</b> (${(v.q/CAP[v.mc]*100).toFixed(0)}%) <button class="lnk" data-un="${o.gid}">Unmerge</button></span></div>
-      <table class="apt"><tr><th></th><th>M/C now</th><th>Batch No</th><th class="num">kg</th><th>LD / Matching</th><th>Plan status</th><th>Customer PO</th></tr>${v.p.map(x=>`<tr><td></td><td class="mcx">${esc(v.mc)}</td><td class="bnx">${esc(x.b)}</td><td class="num">${fmt(Math.round(x.q||0))}</td><td class="ldx">${String(x.ld||'').trim()?esc(x.ld):'<span class="uw">LD pending</span>'}</td><td class="mgrm">${st}</td><td class="pox">${esc(String(x.po||'').trim())}</td></tr>`).join('')}</table>${addRows(o)}</div>`; };
-  const row=(c,i,j)=>`<tr><td><input type="checkbox" data-s="${i}" data-c="${j}"></td><td class="mcx">${esc(c.mc)}</td><td class="bnx">${c.m.map(b=>esc(b)).join('<br>')}</td><td class="num">${fmt(Math.round(c.q))}</td><td class="ldx">${c.p.map(x=>String(x.ld||'').trim()?esc(x.ld):'<span class="uw">LD pending</span>').join('<br>')}</td><td>${(S.plan[c.mc]||[]).includes(c.id)?'Planned · SL '+((S.plan[c.mc]||[]).indexOf(c.id)+1)+(c.body.pd?' · '+dshort(c.body.pd):''):'Not planned'}</td><td class="pox">${POS(c)}</td></tr>`;
+    return `<div class="mgah">Same color, not merged — tick to add to this set</div><table class="apt mgtb mgat">${COLG}${cs.map(c=>`<tr><td><input type="checkbox" data-ag="${o.gid}" data-id="${esc(c.id)}"></td><td class="mcx">${esc(c.mc)}</td><td class="bnx">${c.m.map(esc).join('<br>')}</td><td class="num">${fmt(Math.round(c.q))}</td><td class="ldx">${ldTxt(c)}</td><td>${plTxt(c)}</td><td class="pox">${POS(c)}</td></tr>`).join('')}</table><div class="mgadd"><span data-at="${o.gid}" class="mut">tick batches to add</span> <button class="okb" data-add="${o.gid}" disabled>Add to set</button></div>`; };
+  const mgBox=o=>{ const v=o.v, sl=plSL(v), st=sl?`Merged · SL ${sl}`+(v.body.pd?' · '+dshort(v.body.pd):''):'Merged · not planned';
+    return `<div class="mgc mgm${o.gid===opt.fresh?' fresh':''}" data-by="${esc(BY(v))}" data-sh="${esc(String(v.body.sh||'').trim())}"><div class="mgh"><span class="mghl"><span class="mgtag">Merged</span> <b>${esc(BY(v))}</b> · ${esc(v.body.sh)}${cupTag(v)} · <span class="mut">${esc([...new Set(v.p.map(x=>x.fb))].join(' + '))}</span></span><span class="mgt">${sl?`<b>SL ${sl}</b> · `:''}${v.merged.length} combos · <b>${fmt(Math.round(v.q))} kg</b> → <b>${v.mc} kg MC</b> · ${(v.q/CAP[v.mc]*100).toFixed(0)}% <button class="lnk" data-un="${o.gid}">Unmerge</button></span></div>
+      <table class="apt mgtb">${COLG}${HEAD}${v.p.map(x=>`<tr><td></td><td class="mcx">${esc(v.mc)}</td><td class="bnx">${esc(x.b)}</td><td class="num">${fmt(Math.round(x.q||0))}</td><td class="ldx">${String(x.ld||'').trim()?esc(x.ld):'<span class="uw">LD pending</span>'}</td><td class="mgrm">${st}</td><td class="pox">${esc(String(x.po||'').trim())}</td></tr>`).join('')}</table>${addRows(o)}</div>`; };
+  const grpBox=(g,i)=>`<div class="mgc" data-i="${i}" data-by="${esc(g.by)}" data-sh="${esc(g.sh)}"><div class="mgh"><label class="mghl"><input type="checkbox" data-s="${i}"> <b>${esc(g.by)}</b> · ${esc(g.sh)}${cupTag(g.cs[0])} · <span class="mut">${esc(g.cs[0].p.map(x=>x.fb).join(' + '))}</span></label><span class="mgt" data-t="${i}"></span></div>
+      <table class="apt mgtb">${COLG}${HEAD}${g.cs.map((c,j)=>`<tr><td><input type="checkbox" data-s="${i}" data-c="${j}"></td><td class="mcx">${esc(c.mc)}</td><td class="bnx">${c.m.map(esc).join('<br>')}</td><td class="num">${fmt(Math.round(c.q))}</td><td class="ldx">${ldTxt(c)}</td><td>${plTxt(c)}</td><td class="pox">${POS(c)}</td></tr>`).join('')}</table></div>`;
+  const buyers=[...new Set(G.map(g=>g.by).concat(cur0.map(o=>BY(o.v))))].sort();
+  let SB=new Set((opt.by||[]).filter(b=>buyers.includes(b))), fSh='', fShow=opt.all?'all':'wo';
   d.innerHTML=`<div class="dlgt"><h3 style="color:#664356">⧉ Merge batches</h3><button class="dlgx" id="dlgX" aria-label="Close">×</button></div>
-    <div class="note" style="background:#F4EFF2">Same <b>buyer + shade + fabrication</b>, packed together up to a machine's capacity (750 kg MC up to 770 kg). A merged set is <b>one batch</b> in the plan: one SL, one load, on the machine its total kg fits; its priority follows the regular Auto-order rules (best member). Tick the batches you want together (2 or more) — or tick the set to take all of it — then Merge selected.</div>
-    ${sug.length||cur0.length?`<div class="mgf">${cur0.length?`<span class="vseg mgshow"><button class="hb2${opt&&opt.all?' on':''}" data-show="all">All · incl. merged <small>${cur0.length}</small></button><button class="hb2${opt&&opt.all?'':' on'}" data-show="wo">Without merged</button></span>`:''}<span class="mut">Buyer</span><button class="mgfb on" data-by="">All <small>${sug.length}</small></button>${[...new Set(sug.map(g=>BY(g.cs[0])).concat(cur0.map(o=>BY(o.v))))].sort().map(b=>`<button class="mgfb" data-by="${esc(b)}">${esc(b)} <small>${sug.filter(g=>BY(g.cs[0])===b).length}</small></button>`).join('')}<span class="mgcol"><span class="mut">Color</span><select id="mgSh"><option value="">All colors</option></select></span><label class="mgall"><input type="checkbox" id="mgAll"> Tick all shown</label></div>`:''}
-    ${sug.length||cur0.length?`<div class="mgl">${cur0.map(mgBox).join('')}${sug.map((g,i)=>{ const [by,sh,fb]=[g.cs[0].body.by,g.cs[0].body.sh,g.cs[0].p.map(x=>x.fb).join(' + ')]; return `<div class="mgc" data-i="${i}" data-by="${esc(BY(g.cs[0]))}" data-sh="${esc(String(sh||'').trim())}"><div class="mgh"><label><input type="checkbox" data-s="${i}"> <b>${esc(by)}</b> · ${esc(sh)} · <span class="mut">${esc(fb)}</span></label><span class="mgt" data-t="${i}">${g.cs.length} → 1 load · <b>${fmt(Math.round(g.q))} kg</b> on <b>${g.mc} kg MC</b> (${g.load.toFixed(0)}%)</span></div>
-      <table class="apt"><tr><th></th><th>M/C now</th><th>Batch No</th><th class="num">kg</th><th>LD / Matching</th><th>Plan status</th><th>Customer PO</th></tr>${g.cs.map((c,j)=>row(c,i,j)).join('')}</table></div>`; }).join('')}${sug.length?'':'<div class="mut mgnone" style="padding:14px 4px">No new merge suggestions.</div>'}</div>`:'<div class="mut" style="padding:14px 4px">No merge suggestions — no two batches of the same buyer, shade and fabrication fit one machine together.</div>'}
+    <div class="note" style="background:#F4EFF2">Pick one or more <b>buyers</b>. Batches are listed by <b>color + fabric</b> (body + gusset = one combo; T33: Cup only with Cup, Without Cup only with Without Cup). Tick the combos to put together — the load % shows on the group — then <b>Merge selected</b>. A merged set is one batch: one SL, on the machine its total kg fits.</div>
+    <div class="mgf2"><span class="vseg mgshow"><button class="hb2" data-show="all">All · incl. merged <small>${cur0.length}</small></button><button class="hb2" data-show="wo">Without merged</button></span>
+      <span class="mgfl">Buyer</span><span class="mgbs"><button class="mgfb" data-by="">All</button>${buyers.map(b=>`<button class="mgfb" data-by="${esc(b)}">${esc(b)} <small data-bc="${esc(b)}"></small></button>`).join('')}</span></div>
+    <div class="mgf2"><span class="mgfl">Color</span><select id="mgSh"></select><span class="mut" id="mgCnt"></span><label class="mgall"><input type="checkbox" id="mgAll"> Tick all shown</label></div>
+    <div class="mgl" id="mgL">${cur0.map(mgBox).join('')}${G.map(grpBox).join('')}<div class="mut mgnone" hidden style="padding:14px 4px">Nothing to merge for this selection.</div></div>
     <div class="mgsel" id="mgSel"></div>
-    ${cur0.length?`<details class="mgcur"><summary><b>Merged now (${cur0.length})</b></summary> ${cur0.map(o=>`<span class="mgp">${esc(o.v.body.by)} · ${esc(o.v.body.sh)} · ${o.v.merged.length} combos · ${fmt(Math.round(o.v.q))} kg → ${o.v.mc} kg <button class="lnk" data-un="${o.gid}">Unmerge</button></span>`).join('')}</details>`:''}
-    <div class="dlgb"><span class="mut" style="font-size:11.5px" id="mgSum"></span><span><button class="hb2" id="dlgN">Close</button> <button class="okb" id="mgOk"${sug.length?'':' disabled'}>Merge selected</button></span></div>`;
+    <div class="dlgb"><span class="mut" style="font-size:11.5px" id="mgSum"></span><span><button class="hb2" id="dlgN">Close</button> <button class="okb" id="mgOk" disabled>Merge selected</button></span></div>`;
   $('dlgW').hidden=false;
-  const pick=()=>sug.map((g,i)=>{ const on=d.querySelector(`.mgh input[data-s="${i}"]`).checked; const cs=g.cs.filter((c,j)=>d.querySelector(`tr input[data-s="${i}"][data-c="${j}"]`).checked); const q=cs.reduce((a,c)=>a+c.q,0); return {on:on&&cs.length>=2,cs,q,mc:LPEngine.mcKey(q)}; });
-  const upd=()=>{ const P=pick(); P.forEach((p,i)=>{ const t=d.querySelector(`[data-t="${i}"]`); if(!t) return; t.innerHTML=!p.cs.length?`<span class="mut">possible: ${sug[i].cs.length} → 1 load · ${fmt(Math.round(sug[i].q))} kg on ${sug[i].mc} kg MC</span>`:p.cs.length<2?'<span class="uw">tick 2 or more</span>':(p.mc==='NBP'||!MCS.includes(p.mc))?`<span class="uw">${fmt(Math.round(p.q))} kg — fits no machine</span>`:`${p.cs.length} → 1 load · <b>${fmt(Math.round(p.q))} kg</b> on <b>${p.mc} kg MC</b> (${(p.q/CAP[p.mc]*100).toFixed(0)}%)`; });
-    const ok=P.filter(p=>p.on&&MCS.includes(p.mc));
-    $('mgSel').innerHTML=ok.length?`<b>To be merged (${ok.length})</b> `+ok.map(p=>`<span class="mgp sel">${esc(p.cs[0].body.by)} · ${esc(p.cs[0].body.sh)} · ${p.cs.length} combos · ${fmt(Math.round(p.q))} kg → ${p.mc} kg</span>`).join(''):'';
-    $('mgSum').textContent=ok.length?`${ok.length} selected · saves ${ok.reduce((a,p)=>a+p.cs.length-1,0)} load${ok.reduce((a,p)=>a+p.cs.length-1,0)===1?'':'s'}`:`Nothing ticked yet — ${sug.length} possible merge${sug.length===1?'':'s'}`; if($('mgOk')) $('mgOk').disabled=!ok.length; };
+  const pick=()=>G.map((g,i)=>{ const cs=g.cs.filter((c,j)=>d.querySelector(`tr input[data-s="${i}"][data-c="${j}"]`).checked); const q=cs.reduce((a,c)=>a+c.q,0); return {cs,q,mc:LPEngine.mcKey(q)}; });
+  const loadTxt=p=>(p.mc==='NBP'||!MCS.includes(p.mc))?`<span class="uw">${fmt(Math.round(p.q))} kg — fits no machine</span>`:`<b>${fmt(Math.round(p.q))} kg</b> → <b>${p.mc} kg MC</b> · <b class="${p.q/CAP[p.mc]>1.02?'uw':'okt'}">${(p.q/CAP[p.mc]*100).toFixed(0)}%</b>`;
+  const upd=()=>{ const P=pick(); P.forEach((p,i)=>{ const t=d.querySelector(`[data-t="${i}"]`); t.innerHTML=!p.cs.length?`<span class="mut">${G[i].cs.length} combos · ${fmt(Math.round(G[i].q))} kg</span>`:p.cs.length<2?`1 ticked · ${fmt(Math.round(p.q))} kg — <span class="uw">tick 2 or more</span>`:`${p.cs.length} ticked · ${loadTxt(p)}`;
+      d.querySelector(`.mgh input[data-s="${i}"]`).checked=p.cs.length===G[i].cs.length; });
+    const ok=P.filter(p=>p.cs.length>=2&&MCS.includes(p.mc));
+    $('mgSel').innerHTML=ok.length?`<b>To be merged (${ok.length})</b> `+ok.map(p=>`<span class="mgp sel">${esc(BY(p.cs[0]))} · ${esc(p.cs[0].body.sh)} · ${p.cs.length} combos · ${fmt(Math.round(p.q))} kg → ${p.mc} kg · ${(p.q/CAP[p.mc]*100).toFixed(0)}%</span>`).join(''):'';
+    $('mgSum').textContent=ok.length?`${ok.length} set${ok.length>1?'s':''} ready · saves ${ok.reduce((a,p)=>a+p.cs.length-1,0)} load${ok.reduce((a,p)=>a+p.cs.length-1,0)===1?'':'s'}`:'Tick 2 or more combos in a group to merge them';
+    $('mgOk').disabled=!ok.length; };
+  const inB=by=>!SB.size||SB.has(by);
+  const applyF=()=>{ let n=0; d.querySelectorAll('#mgL .mgc').forEach(c=>{ c.hidden=(c.classList.contains('mgm')&&fShow!=='all')||!inB(c.dataset.by)||(!!fSh&&c.dataset.sh!==fSh); if(!c.hidden) n++; });
+    d.querySelector('.mgnone').hidden=n>0; $('mgCnt').textContent=`${n} group${n===1?'':'s'}`; $('mgAll').checked=false; };
+  const fillSh=()=>{ const shs={}; G.filter(g=>inB(g.by)).map(g=>g.sh).concat(fShow==='all'?cur0.filter(o=>inB(BY(o.v))).map(o=>String(o.v.body.sh||'').trim()):[]).forEach(s=>shs[s]=(shs[s]||0)+1);
+    const sel=$('mgSh'); sel.innerHTML='<option value="">All colors</option>'+Object.keys(shs).sort().map(k=>`<option value="${esc(k)}">${esc(k)} (${shs[k]})</option>`).join(''); sel.value=shs[fSh]?fSh:''; fSh=sel.value; };
+  const drawBar=()=>{ d.querySelectorAll('[data-show]').forEach(x=>x.classList.toggle('on',x.dataset.show===fShow));
+    d.querySelectorAll('.mgfb').forEach(x=>x.classList.toggle('on',x.dataset.by?SB.has(x.dataset.by):!SB.size));
+    d.querySelectorAll('[data-bc]').forEach(x=>{ const b=x.dataset.bc; x.textContent=G.filter(g=>g.by===b).length+(fShow==='all'?cur0.filter(o=>BY(o.v)===b).length:0); }); };
+  const refresh=()=>{ drawBar(); fillSh(); applyF(); };
+  d.querySelectorAll('.mgfb').forEach(b=>b.onclick=()=>{ const by=b.dataset.by; if(!by) SB.clear(); else if(SB.has(by)) SB.delete(by); else SB.add(by); refresh(); });   // click buyers to add / remove; All clears
+  d.querySelectorAll('[data-show]').forEach(b=>b.onclick=()=>{ fShow=b.dataset.show; refresh(); });
+  $('mgSh').onchange=e=>{ fSh=e.target.value; applyF(); };
   const addPick=gid=>[...d.querySelectorAll(`input[data-ag="${gid}"]:checked`)].map(x=>C.get(x.dataset.id)).filter(Boolean);
   const updAdd=gid=>{ const v=C.get('MG:'+gid), add=addPick(gid), q=v.q+add.reduce((s,c)=>s+c.q,0), mc=LPEngine.mcKey(q), ok=add.length&&MCS.includes(mc);
-    d.querySelector(`[data-at="${gid}"]`).innerHTML=!add.length?'tick batches to add':ok?`+${add.length} → <b>${fmt(Math.round(q))} kg</b> on <b>${mc} kg MC</b> (${(q/CAP[mc]*100).toFixed(0)}%)`:`<span class="uw">${fmt(Math.round(q))} kg — fits no machine</span>`;
+    d.querySelector(`[data-at="${gid}"]`).innerHTML=!add.length?'tick batches to add':`+${add.length} → `+loadTxt({q,mc});
     d.querySelector(`[data-add="${gid}"]`).disabled=!ok; };
   d.onchange=e=>{ if(!$('mgSum')) return; const t=e.target;
     if(t.dataset.ag){ updAdd(t.dataset.ag); return; }
-    if(t.id==='mgAll'){ d.querySelectorAll('.mgc:not([hidden]):not(.mgm) input[type=checkbox]').forEach(x=>x.checked=t.checked); }
-    else if(t.dataset.s!=null&&t.dataset.c==null){ d.querySelectorAll(`tr input[data-s="${t.dataset.s}"]`).forEach(x=>x.checked=t.checked); }   // set box = all its batches
-    else if(t.dataset.c!=null){ const n=d.querySelectorAll(`tr input[data-s="${t.dataset.s}"]:checked`).length; d.querySelector(`.mgh input[data-s="${t.dataset.s}"]`).checked=n>=2; }   // 2 or more batches ticked = this set merges
-    upd(); }; upd();
-  let fBy='', fSh='', fShow=opt&&opt.all?'all':'wo';
-  const applyF=()=>{ d.querySelectorAll('.mgc').forEach(c=>c.hidden=(c.classList.contains('mgm')&&fShow!=='all')||(!!fBy&&c.dataset.by!==fBy)||(!!fSh&&c.dataset.sh!==fSh)); if($('mgAll')) $('mgAll').checked=false; };
-  const fillSh=()=>{ const sel=$('mgSh'); if(!sel) return; const shs={}; sug.map(g=>g.cs[0]).concat(fShow==='all'?cur0.map(o=>o.v):[]).forEach(c0=>{ const by=BY(c0), sh=String(c0.body.sh||'').trim(); if(!fBy||by===fBy) shs[sh]=(shs[sh]||0)+1; });
-    sel.innerHTML='<option value="">All colors</option>'+Object.keys(shs).sort().map(k=>`<option value="${esc(k)}">${esc(k)} (${shs[k]})</option>`).join(''); sel.value=shs[fSh]?fSh:''; fSh=sel.value; };
-  d.querySelectorAll('.mgfb').forEach(b=>b.onclick=()=>{ d.querySelectorAll('.mgfb').forEach(x=>x.classList.toggle('on',x===b)); fBy=b.dataset.by; fillSh(); applyF(); });
-  if($('mgSh')){ fillSh(); $('mgSh').onchange=e=>{ fSh=e.target.value; applyF(); }; }
-  d.querySelectorAll('[data-show]').forEach(b=>b.onclick=()=>{ d.querySelectorAll('[data-show]').forEach(x=>x.classList.toggle('on',x===b)); fShow=b.dataset.show; fillSh(); applyF(); });
+    if(t.id==='mgAll'){ d.querySelectorAll('#mgL .mgc:not([hidden]):not(.mgm) input[type=checkbox]').forEach(x=>x.checked=t.checked); }
+    else if(t.dataset.s!=null&&t.dataset.c==null){ d.querySelectorAll(`tr input[data-s="${t.dataset.s}"]`).forEach(x=>x.checked=t.checked); }   // group box = all its combos
+    upd(); };
+  refresh(); upd();
   $('dlgX').onclick=$('dlgN').onclick=()=>{ $('dlgW').hidden=true; };
-  d.querySelectorAll('[data-un]').forEach(b=>b.onclick=()=>{ unmerge([ 'MG:'+b.dataset.un ]); openMerge({all:fShow==='all'}); });
+  const reopen=fresh=>openMerge({all:true,by:[...SB],fresh});
+  d.querySelectorAll('[data-un]').forEach(b=>b.onclick=()=>{ unmerge([ 'MG:'+b.dataset.un ]); openMerge({all:fShow==='all',by:[...SB]}); });
   d.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>{ const gid=b.dataset.add, v=C.get('MG:'+gid), add=addPick(gid); if(!v||!add.length) return;
     const q=v.q+add.reduce((s,c)=>s+c.q,0), mc=LPEngine.mcKey(q); if(!MCS.includes(mc)) return;
     const all=[v,...add]; if(all.some(c=>(S.plan[c.mc]||[]).includes(c.id))) for(const c of all) if(!(S.plan[c.mc]||[]).includes(c.id)) setPlanDate(c,true);
     MERGE[gid]={ids:[...MERGE[gid].ids,...add.map(c=>c.id)],mc}; for(const c of add) delete PIN[c.id];
-    saveMerge(); savePin(); save(); build(); for(const k of MCS) autoSort(k); save(); refreshView(); toast(`Added ${add.length} to the merged set — ${fmt(Math.round(q))} kg on ${mc} kg MC.`); openMerge({all:true}); });
-  if($('mgOk')) $('mgOk').onclick=()=>{ const P=pick().filter(p=>p.on&&MCS.includes(p.mc)); if(!P.length) return;
-    // confirm first: what will finally be merged
+    saveMerge(); savePin(); save(); build(); for(const k of MCS) autoSort(k); save(); refreshView(); toast(`Added ${add.length} to the merged set — ${fmt(Math.round(q))} kg on ${mc} kg MC.`); reopen(gid); });
+  $('mgOk').onclick=()=>{ const P=pick().filter(p=>p.cs.length>=2&&MCS.includes(p.mc)); if(!P.length) return;
     const nb=P.reduce((a,p)=>a+p.cs.reduce((x,c)=>x+c.m.length,0),0), nc=P.reduce((a,p)=>a+p.cs.length,0);
     const cf=document.createElement('div'); cf.className='mgcf';
     cf.innerHTML=`<div class="mgcfb"><h4>Merge ${P.length} set${P.length>1?'s':''}?</h4>
       <div class="mgcfs"><span><b>${nc}</b> combos</span><span><b>${nb}</b> batches</span><span><b>${nc}</b> loads → <b>${P.length}</b></span><span>saves <b>${nc-P.length}</b> load${nc-P.length===1?'':'s'}</span></div>
-      <div class="mgcfl">${P.map(p=>`<div><b>${esc(p.cs[0].body.by)}</b> · ${esc(p.cs[0].body.sh)} — ${p.cs.length} combos · ${fmt(Math.round(p.q))} kg → <b>${p.mc} kg MC</b> (${(p.q/CAP[p.mc]*100).toFixed(0)}%)</div>`).join('')}</div>
+      <div class="mgcfl">${P.map(p=>`<div><b>${esc(BY(p.cs[0]))}</b> · ${esc(p.cs[0].body.sh)} — ${p.cs.length} combos · ${loadTxt(p)}</div>`).join('')}</div>
       <div class="dlgb" style="justify-content:flex-end;gap:8px"><button class="hb2" id="mgBack">Back</button><button class="okb" id="mgGo">Confirm merge</button></div></div>`;
     d.appendChild(cf); $('mgBack').onclick=()=>cf.remove(); $('mgGo').focus();
-    $('mgGo').onclick=()=>{ cf.remove(); doMerge(P); }; };
-  const doMerge=P=>{ let n=0;
-    for(const p of P){ const gid=Date.now().toString(36)+(n++); MERGE[gid]={ids:p.cs.map(c=>c.id),mc:p.mc};
-      // a member already planned keeps the set planned: give every batch of the set the plan date
-      const anyPl=p.cs.some(c=>(S.plan[c.mc]||[]).includes(c.id)); if(anyPl) for(const c of p.cs) if(!(S.plan[c.mc]||[]).includes(c.id)) setPlanDate(c,true); }
-    saveMerge(); save(); build(); for(const k of MCS) autoSort(k); save(); $('dlgW').hidden=true; refreshView(); toast(`${P.length} merged set${P.length>1?'s':''} made — each is one batch now.`); };
+    $('mgGo').onclick=()=>{ cf.remove(); let n=0, last='';
+      for(const p of P){ const gid=Date.now().toString(36)+(n++); last=last||gid; MERGE[gid]={ids:p.cs.map(c=>c.id),mc:p.mc};
+        const anyPl=p.cs.some(c=>(S.plan[c.mc]||[]).includes(c.id)); if(anyPl) for(const c of p.cs) if(!(S.plan[c.mc]||[]).includes(c.id)) setPlanDate(c,true); }
+      saveMerge(); save(); build(); for(const k of MCS) autoSort(k); save(); refreshView(); toast(`${P.length} merged set${P.length>1?'s':''} made — each is one batch now.`); reopen(last); }; };
 }
 // ---------- right-click › Merge with… : pick partners for this combo (same color by default; buyer / fabric / color filters) ----------
 function openMergeWith(ids){
