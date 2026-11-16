@@ -508,7 +508,7 @@ header.fover::after{background:rgba(239,230,235,.92)}
       <button class="qi" data-act="export"><span>⤓</span>Export File<em>Loading plan with your plan</em></button>
       <button class="qi" data-act="update"><span>⟳</span>Update File<em>Loading plan + DOC 280+217 + Line Plan</em></button>
       <div class="qsep"></div><a class="qi" href="index.html"><span>←</span>SQ Hues Tools</a>
-      <div class="qver">Version 16 Nov 11:59</div>
+      <div class="qver">Version 16 Nov 12:35</div>
     </div>
   </div>
   <div class="hcol">
@@ -2356,6 +2356,10 @@ $('xls').addEventListener('click',async()=>{
   for(const b in D.batches){ const f=D.batches[b].fix280; if(!f) continue; const r=row(b); if(r) Object.assign(r,f); }   // Buyer / Shade / Fabric as in the 280 sheet
   for(const b in S.cx){const r=row(b); if(!r) continue; for(const L in S.cx[b]) if(!NOEDIT[L]){ const fv=S.cx[b][L]; r[L]=String(fv).startsWith('=')?{f:fxExcel(fv),v:(()=>{const t=cellText(L,D.batches[b]);return isNumTxt(t)?+String(t).replace(/,/g,''):t;})()}:cellOut(L,fv); } }
   for(const b in S.ed){const e=S.ed[b], r=row(b); if(!r) continue; if('pd' in e) r.N=e.pd||''; if('rmk' in e) r.Q=e.rmk; if('hold' in e) r.R=e.hold;}
+  { const PTAG=/\s*(?:\/\s*)?(?:Over 102% \+|Ex-)[\d,]+ ?kg/gi;   // problematic batches: short reason in Q (Remarks), e.g. "Ex-128 kg"
+    for(const c of C.values()){ const over={}; for(const q of overRows(c)) over[q.x.b]=Math.ceil(q.tot-q.bal);
+      for(const x of c.p){ const base=String((S.ed[x.b]&&'rmk' in S.ed[x.b])?S.ed[x.b].rmk:(x.rmk||'')); const clean=base.replace(PTAG,'').trim();
+        const nv=over[x.b]?(clean?clean+' / ':'')+`Ex-${over[x.b]} kg`:clean; if(nv!==base.trim()||(over[x.b]&&nv!==base)){ const r=row(x.b); if(r) r.Q=nv; } } } }
   calcLoadDays(); for(const b in D.batches){ const r=D.batches[b].row; if(!r) continue; const v=LDAY[b]&&LDAY[b].d?{date:LDAY[b].d}:''; if(v||(ed[r]&&ed[r].A)){ (ed[r]=ed[r]||{}).BH=v; } }
   ed[3]=Object.assign(ed[3]||{},{BH:'Load Date'});
   if(!Object.keys(ed).length){toast('Nothing to write yet — plan a combo or type a remark first.');return;}
