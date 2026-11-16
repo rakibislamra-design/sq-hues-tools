@@ -368,7 +368,9 @@ header.fover::after{background:rgba(239,230,235,.92)}
 .urep .uh{font-weight:600;color:#3c7a5a;margin-bottom:4px}.urep ul{margin:0 0 8px;padding-left:18px;columns:2;column-gap:24px;font-size:12px}.urep li{margin:1px 0}.uw{color:#AF4F5A}
 #dlg .okb{background:#664356;color:#fff;border:0;border-radius:6px;padding:6px 16px;font:600 13px var(--f-ui);cursor:pointer}#dlg .okb:disabled{opacity:.4;cursor:default}
 #dlg .dlgb{display:flex;justify-content:space-between;align-items:center;gap:10px}
-#rtip{position:fixed;z-index:60;pointer-events:none;background:#fff;border:1px solid #D9CBD2;border-left:3px solid #664356;border-radius:6px;box-shadow:0 6px 18px rgba(40,20,30,.16);padding:6px 10px;font:12px var(--f-ui);color:#1F1F1F;max-width:420px}
+#rtip{position:fixed;z-index:60;pointer-events:none;background:#fff;border:1px solid #D9CBD2;border-left:3px solid #664356;border-radius:6px;box-shadow:0 6px 18px rgba(40,20,30,.16);padding:6px 10px;font:12px var(--f-ui);color:#1F1F1F;max-width:620px}
+#rtip .rpb{display:block;border-top:1px solid #EEE6EA;margin-top:5px;padding-top:5px;color:#AF4F5A}#rtip .rpb b{display:block;font-weight:700;color:#AF4F5A}#rtip .rpb em{font-style:normal;font-size:11px;color:var(--muted)}
+#rtip .rpt{border-collapse:collapse;margin-top:3px;font-size:11.5px}#rtip .rpt th{font-weight:600;color:var(--muted);font-size:10.5px;padding:1px 5px;text-align:right;white-space:nowrap}#rtip .rpt td{padding:1px 5px;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}#rtip .rpt td:first-child{text-align:left}#rtip .rpt td.bad{color:#AF4F5A;font-weight:700}#rtip .rpn{display:block;font-size:10.5px;color:var(--muted);margin-top:3px}
 #rtip div{display:flex;gap:10px;align-items:baseline;padding:1px 0}#rtip span{color:var(--muted);font-size:11px;min-width:76px}#rtip b{font-weight:600}#rtip b.lp{color:#664356}
 .qver{font-size:10.5px;color:var(--muted);padding:6px 10px 2px;text-align:right}
 #dlg .holdx{background:#F7E9EA;color:#8A3540;border-radius:6px;padding:7px 10px;font-size:12.5px;font-weight:600;margin:6px 0}
@@ -506,7 +508,7 @@ header.fover::after{background:rgba(239,230,235,.92)}
       <button class="qi" data-act="export"><span>⤓</span>Export File<em>Loading plan with your plan</em></button>
       <button class="qi" data-act="update"><span>⟳</span>Update File<em>Loading plan + DOC 280+217 + Line Plan</em></button>
       <div class="qsep"></div><a class="qi" href="index.html"><span>←</span>SQ Hues Tools</a>
-      <div class="qver">Version 16 Nov 10:07</div>
+      <div class="qver">Version 16 Nov 11:24</div>
     </div>
   </div>
   <div class="hcol">
@@ -2201,6 +2203,8 @@ document.addEventListener('keydown',e=>{
 const isReady=c=>c.p.every(x=>x.kn==='KOK'&&String(x.ld||'').trim()&&!isHold(x));
 // block orders (Buyer Name starts with "Block", e.g. Block-Lidl) never go into Auto plan — they are planned by hand
 const isBlock=c=>c.p.some(x=>/^\s*block\b/i.test(String(x.by||'')));
+function overRows(c){ const r=[]; if(!D.itemsKg) return r; const skip=new Set(c.m); const seen={};
+  for(const x of c.p){ const it=D.itemsKg[x.ik]; if(!it) continue; const pl=plannedKg(x.ik,skip)+(seen[x.ik]||0); const tot=it[1]+pl+(x.q||0); seen[x.ik]=(seen[x.ik]||0)+(x.q||0); if(tot>it[0]+OVTOL) r.push({x,bal:it[0],wip:it[1],pl,tot}); } return r; }
 function overReq(c,extra){ if(!D.itemsKg) return false; const skip=new Set(c.m); const seen={};
   for(const x of c.p){ const it=D.itemsKg[x.ik]; if(!it) continue; const tot=it[1]+plannedKg(x.ik,skip)+((extra||{})[x.ik]||0)+(seen[x.ik]||0)+(x.q||0); seen[x.ik]=(seen[x.ik]||0)+(x.q||0); if(tot>it[0]+OVTOL) return true; } return false; }
 $('autoPlan').addEventListener('click',()=>{
@@ -2243,7 +2247,9 @@ $('qf').addEventListener('click',e=>{ if(e.target.closest('#mgBtn')){ openMerge(
 // hover a row: small card with Customer PO and Line Plan date
 (()=>{ const tp=document.createElement('div'); tp.id='rtip'; tp.hidden=true; document.body.appendChild(tp); let cur=null, t=null;
   const show=(cb,e)=>{ const c=C.get(cb.dataset.id); if(!c) return; const po=[...new Set(c.p.map(x=>x.po).filter(Boolean))], lp=[...new Set(c.p.map(x=>dshort(x.lp)||x.lpt).filter(Boolean))];
-    tp.innerHTML=`<div><span>Customer PO</span><b>${esc(po.join(' / ')||'–')}</b></div><div><span>Line Plan</span><b class="${lp.length?'lp':''}">${esc(lp.join(' / ')||'–')}</b></div>${(()=>{const dl=[...new Set(c.p.map(x=>dshort(x.dl)).filter(Boolean))];return dl.length?`<div><span>DL</span><b class="lp">${esc(dl.join(' / '))}</b></div>`:'';})()}`; tp.hidden=false; place(e); };
+    tp.innerHTML=`<div><span>Customer PO</span><b>${esc(po.join(' / ')||'–')}</b></div><div><span>Line Plan</span><b class="${lp.length?'lp':''}">${esc(lp.join(' / ')||'–')}</b></div>${(()=>{const dl=[...new Set(c.p.map(x=>dshort(x.dl)).filter(Boolean))];return dl.length?`<div><span>DL</span><b class="lp">${esc(dl.join(' / '))}</b></div>`:'';})()}${probTip(c)}`; tp.hidden=false; place(e); };
+  const probTip=c=>{ const R=overRows(c); if(!R.length) return ''; const pl=(S.plan[c.mc]||[]).includes(c.id);
+    return `<div class="rpb"><b>Problematic — over 102% Req Qty Kg</b><em>${pl?'Planned, and the order item is already over':'Adding it would take the order item over'}</em></div><table class="rpt"><tr><th></th><th>102% Req</th><th>In process</th><th>Planned</th><th>This batch</th><th>Total</th><th>Over by</th></tr>${R.map(r=>`<tr><td>${r.x.t==='G'?'Gusset':'Body'} · ${esc(r.x.sh||'')}</td><td>${f0(r.bal)}</td><td>${f0(r.wip)}</td><td>${f0(r.pl)}</td><td>${f0(r.x.q)}</td><td>${f0(r.tot)}</td><td class="bad">${f0(r.tot-r.bal)}</td></tr>`).join('')}</table><div class="rpn">Order item: ${esc([...new Set(R.map(r=>r.x.ik))].join(' / '))} · up to ${OVTOL} kg over is allowed</div>`; };
   const place=e=>{ const w=tp.offsetWidth,h=tp.offsetHeight; let x=e.clientX+14, y=e.clientY-h-12; if(y<6) y=e.clientY+18; if(x+w>innerWidth-6) x=innerWidth-w-6; tp.style.left=x+'px'; tp.style.top=y+'px'; };
   $('list').addEventListener('mousemove',e=>{ const cb=e.target.closest('.cb[data-id]'); if(cb!==cur){ cur=cb; tp.hidden=true; clearTimeout(t); if(cb) t=setTimeout(()=>show(cb,e),250); return; } if(!tp.hidden) place(e); });
   $('list').addEventListener('mouseleave',()=>{ cur=null; clearTimeout(t); tp.hidden=true; });
