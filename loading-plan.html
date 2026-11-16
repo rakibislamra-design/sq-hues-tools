@@ -508,7 +508,7 @@ header.fover::after{background:rgba(239,230,235,.92)}
       <button class="qi" data-act="export"><span>⤓</span>Export File<em>Loading plan with your plan</em></button>
       <button class="qi" data-act="update"><span>⟳</span>Update File<em>Loading plan + DOC 280+217 + Line Plan</em></button>
       <div class="qsep"></div><a class="qi" href="index.html"><span>←</span>SQ Hues Tools</a>
-      <div class="qver">Version 16 Nov 11:24</div>
+      <div class="qver">Version 16 Nov 11:59</div>
     </div>
   </div>
   <div class="hcol">
@@ -547,6 +547,28 @@ header.fover::after{background:rgba(239,230,235,.92)}
 
 <script type="application/json" id="seed">{"label":"No file loaded","data":{"batches":{},"combos":[],"itemsKg":{}}}</script>
 <script>
+// Date style helper: gives a cell style that shows a date (d-mmm), cloning the cell's own style (font, border, fill) when it is not a date format
+function DateStyler(xml) {
+  const none = { get: s => s, changed: () => false, xml: () => xml };
+  const m = /<cellXfs\b([^>]*)>([\s\S]*?)<\/cellXfs>/.exec(xml || ''); if (!m) return none;
+  const xfs = m[2].match(/<xf\b[^>]*?(?:\/>|>[\s\S]*?<\/xf>)/g) || [];
+  const fmts = {}; (xml.match(/<numFmt\b[^>]*\/>/g) || []).forEach(t => { const id = /numFmtId="(\d+)"/.exec(t), c = /formatCode="([^"]*)"/.exec(t); if (id && c) fmts[id[1]] = c[1]; });
+  const isDate = id => { id = +id; if ((id >= 14 && id <= 22) || (id >= 45 && id <= 47)) return true; const c = fmts[id]; if (c == null) return false; const s = c.replace(/&quot;[^&]*&quot;|"[^"]*"|\[[^\]]*\]|\\./g, ''); return /[dy]/i.test(s) && !/[#0]/.test(s); };
+  let fid = Object.keys(fmts).find(k => /^d+-m+m+$/i.test(fmts[k].replace(/\\/g, ''))), addF = false;
+  const cache = {}; let ch = false;
+  const get = s => { s = s == null ? '0' : String(s); if (s in cache) return cache[s]; const xf = xfs[+s]; if (!xf) return (cache[s] = s);
+    const nf = (/numFmtId="(\d+)"/.exec(xf) || [0, '0'])[1]; if (isDate(nf)) return (cache[s] = s);
+    if (!fid) { fid = String(Math.max(163, ...Object.keys(fmts).map(Number)) + 1); fmts[fid] = 'd-mmm'; addF = true; }
+    let nx = /numFmtId="/.test(xf) ? xf.replace(/numFmtId="\d+"/, `numFmtId="${fid}"`) : xf.replace(/^<xf\b/, `<xf numFmtId="${fid}"`);
+    nx = /applyNumberFormat="/.test(nx) ? nx.replace(/applyNumberFormat="[^"]*"/, 'applyNumberFormat="1"') : nx.replace(/^<xf\b/, '<xf applyNumberFormat="1"');
+    xfs.push(nx); ch = true; return (cache[s] = String(xfs.length - 1)); };
+  const out = () => { if (!ch) return xml; let x = xml.replace(m[0], `<cellXfs${m[1].replace(/\scount="\d+"/, '')} count="${xfs.length}">${xfs.join('')}</cellXfs>`);
+    if (addF) { const t = `<numFmt numFmtId="${fid}" formatCode="d-mmm"/>`;
+      if (/<numFmts\b/.test(x)) x = x.replace(/<numFmts\b([^>]*)>([\s\S]*?)<\/numFmts>/, (a, at, body) => `<numFmts${at.replace(/\scount="\d+"/, '')} count="${(body.match(/<numFmt\b/g) || []).length + 1}">${body}${t}</numFmts>`);
+      else x = x.replace(/(<styleSheet\b[^>]*>)/, `$1<numFmts count="1">${t}</numFmts>`); }
+    return x; };
+  return { get, changed: () => ch, xml: out };
+}
 /* MC Loading Planner engine: body/gusset rules (same as Dye Q Combo Planner) applied to the Loading plan Master Sheet. */
 (function (root) {
   'use strict';
@@ -886,7 +908,7 @@ header.fover::after{background:rgba(239,230,235,.92)}
   }
   // plan: [{mc:'750', rows:[original row numbers in SL order]}]  edits: {origRow:{A,B,N,Q,R}}
   async function writePlan(JSZip, input, edits, plan = [], sheetName = 'Master Sheet', firstRow = 4) {
-    const zip = await JSZip.loadAsync(input);
+    const zip = await JSZip.loadAsync(input); const DS = DateStyler(zip.file('xl/styles.xml') ? await zip.file('xl/styles.xml').async('string') : '');
     const sp = await sheetPaths(zip); if (!sp[sheetName]) throw new Error('No "' + sheetName + '" sheet in this file.');
     const sstFile = zip.file('xl/sharedStrings.xml'); const sst = parseSST(sstFile ? await sstFile.async('string') : '');
     const path = sp[sheetName].path; let x = await zip.file(path).async('string');
@@ -946,9 +968,10 @@ header.fover::after{background:rgba(239,230,235,.92)}
       });
       let attrs = R.attrs;
       const e = E[R.r]; if (e) { let bhS = null; const e2 = Object.assign({}, e);
-        if (e2.BH && typeof e2.BH === 'object' && 'd' in e2.BH) { const st = new RegExp(`<c r="(?:BF|N)${R.r}"[^>]*?\\ss="(\\d+)"`).exec(R.inner); bhS = st ? st[1] : null; e2.BH = e2.BH.d; }
+        if (e2.BH && typeof e2.BH === 'object' && 'd' in e2.BH) { const st = new RegExp(`<c r="(?:BF|N)${R.r}"[^>]*?\\ss="(\\d+)"`).exec(R.inner); bhS = st ? DS.get(st[1]) : null; e2.BH = e2.BH.d; }
         inner = patchRow(inner, dst, e2);
         if (bhS) inner = inner.replace(new RegExp(`<c r="BH${dst}"( s="\\d+")?`), `<c r="BH${dst}" s="${bhS}"`); if (e.N) attrs = attrs.replace(/\shidden="1"/, ''); }
+      inner = inner.replace(new RegExp(`<c r="BI${dst}"((?:\\s(?!t=)[a-z]+="[^"]*")*)>(<v>\\d+(?:\\.\\d+)?</v>)`), (m0, at, v) => { const s0 = (/\ss="(\d+)"/.exec(at) || [])[1]; const s1 = DS.get(s0); return `<c r="BI${dst}"${s0 != null ? at.replace(/\ss="\d+"/, ` s="${s1}"`) : at + ` s="${s1}"`}>${v}`; });
       if (R.r >= firstRow && R.r <= lastRow) {
         if (sepOf.has(R.r)) attrs = attrs.replace(/\shidden="1"/, '');
         else if (GREEN && PLAIN && GREEN !== PLAIN) { const want = hasN(dst, inner) ? GREEN : PLAIN; inner = inner.replace(new RegExp(`<c r="A${dst}"( s="\\d+")?`), `<c r="A${dst}" s="${want}"`); }
@@ -965,7 +988,7 @@ header.fover::after{background:rgba(239,230,235,.92)}
     }
     let headOut = head;
     if (Object.values(E).some(o => 'BH' in o)) headOut = headOut.replace(/<col min="(\d+)" max="(\d+)"([^>]*?)\shidden="1"([^>]*?)\/>/g, (m0, mn, mx, a1, a2) => (+mn <= 60 && +mx >= 60 && +mn === +mx) ? `<col min="${mn}" max="${mx}"${a1}${a2}/>` : m0);
-    zip.file(path, headOut + nb + tail);
+    zip.file(path, headOut + nb + tail); if (DS.changed()) zip.file('xl/styles.xml', DS.xml());
     // drop calcChain (cell positions changed); Excel rebuilds it
     if (zip.file('xl/calcChain.xml')) {
       zip.remove('xl/calcChain.xml');
@@ -1117,7 +1140,7 @@ header.fover::after{background:rgba(239,230,235,.92)}
 
     // --- Loading plan file
     log('Opening the Loading plan file…');
-    const lz = await JSZip.loadAsync(lpBuf); const lsp = await sheetPaths(lz);
+    const lz = await JSZip.loadAsync(lpBuf); const lsp = await sheetPaths(lz); const DS = DateStyler(lz.file('xl/styles.xml') ? await lz.file('xl/styles.xml').async('string') : '');
     if (!lsp['Master Sheet'] || !lsp['280']) throw new Error('The Loading plan file needs a "Master Sheet" and a "280" sheet.');
     let sstXml = lz.file('xl/sharedStrings.xml') ? await lz.file('xl/sharedStrings.xml').async('string') : '';
     const lsst = parseSST(sstXml);
@@ -1361,13 +1384,13 @@ header.fover::after{background:rgba(239,230,235,.92)}
       const cells = []; const done = new Set();
       for (const c of d.src.cells) {
         const ref = c.col + nr, s = styleOf(c.attrs);
-        if (want[c.col]) { cells.push(cellXml(ref, s, want[c.col].v, want[c.col].f)); done.add(c.col); continue; }
+        if (want[c.col]) { cells.push(cellXml(ref, c.col === 'BI' && want.BI.v !== '' ? DS.get(s) : s, want[c.col].v, want[c.col].f)); done.add(c.col); continue; }
         if (d.isNew) { cells.push(`<c r="${ref}"${s != null ? ` s="${s}"` : ''}/>`); continue; }
         const f = formulaOf(c, d.src.r);
         if (f != null) { const nf = shiftF(f, nr - d.src.r, 0); const inner = (c.inner || '').replace(/<f\b[^>]*?(?:\/>|>[^<]*<\/f>)/, `<f>${xesc(nf)}</f>`); cells.push(`<c r="${ref}"${c.attrs}>${inner}</c>`); }
         else cells.push(c.inner == null ? `<c r="${ref}"${c.attrs}/>` : `<c r="${ref}"${c.attrs}>${c.inner}</c>`);
       }
-      for (const k of Object.keys(want).filter(k => !done.has(k) && !d.src.cells.some(c => c.col === k))) { const sty = k === 'BI' ? styleOf((d.src.cells.find(c => c.col === 'BF') || d.src.cells.find(c => c.col === 'N') || {}).attrs) : null; cells.push(cellXml(k + nr, sty, want[k].v, want[k].f)); }
+      for (const k of Object.keys(want).filter(k => !done.has(k) && !d.src.cells.some(c => c.col === k))) { const sty = k === 'BI' ? DS.get(styleOf((d.src.cells.find(c => c.col === 'BF') || d.src.cells.find(c => c.col === 'N') || {}).attrs)) : null; cells.push(cellXml(k + nr, sty, want[k].v, want[k].f)); }
       cells.sort((p, q) => cn(/r="([A-Z]+)/.exec(p)[1]) - cn(/r="([A-Z]+)/.exec(q)[1]));
       const attrs = d.src.attrs.replace(/\br="\d+"/, `r="${nr}"`).replace(/\sspans="[^"]*"/, '');
       rowsXml.push(`<row${attrs}>${cells.join('')}</row>`);
@@ -1386,7 +1409,7 @@ header.fover::after{background:rgba(239,230,235,.92)}
 
     // --- assemble the workbook
     log('Saving the updated workbook…');
-    lz.file(mPath, newMaster); if (docBuf) lz.file(lsp['280'].path, new280);
+    lz.file(mPath, newMaster); if (DS.changed()) lz.file('xl/styles.xml', DS.xml()); if (docBuf) lz.file(lsp['280'].path, new280);
     if (lz.file('xl/calcChain.xml')) {
       lz.remove('xl/calcChain.xml');
       const rel = 'xl/_rels/workbook.xml.rels'; lz.file(rel, (await lz.file(rel).async('string')).replace(/<Relationship\b[^>]*calcChain[^>]*\/>/g, ''));
@@ -1690,11 +1713,11 @@ let BMC={};
 const cval=(c,k)=>k==='s'?[c.can?'Can dye':'Not ready']:c.p.map(x=>String(cellText(k,x)||'(blank)'));
 // quick type filters (any of the chosen types)
 let QF=new Set(store.get('mclp-qf')||[]);
-const QFDEF=[['FOC','FOC',c=>c.p.some(x=>/FOC/i.test((x.pt||'')+' '+(x.cat||''))||/raw\s*bought/i.test(x.by||''))],['HANGER','Hanger',c=>c.p.some(x=>/HANGER/i.test((x.pt||'')+' '+(x.cat||'')))],['PSI','PSI',c=>c.p.some(x=>/\bPSI\b/i.test((x.pt||'')+' '+(x.cat||'')+' '+(x.n1||'')))],['AOP','AOP',c=>c.p.some(x=>/AOP/i.test((x.sh||'')+' '+(x.pt||'')))],['LP','Line Plan',c=>c.p.some(x=>x.lp||x.lpt||/LINE\s*PLAN/i.test(x.pt||''))],['URG','Urgent',c=>c.p.some(x=>/URGENT/i.test(x.pt||''))],['NKQ','Not in KQ',c=>c.p.some(x=>/not\s*in\s*kq/i.test((x.cat||'')+' '+(x.rmk||'')))],['LDP','LD Pending',c=>c.p.some(x=>!String(x.ld||'').trim())],['PROB','Problematic Batch',c=>overReq(c)]];
+const QFDEF=[['FOC','FOC',c=>c.p.some(x=>/FOC/i.test((x.pt||'')+' '+(x.cat||''))||/raw\s*bought/i.test(x.by||''))],['HANGER','Hanger',c=>c.p.some(x=>/HANGER/i.test((x.pt||'')+' '+(x.cat||'')))],['PSI','PSI',c=>c.p.some(x=>/\bPSI\b/i.test((x.pt||'')+' '+(x.cat||'')+' '+(x.n1||'')))],['AOP','AOP',c=>c.p.some(x=>/AOP/i.test((x.sh||'')+' '+(x.pt||'')))],['LP','Line Plan',c=>c.p.some(x=>x.lp||x.lpt||/LINE\s*PLAN/i.test(x.pt||''))],['URG','Urgent',c=>c.p.some(x=>/URGENT/i.test(x.pt||''))],['PIN','📌 Pinned',c=>!!PIN[c.id]],['NKQ','Not in KQ',c=>c.p.some(x=>/not\s*in\s*kq/i.test((x.cat||'')+' '+(x.rmk||'')))],['LDP','LD Pending',c=>c.p.some(x=>!String(x.ld||'').trim())],['PROB','Problematic Batch',c=>overReq(c)]];
 function qfPass(c){ if(!QF.size) return true; for(const [k,,f] of QFDEF) if(QF.has(k)&&f(c)) return true; return false; }
 function drawQF(){ const pool=[...C.values()].filter(c=>cur==='ALL'||c.mc===cur);
   const nSug=mergeSuggest().length;
-  $('qf').innerHTML=QFDEF.map(([k,n,f])=>{ const cnt=pool.filter(f).length; return `${k==='NKQ'?'<span class="qgap"></span>':''}<button class="qfc${QF.has(k)?' on':''}${k==='PROB'||k==='LDP'||k==='NKQ'?' prob':''}" data-q="${k}" title="${k==='NKQ'?'Knit done in 280 but no Greige from and no knit qty — not in the knit queue':k==='LDP'?'Combos with no LD / Matching given':k==='PROB'?'Combos that take their order item above the 102% Req Qty Kg (planned ones already over, not planned ones if added)':'Show only '+n+' combos'} — click again to clear · Ctrl+click to add more">${n}<small>${cnt}</small></button>`; }).join('')+`<span class="qgap"></span><button class="qfc mgb" id="mgBtn" title="Same buyer + shade + fabrication that fit one machine together">⧉ Merge batches<small>${nSug}</small></button>`; }
+  $('qf').innerHTML=QFDEF.map(([k,n,f])=>{ const cnt=pool.filter(f).length; return `${k==='NKQ'?'<span class="qgap"></span>':''}<button class="qfc${QF.has(k)?' on':''}${k==='PROB'||k==='LDP'||k==='NKQ'?' prob':''}" data-q="${k}" title="${k==='NKQ'?'Knit done in 280 but no Greige from and no knit qty — not in the knit queue':k==='LDP'?'Combos with no LD / Matching given':k==='PIN'?'Pinned combos — their SL is kept by Auto-order':k==='PROB'?'Combos that take their order item above the 102% Req Qty Kg (planned ones already over, not planned ones if added)':'Show only '+n+' combos'} — click again to clear · Ctrl+click to add more">${n}<small>${cnt}</small></button>`; }).join('')+`<span class="qgap"></span><button class="qfc mgb" id="mgBtn" title="Same buyer + shade + fabrication that fit one machine together">⧉ Merge batches<small>${nSug}</small></button>`; }
 function passes(c,skip){ if(!qfPass(c)) return false; for(const k in FILT){ if(k===skip) continue; const set=FILT[k]; if(!set) continue; if(!(k==='s'||COLS.some(cc=>cc.k===k))) continue; if(!cval(c,k).some(v=>set.includes(v))) return false; } return true; }
 const sp=(v,cls)=>`<span${cls?' class="'+cls+'"':''} title="${esc(v)}">${esc(v)}</span>`;
 // Load Day for planned batches: SL order ÷ (MCs × batches per MC per day), working days from the plan start; every planned batch gets its date
