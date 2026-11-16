@@ -371,6 +371,7 @@ header.fover::after{background:rgba(239,230,235,.92)}
 #rtip{position:fixed;z-index:60;pointer-events:none;background:#fff;border:1px solid #D9CBD2;border-left:3px solid #664356;border-radius:6px;box-shadow:0 6px 18px rgba(40,20,30,.16);padding:6px 10px;font:12px var(--f-ui);color:#1F1F1F;max-width:620px}
 #rtip .rpb{display:block;border-top:1px solid #EEE6EA;margin-top:5px;padding-top:5px;color:#AF4F5A}#rtip .rpb b{display:block;font-weight:700;color:#AF4F5A}#rtip .rpb em{font-style:normal;font-size:11px;color:var(--muted)}
 #rtip .rpt{border-collapse:collapse;margin-top:3px;font-size:11.5px}#rtip .rpt th{font-weight:600;color:var(--muted);font-size:10.5px;padding:1px 5px;text-align:right;white-space:nowrap}#rtip .rpt td{padding:1px 5px;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}#rtip .rpt td:first-child{text-align:left}#rtip .rpt td.bad{color:#AF4F5A;font-weight:700}#rtip .rpn{display:block;font-size:10.5px;color:var(--muted);margin-top:3px}
+#dlg .mgm{background:#FAF7F9;border-color:#C9B5C0}.mgtag{display:inline-block;background:#8C6A7C;color:#fff;border-radius:10px;padding:0 7px;font:600 11px var(--f-ui)}#dlg .mgrm{color:#664356;font-weight:600}.mgm .lnk{font-size:12px}.mgshow{margin-right:8px}.mgshow .hb2{font-size:11.5px}.mgshow small{opacity:.75}.mwshow{margin-left:auto;margin-right:0}#dlg tr.mwm td{background:#F6EFF3}
 #dlg td.pox{font-size:11.5px;white-space:nowrap}
 #rtip div{display:flex;gap:10px;align-items:baseline;padding:1px 0}#rtip span{color:var(--muted);font-size:11px;min-width:76px}#rtip b{font-weight:600}#rtip b.lp{color:#664356}
 .qver{font-size:10.5px;color:var(--muted);padding:6px 10px 2px;text-align:right}
@@ -509,7 +510,7 @@ header.fover::after{background:rgba(239,230,235,.92)}
       <button class="qi" data-act="export"><span>⤓</span>Export File<em>Loading plan with your plan</em></button>
       <button class="qi" data-act="update"><span>⟳</span>Update File<em>Loading plan + DOC 280+217 + Line Plan</em></button>
       <div class="qsep"></div><a class="qi" href="index.html"><span>←</span>SQ Hues Tools</a>
-      <div class="qver">Version 16 Nov 17:14</div>
+      <div class="qver">Version 16 Nov 20:51</div>
     </div>
   </div>
   <div class="hcol">
@@ -1491,12 +1492,15 @@ function mergeSuggest(){ const groups=new Map();
 function openMerge(){
   const sug=mergeSuggest(); const d=$('dlg'); d.className='wide';
   const cur0=Object.entries(MERGE).map(([gid,g])=>({gid,v:C.get('MG:'+gid)})).filter(o=>o.v);
+  const mgBox=o=>{ const v=o.v, L=S.plan[v.mc]||[], sl=L.indexOf(v.id), st=sl>=0?`Merged · SL ${sl+1}`+(v.body.pd?' · '+dshort(v.body.pd):''):'Merged · not planned';
+    return `<div class="mgc mgm" hidden data-by="${esc(String(v.body.by||'').trim())}" data-sh="${esc(String(v.body.sh||'').trim())}"><div class="mgh"><span><span class="mgtag">Merged</span> <b>${esc(v.body.by)}</b> · ${esc(v.body.sh)} · <span class="mut">${esc([...new Set(v.p.map(x=>x.fb))].join(' + '))}</span></span><span class="mgt">${sl>=0?`<b>SL ${sl+1}</b> · `:''}${v.merged.length} combos · <b>${fmt(Math.round(v.q))} kg</b> on <b>${v.mc} kg MC</b> (${(v.q/CAP[v.mc]*100).toFixed(0)}%) <button class="lnk" data-un="${o.gid}">Unmerge</button></span></div>
+      <table class="apt"><tr><th></th><th>M/C now</th><th>Batch No</th><th class="num">kg</th><th>LD / Matching</th><th>Plan status</th><th>Customer PO</th></tr>${v.p.map(x=>`<tr><td></td><td class="mcx">${esc(v.mc)}</td><td class="bnx">${esc(x.b)}</td><td class="num">${fmt(Math.round(x.q||0))}</td><td class="ldx">${String(x.ld||'').trim()?esc(x.ld):'<span class="uw">LD pending</span>'}</td><td class="mgrm">${st}</td><td class="pox">${esc(String(x.po||'').trim())}</td></tr>`).join('')}</table></div>`; };
   const row=(c,i,j)=>`<tr><td><input type="checkbox" data-s="${i}" data-c="${j}"></td><td class="mcx">${esc(c.mc)}</td><td class="bnx">${c.m.map(b=>esc(b)).join('<br>')}</td><td class="num">${fmt(Math.round(c.q))}</td><td class="ldx">${c.p.map(x=>String(x.ld||'').trim()?esc(x.ld):'<span class="uw">LD pending</span>').join('<br>')}</td><td>${(S.plan[c.mc]||[]).includes(c.id)?'Planned · SL '+((S.plan[c.mc]||[]).indexOf(c.id)+1)+(c.body.pd?' · '+dshort(c.body.pd):''):'Not planned'}</td><td class="pox">${POS(c)}</td></tr>`;
   d.innerHTML=`<div class="dlgt"><h3 style="color:#664356">⧉ Merge batches</h3><button class="dlgx" id="dlgX" aria-label="Close">×</button></div>
     <div class="note" style="background:#F4EFF2">Same <b>buyer + shade + fabrication</b>, packed together up to a machine's capacity (750 kg MC up to 770 kg). A merged set is <b>one batch</b> in the plan: one SL, one load, on the machine its total kg fits; its priority follows the regular Auto-order rules (best member). Tick the batches you want together (2 or more) — or tick the set to take all of it — then Merge selected.</div>
-    ${sug.length?`<div class="mgf"><span class="mut">Buyer</span><button class="mgfb on" data-by="">All <small>${sug.length}</small></button>${[...new Set(sug.map(g=>String(g.cs[0].body.by||'').trim()))].sort().map(b=>`<button class="mgfb" data-by="${esc(b)}">${esc(b)} <small>${sug.filter(g=>String(g.cs[0].body.by||'').trim()===b).length}</small></button>`).join('')}<span class="mgcol"><span class="mut">Color</span><select id="mgSh"><option value="">All colors</option></select></span><label class="mgall"><input type="checkbox" id="mgAll"> Tick all shown</label></div>`:''}
-    ${sug.length?`<div class="mgl">${sug.map((g,i)=>{ const [by,sh,fb]=[g.cs[0].body.by,g.cs[0].body.sh,g.cs[0].p.map(x=>x.fb).join(' + ')]; return `<div class="mgc" data-i="${i}" data-by="${esc(String(by||'').trim())}" data-sh="${esc(String(sh||'').trim())}"><div class="mgh"><label><input type="checkbox" data-s="${i}"> <b>${esc(by)}</b> · ${esc(sh)} · <span class="mut">${esc(fb)}</span></label><span class="mgt" data-t="${i}">${g.cs.length} → 1 load · <b>${fmt(Math.round(g.q))} kg</b> on <b>${g.mc} kg MC</b> (${g.load.toFixed(0)}%)</span></div>
-      <table class="apt"><tr><th></th><th>M/C now</th><th>Batch No</th><th class="num">kg</th><th>LD / Matching</th><th>Plan status</th><th>Customer PO</th></tr>${g.cs.map((c,j)=>row(c,i,j)).join('')}</table></div>`; }).join('')}</div>`:'<div class="mut" style="padding:14px 4px">No merge suggestions — no two batches of the same buyer, shade and fabrication fit one machine together.</div>'}
+    ${sug.length||cur0.length?`<div class="mgf">${cur0.length?`<span class="vseg mgshow"><button class="hb2" data-show="all">All · incl. merged <small>${cur0.length}</small></button><button class="hb2 on" data-show="wo">Without merged</button></span>`:''}<span class="mut">Buyer</span><button class="mgfb on" data-by="">All <small>${sug.length}</small></button>${[...new Set(sug.map(g=>String(g.cs[0].body.by||'').trim()).concat(cur0.map(o=>String(o.v.body.by||'').trim())))].sort().map(b=>`<button class="mgfb" data-by="${esc(b)}">${esc(b)} <small>${sug.filter(g=>String(g.cs[0].body.by||'').trim()===b).length}</small></button>`).join('')}<span class="mgcol"><span class="mut">Color</span><select id="mgSh"><option value="">All colors</option></select></span><label class="mgall"><input type="checkbox" id="mgAll"> Tick all shown</label></div>`:''}
+    ${sug.length||cur0.length?`<div class="mgl">${cur0.map(mgBox).join('')}${sug.map((g,i)=>{ const [by,sh,fb]=[g.cs[0].body.by,g.cs[0].body.sh,g.cs[0].p.map(x=>x.fb).join(' + ')]; return `<div class="mgc" data-i="${i}" data-by="${esc(String(by||'').trim())}" data-sh="${esc(String(sh||'').trim())}"><div class="mgh"><label><input type="checkbox" data-s="${i}"> <b>${esc(by)}</b> · ${esc(sh)} · <span class="mut">${esc(fb)}</span></label><span class="mgt" data-t="${i}">${g.cs.length} → 1 load · <b>${fmt(Math.round(g.q))} kg</b> on <b>${g.mc} kg MC</b> (${g.load.toFixed(0)}%)</span></div>
+      <table class="apt"><tr><th></th><th>M/C now</th><th>Batch No</th><th class="num">kg</th><th>LD / Matching</th><th>Plan status</th><th>Customer PO</th></tr>${g.cs.map((c,j)=>row(c,i,j)).join('')}</table></div>`; }).join('')}${sug.length?'':'<div class="mut mgnone" style="padding:14px 4px">No new merge suggestions.</div>'}</div>`:'<div class="mut" style="padding:14px 4px">No merge suggestions — no two batches of the same buyer, shade and fabrication fit one machine together.</div>'}
     <div class="mgsel" id="mgSel"></div>
     ${cur0.length?`<details class="mgcur"><summary><b>Merged now (${cur0.length})</b></summary> ${cur0.map(o=>`<span class="mgp">${esc(o.v.body.by)} · ${esc(o.v.body.sh)} · ${o.v.merged.length} combos · ${fmt(Math.round(o.v.q))} kg → ${o.v.mc} kg <button class="lnk" data-un="${o.gid}">Unmerge</button></span>`).join('')}</details>`:''}
     <div class="dlgb"><span class="mut" style="font-size:11.5px" id="mgSum"></span><span><button class="hb2" id="dlgN">Close</button> <button class="okb" id="mgOk"${sug.length?'':' disabled'}>Merge selected</button></span></div>`;
@@ -1511,12 +1515,13 @@ function openMerge(){
     else if(t.dataset.s!=null&&t.dataset.c==null){ d.querySelectorAll(`tr input[data-s="${t.dataset.s}"]`).forEach(x=>x.checked=t.checked); }   // set box = all its batches
     else if(t.dataset.c!=null){ const n=d.querySelectorAll(`tr input[data-s="${t.dataset.s}"]:checked`).length; d.querySelector(`.mgh input[data-s="${t.dataset.s}"]`).checked=n>=2; }   // 2 or more batches ticked = this set merges
     upd(); }; upd();
-  let fBy='', fSh='';
-  const applyF=()=>{ d.querySelectorAll('.mgc').forEach(c=>c.hidden=(!!fBy&&c.dataset.by!==fBy)||(!!fSh&&c.dataset.sh!==fSh)); if($('mgAll')) $('mgAll').checked=false; };
-  const fillSh=()=>{ const sel=$('mgSh'); if(!sel) return; const shs={}; sug.forEach(g=>{ const by=String(g.cs[0].body.by||'').trim(), sh=String(g.cs[0].body.sh||'').trim(); if(!fBy||by===fBy) shs[sh]=(shs[sh]||0)+1; });
+  let fBy='', fSh='', fShow='wo';
+  const applyF=()=>{ d.querySelectorAll('.mgc').forEach(c=>c.hidden=(c.classList.contains('mgm')&&fShow!=='all')||(!!fBy&&c.dataset.by!==fBy)||(!!fSh&&c.dataset.sh!==fSh)); if($('mgAll')) $('mgAll').checked=false; };
+  const fillSh=()=>{ const sel=$('mgSh'); if(!sel) return; const shs={}; sug.map(g=>g.cs[0]).concat(fShow==='all'?cur0.map(o=>o.v):[]).forEach(c0=>{ const by=String(c0.body.by||'').trim(), sh=String(c0.body.sh||'').trim(); if(!fBy||by===fBy) shs[sh]=(shs[sh]||0)+1; });
     sel.innerHTML='<option value="">All colors</option>'+Object.keys(shs).sort().map(k=>`<option value="${esc(k)}">${esc(k)} (${shs[k]})</option>`).join(''); sel.value=shs[fSh]?fSh:''; fSh=sel.value; };
   d.querySelectorAll('.mgfb').forEach(b=>b.onclick=()=>{ d.querySelectorAll('.mgfb').forEach(x=>x.classList.toggle('on',x===b)); fBy=b.dataset.by; fillSh(); applyF(); });
   if($('mgSh')){ fillSh(); $('mgSh').onchange=e=>{ fSh=e.target.value; applyF(); }; }
+  d.querySelectorAll('[data-show]').forEach(b=>b.onclick=()=>{ d.querySelectorAll('[data-show]').forEach(x=>x.classList.toggle('on',x===b)); fShow=b.dataset.show; fillSh(); applyF(); });
   $('dlgX').onclick=$('dlgN').onclick=()=>{ $('dlgW').hidden=true; };
   d.querySelectorAll('[data-un]').forEach(b=>b.onclick=()=>{ unmerge([ 'MG:'+b.dataset.un ]); openMerge(); });
   if($('mgOk')) $('mgOk').onclick=()=>{ const P=pick().filter(p=>p.on&&MCS.includes(p.mc)); if(!P.length) return;
@@ -1541,7 +1546,7 @@ function openMergeWith(ids){
   const baseIds=new Set(base.map(c=>c.id)); const b0=base[0];
   const T=v=>String(v||'').trim(), fab=c=>c.p.map(x=>T(x.fb)).join(' + ');
   const cup0=cupOf(b0); const pool=[...C.values()].filter(c=>!baseIds.has(c.id)&&c.q>0&&(!cup0||cupOf(c)===cup0));   // T33: cup with cup, without cup with without cup
-  const st={by:T(b0.body.by),fb:fab(b0),sh:T(b0.body.sh)}; const OFF=new Set();
+  const st={by:T(b0.body.by),fb:fab(b0),sh:T(b0.body.sh),mg:'all'}; const OFF=new Set(); const nMG=pool.filter(c=>c.merged).length;
   const baseQ=base.reduce((a,c)=>a+c.q,0);
   const d=$('dlg'); d.className='wide mgw';
   const opts=(key,list,cur)=>`<option value="">All</option>`+[...new Set(list)].sort().map(v=>`<option value="${esc(v)}"${v===cur?' selected':''}>${esc(v)}</option>`).join('');
@@ -1549,10 +1554,10 @@ function openMergeWith(ids){
   const draw2=()=>{
     const byL=pool.map(c=>T(c.body.by)), inBy=pool.filter(c=>!st.by||T(c.body.by)===st.by);
     const fbL=inBy.map(fab), inFb=inBy.filter(c=>!st.fb||fab(c)===st.fb), shL=inFb.map(c=>T(c.body.sh));
-    const rows=inFb.filter(c=>!st.sh||T(c.body.sh)===st.sh).sort((a,b)=>cmpAuto(a,b));
+    const rows=inFb.filter(c=>(!st.sh||T(c.body.sh)===st.sh)&&(st.mg==='all'||!c.merged)).sort((a,b)=>cmpAuto(a,b));
     const picked=rows.filter(c=>!OFF.has(c.id)&&PICK.has(c.id));
-    $('mwF').innerHTML=`<label>Buyer <select data-f="by">${opts('by',byL,st.by)}</select></label><label>Fabric <select data-f="fb">${opts('fb',fbL,st.fb)}</select></label><label>Color <select data-f="sh">${opts('sh',shL,st.sh)}</select></label><span class="mut">${rows.length} combo${rows.length===1?'':'s'}</span>`;
-    $('mwT').innerHTML=rows.length?`<table class="apt"><tr><th></th><th>M/C</th><th>Batch No</th><th>Buyer</th><th>Color</th><th class="num">kg</th><th>LD / Matching</th><th>Plan status</th><th>Customer PO</th></tr>${rows.map(c=>`<tr data-id="${esc(c.id)}"><td><input type="checkbox"${PICK.has(c.id)?' checked':''}></td><td class="mcx">${esc(c.mc)}</td><td class="bnx">${c.m.map(esc).join('<br>')}</td><td>${esc(c.body.by)}</td><td>${esc(c.body.sh)}</td><td class="num">${fmt(Math.round(c.q))}</td><td class="ldx">${c.p.map(x=>T(x.ld)?esc(x.ld):'<span class="uw">LD pending</span>').join('<br>')}</td><td>${plTxt(c)}</td><td class="pox">${POS(c)}</td></tr>`).join('')}</table>`:'<div class="mut" style="padding:12px">No other combo with these filters — widen Buyer / Fabric / Color.</div>';
+    $('mwF').innerHTML=`<label>Buyer <select data-f="by">${opts('by',byL,st.by)}</select></label><label>Fabric <select data-f="fb">${opts('fb',fbL,st.fb)}</select></label><label>Color <select data-f="sh">${opts('sh',shL,st.sh)}</select></label><span class="mut">${rows.length} combo${rows.length===1?'':'s'}</span><span class="vseg mgshow mwshow"><button class="hb2${st.mg==='all'?' on':''}" data-mg="all">All · incl. merged <small>${nMG}</small></button><button class="hb2${st.mg==='wo'?' on':''}" data-mg="wo">Without merged</button></span>`;
+    $('mwT').innerHTML=rows.length?`<table class="apt"><tr><th></th><th>M/C</th><th>Batch No</th><th>Buyer</th><th>Color</th><th class="num">kg</th><th>LD / Matching</th><th>Plan status</th><th>Customer PO</th></tr>${rows.map(c=>`<tr data-id="${esc(c.id)}"${c.merged?' class="mwm"':''}><td><input type="checkbox"${PICK.has(c.id)?' checked':''}></td><td class="mcx">${esc(c.mc)}</td><td class="bnx">${c.merged?`<span class="mgtag">Merged · ${c.merged.length} combos</span><br>`:''}${c.m.map(esc).join('<br>')}</td><td>${esc(c.body.by)}</td><td>${esc(c.body.sh)}</td><td class="num">${fmt(Math.round(c.q))}</td><td class="ldx">${c.p.map(x=>T(x.ld)?esc(x.ld):'<span class="uw">LD pending</span>').join('<br>')}</td><td${c.merged?' class="mgrm"':''}>${c.merged?'Merged · ':''}${plTxt(c)}</td><td class="pox">${POS(c)}</td></tr>`).join('')}</table>`:'<div class="mut" style="padding:12px">No other combo with these filters — widen Buyer / Fabric / Color.</div>';
     sum2(); };
   const PICK=new Set();
   const sum2=()=>{ const sel=[...PICK].map(id=>C.get(id)).filter(Boolean); const q=baseQ+sel.reduce((a,c)=>a+c.q,0); const mc=LPEngine.mcKey(q); const ok=sel.length>0&&MCS.includes(mc);
@@ -1564,6 +1569,7 @@ function openMergeWith(ids){
     <div class="dlgb"><span id="mwS" style="font-size:12.5px"></span><span><button class="hb2" id="dlgN">Close</button> <button class="okb" id="mwGo" disabled>Merge</button></span></div>`;
   $('dlgW').hidden=false; draw2();
   $('dlgX').onclick=$('dlgN').onclick=()=>{ $('dlgW').hidden=true; };
+  $('mwF').onclick=e=>{ const b=e.target.closest('[data-mg]'); if(!b) return; st.mg=b.dataset.mg; draw2(); };
   $('mwF').onchange=e=>{ const f=e.target.dataset.f; if(!f) return; st[f]=e.target.value; if(f==='by'){ st.fb=''; st.sh=''; } if(f==='fb') st.sh=''; draw2(); };
   $('mwT').onclick=e=>{ const tr=e.target.closest('tr[data-id]'); if(!tr) return; const id=tr.dataset.id; if(e.target.type!=='checkbox'){ const cb=tr.querySelector('input'); cb.checked=!cb.checked; } PICK[tr.querySelector('input').checked?'add':'delete'](id); sum2(); };
   $('mwGo').onclick=()=>{ const {sel,q,mc}=sum2(); if(!sel.length||!MCS.includes(mc)) return;
