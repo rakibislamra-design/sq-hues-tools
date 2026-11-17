@@ -512,7 +512,7 @@ header.fover::after{background:rgba(239,230,235,.92)}
       <button class="qi" data-act="export"><span>⤓</span>Export File<em>Loading plan with your plan</em></button>
       <button class="qi" data-act="update"><span>⟳</span>Update File<em>Loading plan + DOC 280+217 + Line Plan</em></button>
       <div class="qsep"></div><a class="qi" href="index.html"><span>←</span>SQ Hues Tools</a>
-      <div class="qver">Version 16 Nov 23:27</div>
+      <div class="qver">Version 17 Nov 15:51</div>
     </div>
   </div>
   <div class="hcol">
@@ -571,7 +571,13 @@ function DateStyler(xml) {
       if (/<numFmts\b/.test(x)) x = x.replace(/<numFmts\b([^>]*)>([\s\S]*?)<\/numFmts>/, (a, at, body) => `<numFmts${at.replace(/\scount="\d+"/, '')} count="${(body.match(/<numFmt\b/g) || []).length + 1}">${body}${t}</numFmts>`);
       else x = x.replace(/(<styleSheet\b[^>]*>)/, `$1<numFmts count="1">${t}</numFmts>`); }
     return x; };
-  return { get, changed: () => ch, xml: out };
+  const cc = {};
+  const center = s => { s = s == null ? '0' : String(s); if (s in cc) return cc[s]; const xf = xfs[+s] || xfs[0]; if (!xf) return (cc[s] = s);
+    const al = '<alignment horizontal="center" vertical="center" wrapText="1"/>';
+    let nx = /\/>$/.test(xf) ? xf.replace(/\/>$/, `>${al}</xf>`) : /<alignment\b[^>]*\/>/.test(xf) ? xf.replace(/<alignment\b[^>]*\/>/, al) : xf.replace(/^(<xf\b[^>]*>)/, `$1${al}`);
+    nx = /applyAlignment="/.test(nx) ? nx.replace(/applyAlignment="[^"]*"/, 'applyAlignment="1"') : nx.replace(/^<xf\b/, '<xf applyAlignment="1"');
+    xfs.push(nx); ch = true; return (cc[s] = String(xfs.length - 1)); };
+  return { get, center, changed: () => ch, xml: out };
 }
 /* MC Loading Planner engine: body/gusset rules (same as Dye Q Combo Planner) applied to the Loading plan Master Sheet. */
 (function (root) {
@@ -973,9 +979,9 @@ function DateStyler(xml) {
       let attrs = R.attrs;
       const e = E[R.r]; if (e) { let bhS = null; const e2 = Object.assign({}, e);
         if (e2.BH && typeof e2.BH === 'object' && 'd' in e2.BH) { const st = new RegExp(`<c r="(?:BF|N)${R.r}"[^>]*?\\ss="(\\d+)"`).exec(R.inner); bhS = st ? DS.get(st[1]) : null; e2.BH = e2.BH.d; }
-        inner = patchRow(inner, dst, e2);
+        inner = patchRow(inner, dst, e2); if (e2.BJ && / \+ /.test(String(e2.BJ))) BJR.push({ dst, t: String(e2.BJ) });
         if (bhS) inner = inner.replace(new RegExp(`<c r="BH${dst}"( s="\\d+")?`), `<c r="BH${dst}" s="${bhS}"`); if (e.N) attrs = attrs.replace(/\shidden="1"/, ''); }
-      if (/<c r="BJ\d/.test(inner)) inner = inner.replace(new RegExp(`<c r="BJ${dst}"(?![^>]*\\ss=)`), m0 => { const st = new RegExp(`<c r="(?:${R.r === 3 ? 'BI|BH' : 'D'})${dst}"[^>]*?\\ss="(\\d+)"`).exec(inner); return st ? m0 + ` s="${st[1]}"` : m0; });
+      if (/<c r="BJ\d/.test(inner)) inner = inner.replace(new RegExp(`<c r="BJ${dst}"(?![^>]*\\ss=)`), m0 => { const st = new RegExp(`<c r="(?:BI|BH|D)${dst}"[^>]*?\\ss="(\\d+)"`).exec(inner);   /* same look as the DL column next to it */ return st ? m0 + ` s="${st[1]}"` : m0; });
       inner = inner.replace(new RegExp(`<c r="BI${dst}"((?:\\s(?!t=)[a-z]+="[^"]*")*)>(<v>\\d+(?:\\.\\d+)?</v>)`), (m0, at, v) => { const s0 = (/\ss="(\d+)"/.exec(at) || [])[1]; const s1 = DS.get(s0); return `<c r="BI${dst}"${s0 != null ? at.replace(/\ss="\d+"/, ` s="${s1}"`) : at + ` s="${s1}"`}>${v}`; });
       if (R.r >= firstRow && R.r <= lastRow) {
         if (sepOf.has(R.r)) attrs = attrs.replace(/\shidden="1"/, '');
@@ -983,7 +989,7 @@ function DateStyler(xml) {
       }
       return `<row r="${dst}"${attrs}>${inner}</row>`;
     };
-    let nb = '';
+    let nb = ''; const BJR = [];   // rows of merged sets: their Merge Batches cells get merged & centred
     // expand shared formulas outside the data block too (their masters may have moved)
     const srcAt = new Map(order.map((src, i) => [slots[i], src]));
     for (let i = 0; i < rows.length; i++) {
@@ -994,10 +1000,20 @@ function DateStyler(xml) {
     let headOut = head;
     if (Object.values(E).some(o => 'BH' in o)) headOut = headOut.replace(/<col min="(\d+)" max="(\d+)"([^>]*?)\shidden="1"([^>]*?)\/>/g, (m0, mn, mx, a1, a2) => (+mn <= 60 && +mx >= 60 && +mn === +mx) ? `<col min="${mn}" max="${mx}"${a1}${a2}/>` : m0);
     let tailOut = tail;
+    { const runs = []; BJR.sort((x, y) => x.dst - y.dst).forEach(r => { const L = runs[runs.length - 1]; if (L && L.t === r.t && r.dst === L.b + 1) L.b = r.dst; else runs.push({ t: r.t, a: r.dst, b: r.dst }); });
+      const M = runs.filter(r => r.b > r.a);
+      for (const r of M) for (let n = r.a; n <= r.b; n++) nb = nb.replace(new RegExp(`<c r="BJ${n}"([^>]*?)(?:/>|>[\\s\\S]*?</c>)`), (m0, at) => { const s0 = (/\ss="(\d+)"/.exec(at) || [])[1]; const at2 = (s0 != null ? at.replace(/\ss="\d+"/, ` s="${DS.center(s0)}"`) : at + ` s="${DS.center('0')}"`).replace(/\st="[^"]*"/, '');
+        return n === r.a ? `<c r="BJ${n}"${at2} t="inlineStr"><is><t>${String(r.t).replace(/&/g, '&amp;').replace(/</g, '&lt;')}</t></is></c>` : `<c r="BJ${n}"${at2}/>`; });
+      if (M.length) { const mc = M.map(r => `<mergeCell ref="BJ${r.a}:BJ${r.b}"/>`).join('');
+        if (/<mergeCells\b/.test(tailOut)) tailOut = tailOut.replace(/<mergeCells\b[^>]*>([\s\S]*?)<\/mergeCells>/, (m0, body) => `<mergeCells count="${(body.match(/<mergeCell\b/g) || []).length + M.length}">${body}${mc}</mergeCells>`);
+        else { const at = tailOut.search(/<(?:phoneticPr|conditionalFormatting|dataValidations|hyperlinks|printOptions|pageMargins|pageSetup|headerFooter|rowBreaks|colBreaks|drawing|legacyDrawing|tableParts|extLst)\b/); const blk = `<mergeCells count="${M.length}">${mc}</mergeCells>`; tailOut = at < 0 ? tailOut.replace('</worksheet>', blk + '</worksheet>') : tailOut.slice(0, at) + blk + tailOut.slice(at); } } }
     if (Object.values(E).some(o => 'BJ' in o)) {   // Merge Batches column: filter range, sheet size and a column width
       headOut = headOut.replace(/<dimension ref="([A-Z]+\d+):(?:BH|BI)(\d+)"\/>/, '<dimension ref="$1:BJ$2"/>');
-      if (/<cols>/.test(headOut) && !/<col min="(\d+)" max="(\d+)"/.test(headOut.replace(/<col min="(\d+)" max="(\d+)"[^>]*\/>/g, (m0, a1, b1) => (+a1 <= 62 && +b1 >= 62) ? m0 : ''))) headOut = headOut.replace('</cols>', '<col min="62" max="62" width="70" customWidth="1"/></cols>');
-      tailOut = tail.replace(/(<autoFilter ref="[A-Z]+\d+:)(?:BH|BI)(\d+")/, '$1BJ$2'); }
+      if (/<cols>/.test(headOut)) headOut = headOut.replace(/<cols>([\s\S]*?)<\/cols>/, (m0, body) => {   // own width for BJ: split any range that covers column 62, keep the cols in order
+        const cs = (body.match(/<col\b[^>]*\/>/g) || []).map(t => ({ mn: +(/min="(\d+)"/.exec(t) || [0, 0])[1], mx: +(/max="(\d+)"/.exec(t) || [0, 0])[1], t }));
+        const out = []; for (const c of cs) { if (c.mn <= 62 && c.mx >= 62) { if (c.mn < 62) out.push({ mn: c.mn, t: c.t.replace(/max="\d+"/, `max="61"`) }); if (c.mx > 62) out.push({ mn: 63, t: c.t.replace(/min="\d+"/, `min="63"`) }); } else out.push(c); }
+        out.push({ mn: 62, t: '<col min="62" max="62" width="45" customWidth="1"/>' }); out.sort((x, y) => x.mn - y.mn); return '<cols>' + out.map(c => c.t).join('') + '</cols>'; });
+      tailOut = tailOut.replace(/(<autoFilter ref="[A-Z]+\d+:)(?:BH|BI)(\d+")/, '$1BJ$2'); }
     zip.file(path, headOut + nb + tailOut); if (DS.changed()) zip.file('xl/styles.xml', DS.xml());
     // drop calcChain (cell positions changed); Excel rebuilds it
     if (zip.file('xl/calcChain.xml')) {
@@ -2520,7 +2536,8 @@ $('xls').addEventListener('click',async()=>{
         const nv=over[x.b]?(clean?clean+' / ':'')+`Ex-${over[x.b]} kg`:clean; if(nv!==base.trim()||(over[x.b]&&nv!==base)){ const r=row(x.b); if(r) r.Q=nv; } } } }
   calcLoadDays(); for(const b in D.batches){ const r=D.batches[b].row; if(!r) continue; const v=LDAY[b]&&LDAY[b].d?{date:LDAY[b].d}:''; if(v||(ed[r]&&ed[r].A)){ (ed[r]=ed[r]||{}).BH=v; } }
   ed[3]=Object.assign(ed[3]||{},{BH:'Load Date',BJ:'Merge Batches'});
-  for(const c of C.values()){ const t=c.merged?c.m.join(' + '):''; for(const b of c.m){ const x=D.batches[b]; if(x&&x.row) (ed[x.row]=ed[x.row]||{}).BJ=t; } }   // merged set: all its batches, batch 1 + batch 2 …
+  const NOMX=new Set((()=>{ try{ return JSON.parse(localStorage.getItem('mclp-nomerge')||'[]'); }catch(e){ return []; } })());
+  for(const c of C.values()){ const t=c.merged?c.m.join(' + '):NOMX.has(c.id)?'No need merge':''; for(const b of c.m){ const x=D.batches[b]; if(x&&x.row) (ed[x.row]=ed[x.row]||{}).BJ=t; } }   // merged set: all its batches, batch 1 + batch 2 …
   if(!Object.keys(ed).length){toast('Nothing to write yet — plan a combo or type a remark first.');return;}
   $('busy').textContent='Writing your file…';
   try{
