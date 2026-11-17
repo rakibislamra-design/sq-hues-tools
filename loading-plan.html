@@ -512,7 +512,7 @@ header.fover::after{background:rgba(239,230,235,.92)}
       <button class="qi" data-act="export"><span>⤓</span>Export File<em>Loading plan with your plan</em></button>
       <button class="qi" data-act="update"><span>⟳</span>Update File<em>Loading plan + DOC 280+217 + Line Plan</em></button>
       <div class="qsep"></div><a class="qi" href="index.html"><span>←</span>SQ Hues Tools</a>
-      <div class="qver">Version 17 Nov 15:51</div>
+      <div class="qver">Version 17 Nov 16:28</div>
     </div>
   </div>
   <div class="hcol">
@@ -982,6 +982,10 @@ function DateStyler(xml) {
         inner = patchRow(inner, dst, e2); if (e2.BJ && / \+ /.test(String(e2.BJ))) BJR.push({ dst, t: String(e2.BJ) });
         if (bhS) inner = inner.replace(new RegExp(`<c r="BH${dst}"( s="\\d+")?`), `<c r="BH${dst}" s="${bhS}"`); if (e.N) attrs = attrs.replace(/\shidden="1"/, ''); }
       if (/<c r="BJ\d/.test(inner)) inner = inner.replace(new RegExp(`<c r="BJ${dst}"(?![^>]*\\ss=)`), m0 => { const st = new RegExp(`<c r="(?:BI|BH|D)${dst}"[^>]*?\\ss="(\\d+)"`).exec(inner);   /* same look as the DL column next to it */ return st ? m0 + ` s="${st[1]}"` : m0; });
+      if (R.r >= firstRow) { const bh = new RegExp(`<c r="BH${dst}"[^>]*?\\ss="(\\d+)"`).exec(inner);   /* every row gets boxed DL and Merge Batches cells, same look as Load Date */
+        if (bh) { const ins = (col, cell) => { const nx = col === 'BI' ? inner.indexOf(`<c r="BJ${dst}"`) : -1; inner = nx >= 0 ? inner.slice(0, nx) + cell + inner.slice(nx) : inner + cell; };
+          if (inner.indexOf(`<c r="BI${dst}"`) < 0) ins('BI', `<c r="BI${dst}" s="${DS.get(bh[1])}"/>`);
+          if (inner.indexOf(`<c r="BJ${dst}"`) < 0) ins('BJ', `<c r="BJ${dst}" s="${bh[1]}"/>`); } }
       inner = inner.replace(new RegExp(`<c r="BI${dst}"((?:\\s(?!t=)[a-z]+="[^"]*")*)>(<v>\\d+(?:\\.\\d+)?</v>)`), (m0, at, v) => { const s0 = (/\ss="(\d+)"/.exec(at) || [])[1]; const s1 = DS.get(s0); return `<c r="BI${dst}"${s0 != null ? at.replace(/\ss="\d+"/, ` s="${s1}"`) : at + ` s="${s1}"`}>${v}`; });
       if (R.r >= firstRow && R.r <= lastRow) {
         if (sepOf.has(R.r)) attrs = attrs.replace(/\shidden="1"/, '');
@@ -1004,9 +1008,11 @@ function DateStyler(xml) {
       const M = runs.filter(r => r.b > r.a);
       for (const r of M) for (let n = r.a; n <= r.b; n++) nb = nb.replace(new RegExp(`<c r="BJ${n}"([^>]*?)(?:/>|>[\\s\\S]*?</c>)`), (m0, at) => { const s0 = (/\ss="(\d+)"/.exec(at) || [])[1]; const at2 = (s0 != null ? at.replace(/\ss="\d+"/, ` s="${DS.center(s0)}"`) : at + ` s="${DS.center('0')}"`).replace(/\st="[^"]*"/, '');
         return n === r.a ? `<c r="BJ${n}"${at2} t="inlineStr"><is><t>${String(r.t).replace(/&/g, '&amp;').replace(/</g, '&lt;')}</t></is></c>` : `<c r="BJ${n}"${at2}/>`; });
-      if (M.length) { const mc = M.map(r => `<mergeCell ref="BJ${r.a}:BJ${r.b}"/>`).join('');
-        if (/<mergeCells\b/.test(tailOut)) tailOut = tailOut.replace(/<mergeCells\b[^>]*>([\s\S]*?)<\/mergeCells>/, (m0, body) => `<mergeCells count="${(body.match(/<mergeCell\b/g) || []).length + M.length}">${body}${mc}</mergeCells>`);
-        else { const at = tailOut.search(/<(?:phoneticPr|conditionalFormatting|dataValidations|hyperlinks|printOptions|pageMargins|pageSetup|headerFooter|rowBreaks|colBreaks|drawing|legacyDrawing|tableParts|extLst)\b/); const blk = `<mergeCells count="${M.length}">${mc}</mergeCells>`; tailOut = at < 0 ? tailOut.replace('</worksheet>', blk + '</worksheet>') : tailOut.slice(0, at) + blk + tailOut.slice(at); } } }
+      for (const r of M) for (let n = r.a; n <= r.b; n++) nb = nb.replace(new RegExp(`<c r="B${n}"([^>]*?)(/>|>[\\s\\S]*?</c>)`), (m0, at, body) => { const s0 = (/\ss="(\d+)"/.exec(at) || [])[1]; const at2 = s0 != null ? at.replace(/\ss="\d+"/, ` s="${DS.center(s0)}"`) : at + ` s="${DS.center('0')}"`;   /* SL: one merged, centred cell for the set */
+        return n === r.a ? `<c r="B${n}"${at2}${body}` : `<c r="B${n}"${at2.replace(/\st="[^"]*"/, '')}/>`; });
+      if (M.length) { const mc = M.map(r => `<mergeCell ref="B${r.a}:B${r.b}"/><mergeCell ref="BJ${r.a}:BJ${r.b}"/>`).join('');
+        if (/<mergeCells\b/.test(tailOut)) tailOut = tailOut.replace(/<mergeCells\b[^>]*>([\s\S]*?)<\/mergeCells>/, (m0, body) => `<mergeCells count="${(body.match(/<mergeCell\b/g) || []).length + 2 * M.length}">${body}${mc}</mergeCells>`);
+        else { const at = tailOut.search(/<(?:phoneticPr|conditionalFormatting|dataValidations|hyperlinks|printOptions|pageMargins|pageSetup|headerFooter|rowBreaks|colBreaks|drawing|legacyDrawing|tableParts|extLst)\b/); const blk = `<mergeCells count="${2 * M.length}">${mc}</mergeCells>`; tailOut = at < 0 ? tailOut.replace('</worksheet>', blk + '</worksheet>') : tailOut.slice(0, at) + blk + tailOut.slice(at); } } }
     if (Object.values(E).some(o => 'BJ' in o)) {   // Merge Batches column: filter range, sheet size and a column width
       headOut = headOut.replace(/<dimension ref="([A-Z]+\d+):(?:BH|BI)(\d+)"\/>/, '<dimension ref="$1:BJ$2"/>');
       if (/<cols>/.test(headOut)) headOut = headOut.replace(/<cols>([\s\S]*?)<\/cols>/, (m0, body) => {   // own width for BJ: split any range that covers column 62, keep the cols in order
