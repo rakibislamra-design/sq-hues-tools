@@ -512,7 +512,7 @@ header.fover::after{background:rgba(239,230,235,.92)}
       <button class="qi" data-act="export"><span>⤓</span>Export File<em>Loading plan with your plan</em></button>
       <button class="qi" data-act="update"><span>⟳</span>Update File<em>Loading plan + DOC 280+217 + Line Plan</em></button>
       <div class="qsep"></div><a class="qi" href="index.html"><span>←</span>SQ Hues Tools</a>
-      <div class="qver">Version 18 Nov 12:56</div>
+      <div class="qver">Version 18 Nov 13:10</div>
     </div>
   </div>
   <div class="hcol">
@@ -1257,13 +1257,13 @@ function DateStyler(xml) {
       while ((m = ROW_RE.exec(px))) {
         const r = +(/\br="(\d+)"/.exec(m[1]) || [])[1]; const o = {}; for (const c of splitCells(m[2])) { const v = cellValue(c.attrs, c.inner, psst); if (v !== undefined) o[c.col] = v; }
         if (!bC) { const ks = Object.keys(o).sort((p, q) => cn(p) - cn(q)); const nm = k => typeof o[k] === 'string' ? o[k].replace(/\s+/g, ' ').trim().toLowerCase() : '';
-          const b = ks.find(k => nm(k) === 'batch no'), d = ks.find(k => nm(k) === 'dyeing date'); if (b && d) { bC = b; dC = d; lC = ks.find(k => nm(k) === 'delivery date') || null; hr = r; } continue; }
+          const b = ks.find(k => nm(k) === 'batch no'), d = ks.find(k => nm(k) === 'dyeing plan date') || ks.find(k => nm(k) === 'dyeing date'); if (b && d) { bC = b; dC = d; lC = ks.find(k => nm(k) === 'delivery plan date') || ks.find(k => nm(k) === 'delivery date') || null; hr = r; } continue; }   /* new layout: Dyeing Plan Date / Delivery Plan Date; old: Dyeing Date / Delivery Date */
         const b = o[bC]; if (typeof b !== 'string' || !b.trim()) continue; const k = lc(b.trim());
         const d = o[dC]; const prev = lineMap.get(k);
         if (prev === undefined || (typeof prev !== 'number' && typeof d === 'number')) lineMap.set(k, typeof d === 'number' ? d : null);
         if (lC) { const dl = o[lC]; const n = typeof dl === 'number' ? dl : (typeof dl === 'string' && /^\d{5}(\.\d+)?$/.test(dl.trim()) ? +dl : null); if (n && (!dlMap.has(k) || n < dlMap.get(k))) dlMap.set(k, n); }
       }
-      if (!bC) throw new Error('Could not find "Batch No" and "Dyeing Date" headers in Batch Wise Line Plan.');
+      if (!bC) throw new Error('Could not find "Batch No" and "Dyeing Plan Date" (or "Dyeing Date") headers in Batch Wise Line Plan.');
     }
 
     // --- Master Sheet rows
