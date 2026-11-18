@@ -512,7 +512,7 @@ header.fover::after{background:rgba(239,230,235,.92)}
       <button class="qi" data-act="export"><span>⤓</span>Export File<em>Loading plan with your plan</em></button>
       <button class="qi" data-act="update"><span>⟳</span>Update File<em>Loading plan + DOC 280+217 + Line Plan</em></button>
       <div class="qsep"></div><a class="qi" href="index.html"><span>←</span>SQ Hues Tools</a>
-      <div class="qver">Version 17 Nov 16:28</div>
+      <div class="qver">Version 18 Nov 12:20</div>
     </div>
   </div>
   <div class="hcol">
@@ -982,6 +982,7 @@ function DateStyler(xml) {
         inner = patchRow(inner, dst, e2); if (e2.BJ && / \+ /.test(String(e2.BJ))) BJR.push({ dst, t: String(e2.BJ) });
         if (bhS) inner = inner.replace(new RegExp(`<c r="BH${dst}"( s="\\d+")?`), `<c r="BH${dst}" s="${bhS}"`); if (e.N) attrs = attrs.replace(/\shidden="1"/, ''); }
       if (/<c r="BJ\d/.test(inner)) inner = inner.replace(new RegExp(`<c r="BJ${dst}"(?![^>]*\\ss=)`), m0 => { const st = new RegExp(`<c r="(?:BI|BH|D)${dst}"[^>]*?\\ss="(\\d+)"`).exec(inner);   /* same look as the DL column next to it */ return st ? m0 + ` s="${st[1]}"` : m0; });
+      if (R.r >= firstRow) inner = inner.replace(new RegExp(`<c r="B${dst}"((?:\\s[a-z]+="[^"]*")*?)(\\ss="(\\d+)")?(?=[\\s/>])`), (m0, pre, ss, s0) => `<c r="B${dst}"${pre} s="${DS.center(s0 || '0')}"`);   /* every SL centred, like the merged ones */
       if (R.r >= firstRow) { const bh = new RegExp(`<c r="BH${dst}"[^>]*?\\ss="(\\d+)"`).exec(inner);   /* every row gets boxed DL and Merge Batches cells, same look as Load Date */
         if (bh) { const ins = (col, cell) => { const nx = col === 'BI' ? inner.indexOf(`<c r="BJ${dst}"`) : -1; inner = nx >= 0 ? inner.slice(0, nx) + cell + inner.slice(nx) : inner + cell; };
           if (inner.indexOf(`<c r="BI${dst}"`) < 0) ins('BI', `<c r="BI${dst}" s="${DS.get(bh[1])}"/>`);
@@ -1508,6 +1509,8 @@ const mkey=c=>[BY(c),c.body.sh,c.p.map(x=>x.fb).join(' + '),cupOf(c)].map(v=>Str
 const MAXLOAD=770;
 const pctOf=(q,mc)=>CAP[mc]?` <span class="mpc">${(q/CAP[mc]*100).toFixed(0)}%</span>`:'';   // load % on that machine
 const T33MCS=MCS.filter(m=>m!=='750');   // T33 is not planned on the 750 kg MC
+const gsmOf=c=>{ const b=c.body||{}; const m=/(?:^|[-,\s])(\d{3})-\d{2,3}-/.exec(String(b.fb||'')); if(m) return +m[1]; const g=parseFloat(b.gsm); return g>0?g:0; };   /* GSM from the fabric text (…-210-67-…), the GSM column only as a fallback */
+const hi70=c=>{ const b=c.body||{}; if(/\bRIB\b/i.test(String(b.fb||''))) return false; return /T\s*33/i.test(String(b.by||''))||gsmOf(c)>190; };   /* 70% rule: T33 or high GSM (above 190); RIB programs load to 100% */
 const t33Mc=q=>{ if(q>CAP['500']*1.02) return '750'; let b='500',dv=1e9; for(const m of T33MCS){ const x=Math.abs(q/CAP[m]-.7); if(x<dv-1e-9){ dv=x; b=m; } } return b; };   // T33: the machine where the load is nearest 70% of capacity
 const anyMcOf=(q,mc)=>MCS.includes(mc)?mc:([...MCS].reverse().find(m=>CAP[m]>=q)||'750');   // outside every band: smallest machine that holds it   // top of the 750 kg band
 function mergeSuggest(){ const groups=new Map();
@@ -1573,7 +1576,7 @@ function openMerge(opt){ opt=opt||{};
   $('dlgW').hidden=false;
   // machine load windows: regular = the M/C formula bands; T33 = 70% to 102% of the machine capacity
   const BAND={}; for(let s=1;s<=MAXLOAD;s++){ const m=LPEngine.mcKey(s); if(MCS.includes(m)){ BAND[m]=BAND[m]||[s,s]; BAND[m][1]=s; } }
-  const isT=c=>/T\s*33/i.test(BY(c));
+  const isT=c=>hi70(c);
   const win=(mc,t)=>t?[Math.ceil(CAP[mc]*.65),Math.floor(CAP[mc]*.75)]:(BAND[mc]||[1e9,0]);   // T33: about 70% of capacity (65–75%)
   const mcFor=(q,t)=>{ if(!t) return LPEngine.mcKey(q); const m=t33Mc(q), [lo,hi]=win(m,t); return q>=lo&&q<=hi?m:'NBP'; };
   const shortOf=(q,t)=>{ let r=null; for(const m of (t?T33MCS:MCS)){ const lo=t?Math.ceil(CAP[m]*.7):win(m,t)[0]; if(q<lo&&(!r||lo-q<r.need)) r={mc:m,need:Math.ceil(lo-q)}; } return r; };   // nearest machine the load is short of
@@ -1607,10 +1610,10 @@ function openMerge(opt){ opt=opt||{};
     d.querySelectorAll('#mgL [data-un]').forEach(b=>b.onclick=()=>{ unmerge([ 'MG:'+b.dataset.un ]); openMerge({all:fShow==='all',...keep()}); });
     d.querySelectorAll('#mgL [data-add]').forEach(b=>b.onclick=()=>addToSet(b.dataset.add)); 
     G.forEach((g,i)=>{ const b=bestOf(g), el=d.querySelector(`[data-sg="${i}"]`); const t=isT(g.cs[0]);
-      el.innerHTML=b.js?`<span class="sgl">Best fit${t?' (T33: aim 70%, max 75%)':''}:</span> ${b.js.length} combos · <b>${fmt(b.q)} kg</b> → <b>${b.mc} kg MC</b> · <b class="okt">${(b.fill*100).toFixed(0)}%</b> <button class="hb2 sgb" data-sgi="${i}" data-js="${b.js.join(',')}">Tick these</button>`
+      el.innerHTML=b.js?`<span class="sgl">Best fit${t?' (high GSM / T33: aim 70%, max 75%)':''}:</span> ${b.js.length} combos · <b>${fmt(b.q)} kg</b> → <b>${b.mc} kg MC</b> · <b class="okt">${(b.fill*100).toFixed(0)}%</b> <button class="hb2 sgb" data-sgi="${i}" data-js="${b.js.join(',')}">Tick these</button>`
         :(()=>{ const q=g.q;
           if(t){ const mc=[...T33MCS].reverse().find(m=>q<=CAP[m]*.75)||'500', need=Math.ceil(CAP[mc]*.7-q);   // T33: suggestion aims at 70% and never above 75% of the machine
-            return `<span class="sgl">Nearest (T33, max 75%):</span> all ${g.cs.length} combos · <b>${fmt(Math.round(q))} kg</b> → <b>${mc} kg MC</b> · <span class="amb2i">${(q/CAP[mc]*100).toFixed(0)}%</span> <button class="hb2 sgb" data-sgi="${i}" data-js="${g.cs.map((c,j)=>j).join(',')}">Tick these</button>`+(need>0?` · <span class="uw">short ${fmt(need)} kg to reach 70% of ${mc} kg MC — add qty (more batches).</span>`:` · <span class="uw">over 75% of ${mc} kg MC — take a batch out.</span>`); }
+            return `<span class="sgl">Nearest (high GSM / T33, max 75%):</span> all ${g.cs.length} combos · <b>${fmt(Math.round(q))} kg</b> → <b>${mc} kg MC</b> · <span class="amb2i">${(q/CAP[mc]*100).toFixed(0)}%</span> <button class="hb2 sgb" data-sgi="${i}" data-js="${g.cs.map((c,j)=>j).join(',')}">Tick these</button>`+(need>0?` · <span class="uw">short ${fmt(need)} kg to reach 70% of ${mc} kg MC — add qty (more batches).</span>`:` · <span class="uw">over 75% of ${mc} kg MC — take a batch out.</span>`); }
           const mc=anyMcOf(q,LPEngine.mcKey(q)); const near=q<=MAXLOAD?`<span class="sgl">Nearest:</span> all ${g.cs.length} combos · <b>${fmt(Math.round(q))} kg</b> → <b>${mc} kg MC</b> · <span class="amb2i">${(q/CAP[mc]*100).toFixed(0)}%</span> <button class="hb2 sgb" data-sgi="${i}" data-js="${g.cs.map((c,j)=>j).join(',')}">Tick these</button> · `:'';
           return near+(b.short?`<span class="uw">short ${fmt(b.short.need)} kg for ${b.short.mc} kg MC${t?' (70%)':''} — add qty (more batches) to fill it.</span>`:''); })(); });
     KL.forEach(k=>{ if(k.gi==null) return; const el=d.querySelector(`[data-ad="${k.gi}"]`); if(el) el.innerHTML=(k.mg.length?'<span class="mut">Add ticked to:</span> '+k.mg.map(o=>`<button class="hb2 sgb" data-addto="${o.gid}" data-gi="${k.gi}">M-${MBN[o.gid]} (${fmt(Math.round(o.v.q))} kg)</button>`).join(' '):''); });
@@ -1618,7 +1621,7 @@ function openMerge(opt){ opt=opt||{};
     d.querySelectorAll('#mgL [data-back]').forEach(b=>b.onclick=e=>{ e.stopPropagation(); NOM.delete(b.dataset.back); saveNOM(); openMerge({all:fShow==='all',...keep()}); });
     d.querySelectorAll('#mgL [data-addto]').forEach(b=>b.onclick=()=>{ const i=+b.dataset.gi, add=G[i].cs.filter((c,j)=>d.querySelector(`tr input[data-s="${i}"][data-c="${j}"]`).checked); if(!add.length){ toast('Tick combos under Unmerged first.'); return; } addToSet(b.dataset.addto,add); });
     d.querySelectorAll('#mgL [data-sgi]').forEach(b=>b.onclick=()=>{ const i=b.dataset.sgi, js=b.dataset.js.split(',').map(Number); G[+i].cs.forEach((c,j)=>{ d.querySelector(`tr input[data-s="${i}"][data-c="${j}"]`).checked=js.includes(j); }); upd(); }); };
-  const applyF=()=>{ let n=0; d.querySelectorAll('#mgL tr.mgrow').forEach(tr=>tr.hidden=fShow!=='all'||(SB.size&&!tr.dataset.by.split('|').some(b=>SB.has(b)))); d.querySelectorAll('#mgL .mgtop').forEach(b=>{ b.hidden=!b.querySelector('tr.trow:not([hidden])'); }); d.querySelectorAll('#mgL .mgc:not(.mgtop)').forEach(c=>{ c.hidden=(c.classList.contains('mgm')&&(fShow!=='all'||(SB.size&&!c.dataset.by.split('|').some(b=>SB.has(b)))))||(!!fSh&&c.dataset.sh!==fSh); });
+  const applyF=()=>{ let n=0; d.querySelectorAll('#mgL tr.trow').forEach(tr=>tr.hidden=fShow!=='all'||(tr.classList.contains('mgrow')&&SB.size&&!tr.dataset.by.split('|').some(b=>SB.has(b))));   /* Without merged hides merged and no-need-to-merge rows */ d.querySelectorAll('#mgL .mgtop').forEach(b=>{ b.hidden=!b.querySelector('tr.trow:not([hidden])'); }); d.querySelectorAll('#mgL .mgc:not(.mgtop)').forEach(c=>{ c.hidden=(c.classList.contains('mgm')&&(fShow!=='all'||(SB.size&&!c.dataset.by.split('|').some(b=>SB.has(b)))))||(!!fSh&&c.dataset.sh!==fSh); });
     d.querySelectorAll('#mgL .mgsw').forEach(s=>s.hidden=!s.querySelector('.mgc:not([hidden])')); d.querySelectorAll('#mgL .mgk').forEach(k=>{ k.hidden=!k.querySelector('.mgsw:not([hidden])')||(!!fFb&&k.dataset.fb!==fFb); if(!k.hidden) n++; });
     d.querySelector('.mgnone').hidden=n>0; $('mgCnt').textContent=`${n} group${n===1?'':'s'}`; $('mgAll').checked=false; };
   const fillSh=()=>{ const shs={}; G.map(g=>g.sh).concat(fShow==='all'?cur0.filter(o=>!SB.size||mByers(o.v).some(b=>SB.has(b))).map(o=>String(o.v.body.sh||'').trim()):[]).forEach(s=>shs[s]=(shs[s]||0)+1);
@@ -1722,7 +1725,7 @@ function openMergeWith(ids){
     $('mwT').innerHTML=rows.length?`<table class="apt"><tr><th></th><th>M/C</th><th>Batch No</th><th>Buyer</th><th>Color</th><th class="num">kg</th><th>LD / Matching</th><th>Plan status</th><th>Customer PO</th></tr>${rows.map(c=>`<tr data-id="${esc(c.id)}"${c.merged?' class="mwm"':''}><td><input type="checkbox"${PICK.has(c.id)?' checked':''}></td><td class="mcx">${esc(c.mc)}${pctOf(c.q,c.mc)}</td><td class="bnx">${c.merged?`<span class="mgtag">Merged · ${c.merged.length} combos</span><br>`:''}${c.m.map(esc).join('<br>')}</td><td>${esc(c.body.by)}</td><td>${esc(c.body.sh)}</td><td class="num">${fmt(Math.round(c.q))}</td><td class="ldx">${c.p.map(x=>T(x.ld)?esc(x.ld):'<span class="uw">LD pending</span>').join('<br>')}</td><td${c.merged?' class="mgrm"':''}>${c.merged?'Merged · ':''}${plTxt(c)}</td><td class="pox">${POS(c)}</td></tr>`).join('')}</table>`:'<div class="mut" style="padding:12px">No other combo with these filters — widen Buyer / Fabric / Color.</div>';
     sum2(); };
   const PICK=new Set();
-  const sum2=()=>{ const sel=[...PICK].map(id=>C.get(id)).filter(Boolean); const q=baseQ+sel.reduce((a,c)=>a+c.q,0); const tt=/T\s*33/i.test(String(b0.body.by||'')), m0=tt?(Math.abs(q/CAP[t33Mc(q)]-.7)<=.05?t33Mc(q):'NBP'):LPEngine.mcKey(q), mc=tt?t33Mc(q):anyMcOf(q,m0); const ok=sel.length>0;   // T33: nearest 70% of the machine
+  const sum2=()=>{ const sel=[...PICK].map(id=>C.get(id)).filter(Boolean); const q=baseQ+sel.reduce((a,c)=>a+c.q,0); const tt=hi70(b0), m0=tt?(Math.abs(q/CAP[t33Mc(q)]-.7)<=.05?t33Mc(q):'NBP'):LPEngine.mcKey(q), mc=tt?t33Mc(q):anyMcOf(q,m0); const ok=sel.length>0;   // T33: nearest 70% of the machine
     $('mwS').innerHTML=sel.length?`${base.length+sel.length} combos · <b>${fmt(Math.round(q))} kg</b> → ${MCS.includes(m0)?`<b>${mc} kg MC</b> (${(q/CAP[mc]*100).toFixed(0)}%)`:`<span class="amb2i"><b>${mc} kg MC</b> (${(q/CAP[mc]*100).toFixed(0)}%) · outside band</span>`}`:`This: <b>${fmt(Math.round(baseQ))} kg</b> on ${esc(b0.mc)} kg MC — tick combos to merge with it`;
     $('mwGo').disabled=!ok; return {sel,q,mc}; };
   d.innerHTML=`<div class="dlgt"><h3 style="color:#664356">⧉ Merge with…</h3><button class="dlgx" id="dlgX" aria-label="Close">×</button></div>
@@ -1762,7 +1765,7 @@ function build(){
   for(const gid of Object.keys(MERGE)){ const g=MERGE[gid]; const mem=g.ids.filter(id=>C.has(id)&&!C.get(id).merged);
     if(mem.length<2){ delete MERGE[gid]; continue; }
     const cs=mem.map(id=>C.get(id)).sort((a,b)=>cmpAuto(a,b));   // best priority first: the unit follows the regular rules through it
-    const v=mk('MG:'+gid,cs.flatMap(c=>c.m),'',null); v.merged=cs.map(c=>c.id); v.mem=cs; v.file=/T\s*33/i.test(String(v.body.by||''))?t33Mc(v.q):MCS.includes(g.mc)?g.mc:v.auto; v.mc=(S.over[v.id]&&MCS.includes(S.over[v.id]))?S.over[v.id]:v.file;
+    const v=mk('MG:'+gid,cs.flatMap(c=>c.m),'',null); v.merged=cs.map(c=>c.id); v.mem=cs; v.file=hi70(v)?t33Mc(v.q):MCS.includes(g.mc)?g.mc:v.auto; v.mc=(S.over[v.id]&&MCS.includes(S.over[v.id]))?S.over[v.id]:v.file;
     for(const c of cs) C.delete(c.id); C.set(v.id,v);
     for(const k of MCS){ const L=S.plan[k]||[]; const i=L.findIndex(id=>v.merged.includes(id)); if(i<0) continue; const rest=L.filter(id=>!v.merged.includes(id)); rest.splice(Math.min(i,rest.length),0,v.id); S.plan[k]=rest; }
     if(v.merged.some(id=>PIN[id])) PIN[v.id]=1; }
