@@ -512,7 +512,7 @@ header.fover::after{background:rgba(239,230,235,.92)}
       <button class="qi" data-act="export"><span>⤓</span>Export File<em>Loading plan with your plan</em></button>
       <button class="qi" data-act="update"><span>⟳</span>Update File<em>Loading plan + DOC 280+217 + Line Plan</em></button>
       <div class="qsep"></div><a class="qi" href="index.html"><span>←</span>SQ Hues Tools</a>
-      <div class="qver">Version 18 Nov 13:10</div>
+      <div class="qver">Version 18 Nov 13:46</div>
     </div>
   </div>
   <div class="hcol">
@@ -982,7 +982,7 @@ function DateStyler(xml) {
         inner = patchRow(inner, dst, e2); if (e2.BJ && / \+ /.test(String(e2.BJ))) BJR.push({ dst, t: String(e2.BJ) });
         if (bhS) inner = inner.replace(new RegExp(`<c r="BH${dst}"( s="\\d+")?`), `<c r="BH${dst}" s="${bhS}"`); if (e.N) attrs = attrs.replace(/\shidden="1"/, ''); }
       if (/<c r="BJ\d/.test(inner)) inner = inner.replace(new RegExp(`<c r="BJ${dst}"(?![^>]*\\ss=)`), m0 => { const st = new RegExp(`<c r="(?:BI|BH|D)${dst}"[^>]*?\\ss="(\\d+)"`).exec(inner);   /* same look as the DL column next to it */ return st ? m0 + ` s="${st[1]}"` : m0; });
-      if (R.r >= firstRow) inner = inner.replace(new RegExp(`<c r="B${dst}"((?:\\s[a-z]+="[^"]*")*?)(\\ss="(\\d+)")?(?=[\\s/>])`), (m0, pre, ss, s0) => `<c r="B${dst}"${pre} s="${DS.center(s0 || '0')}"`);   /* every SL centred, like the merged ones */
+      if (R.r >= firstRow) inner = inner.replace(new RegExp(`<c r="B${dst}"([^>]*?)(/?>)`), (m0, at, end) => { const s0 = (/\ss="(\d+)"/.exec(at) || [])[1]; return `<c r="B${dst}"${at.replace(/\ss="\d+"/, '')} s="${DS.center(s0 || '0')}"${end}`; });   /* every SL centred, like the merged ones */
       if (R.r >= firstRow) { const bh = new RegExp(`<c r="BH${dst}"[^>]*?\\ss="(\\d+)"`).exec(inner);   /* every row gets boxed DL and Merge Batches cells, same look as Load Date */
         if (bh) { const ins = (col, cell) => { const nx = col === 'BI' ? inner.indexOf(`<c r="BJ${dst}"`) : -1; inner = nx >= 0 ? inner.slice(0, nx) + cell + inner.slice(nx) : inner + cell; };
           if (inner.indexOf(`<c r="BI${dst}"`) < 0) ins('BI', `<c r="BI${dst}" s="${DS.get(bh[1])}"/>`);
@@ -1011,6 +1011,9 @@ function DateStyler(xml) {
         return n === r.a ? `<c r="BJ${n}"${at2} t="inlineStr"><is><t>${String(r.t).replace(/&/g, '&amp;').replace(/</g, '&lt;')}</t></is></c>` : `<c r="BJ${n}"${at2}/>`; });
       for (const r of M) for (let n = r.a; n <= r.b; n++) nb = nb.replace(new RegExp(`<c r="B${n}"([^>]*?)(/>|>[\\s\\S]*?</c>)`), (m0, at, body) => { const s0 = (/\ss="(\d+)"/.exec(at) || [])[1]; const at2 = s0 != null ? at.replace(/\ss="\d+"/, ` s="${DS.center(s0)}"`) : at + ` s="${DS.center('0')}"`;   /* SL: one merged, centred cell for the set */
         return n === r.a ? `<c r="B${n}"${at2}${body}` : `<c r="B${n}"${at2.replace(/\st="[^"]*"/, '')}/>`; });
+      // drop old SL / Merge Batches merges from an earlier export (rows have moved since) — overlapping merges make Excel repair the file
+      tailOut = tailOut.replace(/<mergeCell ref="(?:B|BJ)(\d+):(?:B|BJ)\d+"\/>/g, (m0, r0) => +r0 >= firstRow ? '' : m0);
+      tailOut = tailOut.replace(/<mergeCells\b[^>]*>([\s\S]*?)<\/mergeCells>/, (m0, body) => { const n = (body.match(/<mergeCell\b/g) || []).length; return n ? `<mergeCells count="${n}">${body}</mergeCells>` : ''; });
       if (M.length) { const mc = M.map(r => `<mergeCell ref="B${r.a}:B${r.b}"/><mergeCell ref="BJ${r.a}:BJ${r.b}"/>`).join('');
         if (/<mergeCells\b/.test(tailOut)) tailOut = tailOut.replace(/<mergeCells\b[^>]*>([\s\S]*?)<\/mergeCells>/, (m0, body) => `<mergeCells count="${(body.match(/<mergeCell\b/g) || []).length + 2 * M.length}">${body}${mc}</mergeCells>`);
         else { const at = tailOut.search(/<(?:phoneticPr|conditionalFormatting|dataValidations|hyperlinks|printOptions|pageMargins|pageSetup|headerFooter|rowBreaks|colBreaks|drawing|legacyDrawing|tableParts|extLst)\b/); const blk = `<mergeCells count="${2 * M.length}">${mc}</mergeCells>`; tailOut = at < 0 ? tailOut.replace('</worksheet>', blk + '</worksheet>') : tailOut.slice(0, at) + blk + tailOut.slice(at); } } }
