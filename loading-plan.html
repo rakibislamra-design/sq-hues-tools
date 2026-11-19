@@ -512,7 +512,7 @@ header.fover::after{background:rgba(239,230,235,.92)}
       <button class="qi" data-act="export"><span>⤓</span>Export File<em>Loading plan with your plan</em></button>
       <button class="qi" data-act="update"><span>⟳</span>Update File<em>Loading plan + DOC 280+217 + Line Plan</em></button>
       <div class="qsep"></div><a class="qi" href="index.html"><span>←</span>SQ Hues Tools</a>
-      <div class="qver">Version 18 Nov 13:57</div>
+      <div class="qver">Version 19 Nov 16:19</div>
     </div>
   </div>
   <div class="hcol">
@@ -1380,6 +1380,7 @@ function DateStyler(xml) {
       }
       // a batch with a Line Plan date (or Line Plan-TBC) in BF shows LINE PLAN in Plan Type
       { const bf = 'BF' in set ? set.BF : o.BF; if ((typeof bf === 'number' && bf > 0) || (typeof bf === 'string' && /line\s*plan/i.test(bf))) { const n = add(C, 'LINE PLAN', false); if (n !== C.trim()) rep.lpTag = (rep.lpTag || 0) + 1; C = n; } }
+      if (/hanger/i.test(txt(isE(c.O) ? '' : c.O) + ' ' + txt(isE(c.P) ? '' : c.P))) { const n = add(C, 'HANGER', false); if (n !== C.trim()) rep.hanger = (rep.hanger || 0) + 1; C = n; }   /* Hanger in Workorder Category (O) or Note 1 (P) → e.g. LINE PLAN/HANGER */
       if (C !== (o.C == null ? '' : String(o.C))) set.C = C;
       d.O = O;   // O written as a value only when it carries a note, else =AL
     }
@@ -2639,7 +2640,7 @@ async function runUpdate(){
       ${rp.noDoc?'<li class="uw">No DOC 280+217 file — old 280 kept, no Add Plan</li>':li('added from Dye Q (Add Plan)',rp.added.length)}${rp.addSkipped.length?`<li class="uw">${rp.addSkipped.length} not added: ${esc(rp.addSkipped.slice(0,6).join(' · '))}${rp.addSkipped.length>6?' …':''}</li>`:''}
       ${li('removed — already dyed',rp.delDyed)}${li('removed — no longer in Dye Q',rp.delNotQ)}
       ${li('KOK — Greige from (M = P)',rp.kokGreige)}${li('KOK — knit qty (M = D)',rp.kokKnit)}${li('Not in KQ (noted in Remarks)',rp.notInKQ)}${li('KBL',rp.kbl)}
-      ${li('FOC added to Plan Type',rp.foc)}${li('Urgent added',rp.urgent)}${li('PSI added to Plan Type',rp.psi||0)}${li('AOP added',rp.aop)}${li('LINE PLAN added to Plan Type',rp.lpTag||0)}
+      ${li('FOC added to Plan Type',rp.foc)}${li('Urgent added',rp.urgent)}${li('PSI added to Plan Type',rp.psi||0)}${li('HANGER added to Plan Type',rp.hanger||0)}${li('AOP added',rp.aop)}${li('LINE PLAN added to Plan Type',rp.lpTag||0)}
       ${lineBuf?li('Line Plan dyeing dates in BF',rp.lpDate)+li('Line Plan-TBC (no date yet)',rp.lpTBC)+(rp.lpPartner?li('gusset/body took its partner’s Line Plan',rp.lpPartner):'')+(rp.lpCleared?li('old Line Plan dates cleared',rp.lpCleared):''):'<li class="uw">No Line Plan file — BF left as it was</li>'}
       </ul><button class="hb2" id="updDl">⤓ Download ${esc(name)}</button></div>`;
     $('updDl').onclick=()=>{ $('xls').click(); };   // same as Export: the updated file with the re-ordered plan
