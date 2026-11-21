@@ -438,7 +438,7 @@ header.fover::after{background:rgba(239,230,235,.92)}
 .cb.okp .tick{border-color:#5E9277;box-shadow:0 0 0 3px rgba(94,146,119,.18)}
 .cb.okp.msel,.cb.okp.msel.alt{background:#E2D3DC!important;box-shadow:inset 4px 0 0 #664356!important}
 /* MC board */
-.ldy{font-weight:600;color:var(--s-ac)}
+.ldy{font-weight:600;color:var(--s-ac)}.ldy.ldnp{color:var(--muted);font-weight:400;font-style:italic}
 .cpy{border:1px solid var(--line);background:var(--surface);color:var(--s-ac);border-radius:4px;font-size:12px;line-height:1;padding:2px 5px;cursor:pointer;margin-left:4px;vertical-align:1px}.cpy:hover{border-color:var(--qp-line);background:var(--s-pick)}
 .bcard .stag{font-weight:700;font-size:10px;color:#C0392B}
 .bdl{position:sticky;left:158px;display:inline-block}
@@ -512,7 +512,7 @@ header.fover::after{background:rgba(239,230,235,.92)}
       <button class="qi" data-act="export"><span>⤓</span>Export File<em>Loading plan with your plan</em></button>
       <button class="qi" data-act="update"><span>⟳</span>Update File<em>Loading plan + DOC 280+217 + Line Plan</em></button>
       <div class="qsep"></div><a class="qi" href="index.html"><span>←</span>SQ Hues Tools</a>
-      <div class="qver">Version 19 Nov 16:19</div>
+      <div class="qver">Version 21 Nov 13:09</div>
     </div>
   </div>
   <div class="hcol">
@@ -1922,7 +1922,9 @@ const MAXDAY=1e9;   // every planned combo gets its expected load date
 function calcLoadDays(){
   LDAY={}; const days=bDays(300).filter(d=>!d.off);
   for(const k of MCS){ const {m,b}=capOf(k); const per=Math.max(1,Math.round(m*b));
-    (S.plan[k]||[]).forEach((id,i)=>{ const c=C.get(id); if(!c) return; const n=Math.floor(i/per)+1; if(n>MAXDAY) return; for(const bn of c.m) LDAY[bn]={n,d:days[n-1]?days[n-1].iso:'',k}; }); }
+    const L=S.plan[k]||[]; L.forEach((id,i)=>{ const c=C.get(id); if(!c) return; const n=Math.floor(i/per)+1; if(n>MAXDAY) return; for(const bn of c.m) LDAY[bn]={n,d:days[n-1]?days[n-1].iso:'',k}; });
+    /* not planned: carry on after the planned queue, in the not-planned serial order (Auto-order rules) — changes once they are planned */
+    const inPl=new Set(L); [...C.values()].filter(c=>c.mc===k&&!inPl.has(c.id)).sort((a,b)=>cmpAuto(a,b,true)).forEach((c,j)=>{ const n=Math.floor((L.length+j)/per)+1; for(const bn of c.m) LDAY[bn]={n,d:days[n-1]?days[n-1].iso:'',k,np:1}; }); }
 }
 // combo weight does not suit its machine → suggested machine (or 'over' when above capacity)
 function wrongMc(c){ if(!c) return null; const a=c.auto; if(a&&a!=='NBP') return a!==c.mc?a:null; return CAP[c.mc]&&c.q>CAP[c.mc]*1.02?'over':null; }
@@ -1932,7 +1934,7 @@ function line(x,c){ const wm=wrongMc(c);
   const vc=visCols();
   for(let ci=0;ci<vc.length;ci++){ const col=vc[ci]; const L=col.k; const v=cellText(L,x);
     if(L==='Q'||L==='R'){ const k=L==='Q'?'rmk':'hold'; h+=`<span><input class="ed" data-b="${esc(x.b)}" data-k="${k}" value="${esc(x[k])}" title="${esc(x[k])}" aria-label="${esc(col.h)}"></span>`; continue; }
-    if(L==='BH'){ h+=LDAY[x.b]?`<span class="ldy" title="Load ${dshort(LDAY[x.b].d)} · ${LDAY[x.b].k} kg MC · ${capOf(LDAY[x.b].k).m} MC × ${capOf(LDAY[x.b].k).b}/day">${v}</span>`:'<span></span>'; continue; }
+    if(L==='BH'){ h+=LDAY[x.b]?`<span class="ldy${LDAY[x.b].np?' ldnp':''}" title="${LDAY[x.b].np?'Expected (not planned yet, by serial) · ':''}Load ${dshort(LDAY[x.b].d)} · ${LDAY[x.b].k} kg MC · ${capOf(LDAY[x.b].k).m} MC × ${capOf(LDAY[x.b].k).b}/day">${v}</span>`:'<span></span>'; continue; }
     let cls=col.num?'n':'';
     if(L==='A') cls='mcc'+(x.pd?' mcg':''); else if(L==='C') cls='ptc'; else if(L==='D') cls='bn'; else if(L==='I') cls=x.kn==='KBL'?'kblc':'b'; else if(L==='J'||DATEF[L]) cls='ctr';
     if(L==='K'){ h+=`<span class="n${wm?' wrongq':''}" title="${esc(qtip)}">${esc(v)}</span>`; continue; }
