@@ -1333,7 +1333,7 @@ function calc280(d280, d217, knit, hs, lot, dyeq, old, today, fix = true) {
   const out = {}; const set = (c, arr) => { out[c] = arr; };
   const A = (c) => out[c];
   const rng = f => { const a = new Array(n); for (let i = 0; i < n; i++) a[i] = f(i); return a; };
-  const W = col('W'), AB = col('AB'), AC = col('AC'), AJ = col('AJ'), AK = col('AK'), F = col('F'), L = col('L'), Nn = col('N'), G = col('G'), H = col('H'), M = col('M'), D = col('D');
+  const W = col('W'), AB = col('AB'), AC = col('AC'), AJ = col('AJ'), AK = col('AK'), F = col('F'), L = col('L'), Nn = col('N'), G = col('G'), H = col('H'), M = col('M'), D = col('D'), AF = col('AF');
   // old '280 (2)' lookups
   const oldIdx = makeIndex(old.H);
   const oldV = (key, c) => { const i = MATCH(key, oldIdx); if (isErr(i)) return i; const v = old.cols[c][i]; return v; };
@@ -1420,6 +1420,10 @@ function calc280(d280, d217, knit, hs, lot, dyeq, old, today, fix = true) {
     return IFERROR(IF(aop(i), () => idx217(A('CG')[i], baIdx, L217), kk), kk()); }));
 
   set('BB', rng(i => { const BA = A('BA')[i];
+    // Work Order Info says no need / no need dyeing / adjust to (also 'Adjsut to') -> CLOSED; 'Adjust from' is not included
+    if (/no\s*need|adj(?:ust|sut)\s+to\b/i.test(String(AF[i] ?? ''))) return 'CLOSED';
+    // Excess Qty Utilization batch not RFD yet (RFD Qty Mtr empty / 0) -> QAD-Inhouse, even when its plan qty is 0.01 or it was CLOSED before
+    if (/excess\s*qty/i.test(String(D[i] ?? '')) && !(typeof AC[i] === 'number' && AC[i] > 0)) return 'QAD-Inhouse';
     return IFNA(IF(eq(oldVal(H[i], 'BB'), 'CLOSED'), () => 'CLOSED', () => IF(gt(A('BD')[i], 0), () => IF(eq(BA, 'RFD DONE'), () => 'PO PENDING', () => BA),
       () => IF(OR(eq(BA, 'RFD DONE'), eq(BA, 'Final Reject'), eq(BA, 'CLOSED')), () => 'CLOSED', () => BA))), BA); }));
   set('BN', rng(i => { const BB = A('BB')[i]; return IF(OR(eq(BB, 'CLOSED'), eq(BB, 'PO PENDING'), eq(BB, 'Final Reject')), () => 0, () => 1); }));
