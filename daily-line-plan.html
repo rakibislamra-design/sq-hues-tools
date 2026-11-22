@@ -204,7 +204,7 @@ html.shot .tctl .chip:not([aria-pressed="true"]){display:none}
       <button class="chip" data-v="Outside" style="--c:var(--out)"><i></i>Outside</button>
     </div>
     <div class="grp"><span class="lab">Buyer</span><select id="buyer" aria-label="Buyer"><option value="">All buyers</option></select></div>
-    <div class="grp pres"><button class="chip" id="presBtn" title="Presentation mode (full screen)">▣ Present</button><button class="chip dl" id="dlBtn" title="Download the dashboard as a picture (presentation view)">⬇ Download</button></div>
+    <div class="grp pres"><button class="chip" id="presBtn" title="Presentation mode (full screen)">▣ Present</button></div>
   </section>
 
   <div id="msg" class="panel empty" hidden></div>
@@ -295,10 +295,12 @@ async function load(){
   if(SITE&&!document.documentElement.classList.contains("embed")){   // on the site: open with the latest OTT file saved by the OTT Updater
     show("Loading the latest OTT file from the site…");
     try{ const jr=await fetch(rawURL("dashboard.json")+"?ts="+Date.now(),{cache:"no-store"}).catch(()=>null); const sj=jr&&jr.ok?await jr.json():{};
+      let best=sj.pp&&sj.ppAt&&sj.ppAt>(sj.at||"")?{at:sj.ppAt,pp:sj.pp}:null; try{ const lo=JSON.parse(localStorage.getItem("sqhues.ppDrop")||"null"); if(lo&&lo.pp&&lo.at>((best&&best.at)||sj.at||"")) best=lo; }catch(e){}
+      if(best){ useData({at:best.at,report:best.pp.report,pp:best.pp},`last saved ${new Date(best.at).toLocaleString("en-GB",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"})} · drop a newer OTT file to refresh`); return; }
       const r=await fetch(rawURL("fabric-plan.xlsx")+"?ts="+Date.now(),{cache:"no-store"});
       if(r.ok){ const buf=await r.arrayBuffer(); const d=await readWorkbook({name:sj.ott||"fabric-plan.xlsx",arrayBuffer:async()=>buf});
         const at=sj.at?new Date(sj.at):null; useData(d,`latest on site${at?" · updated "+at.toLocaleString("en-GB",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"}):""} · drop a newer OTT file to refresh`); return; } }catch(e){ console.warn(e); } }
-  if(EMB&&EMB.pp) useData(EMB,"saved in this page · upload a newer OTT file to refresh");
+  if(EMB&&EMB.pp) useData(EMB,`last saved${EMB.at?" "+new Date(EMB.at).toLocaleString("en-GB",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"}):""} · drop a newer OTT file to refresh`);
   else show("Upload the OTT Excel file (upload sign at the top right, or drop it anywhere on this page) to see the analysis.");
 }
 function useData(j,label){
@@ -355,8 +357,12 @@ async function readWorkbook(file){
   return {at:new Date().toISOString(),report:rep,pp:{v:1,dates,buyers:B,mills:M,cells:[...acc.values()],lines:LINES,str:STR,file:file.name,report:rep}};
 }
 async function openFile(file){
+  try{ if(typeof EMBP!=="undefined"&&EMBP&&typeof window.parent.ppDropOTTFrame==="function"){ $("srcTxt").textContent=`reading ${file.name}…`; window.parent.ppDropOTTFrame(file); return; } }catch(e){}
   $("srcTxt").textContent=`reading ${file.name}…`;
-  try{ const j=await readWorkbook(file); useData(j,`uploaded ${new Date().toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"})}`); }
+  try{ const j=await readWorkbook(file); const tm=new Date().toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"}); useData(j,`uploaded ${tm} · saving…`);
+    let msg="kept on this computer";
+    try{ if(EMBP&&typeof window.parent.ppSaveDrop==="function") msg=await window.parent.ppSaveDrop(j); else localStorage.setItem("sqhues.ppDrop",JSON.stringify({at:j.at,pp:j.pp})); }catch(e){}
+    $("srcTxt").textContent=`${j.pp.file||file.name} · uploaded ${tm} · ${msg}`; }
   catch(e){ $("srcTxt").textContent=""; show("Could not read that file: "+(e.message||e)); }
 }
 $("openBtn").addEventListener("click",()=>$("fileIn").click());
@@ -377,11 +383,11 @@ function setRange(m){
 }
 /* aggregate: per date -> {AOP:[p,r,k],Inhouse:..,Outside:..,All:..}, per buyer for range */
 function build(bv){
-  const by=new Map(PP.dates.map(d=>[d,{AOP:[0,0,0],Inhouse:[0,0,0],Outside:[0,0,0],All:[0,0,0],buy:new Map()}]));
+  const by=new Map(PP.dates.map(d=>[d,{AOP:[0,0,0,0],Inhouse:[0,0,0,0],Outside:[0,0,0,0],All:[0,0,0,0],buy:new Map()}]));
   const bb=bv===undefined?S.buyer:bv, bsel=bb===""?null:+bb;
-  for(const [d,bi,mi,p,r,k] of PP.cells){ if(bsel!==null&&bi!==bsel) continue; const o=by.get(d); if(!o) continue; const m=PP.mills[mi];
-    o.All[0]+=p;o.All[1]+=r;o.All[2]+=k; if(o[m]){o[m][0]+=p;o[m][1]+=r;o[m][2]+=k;}
-    const bk=o.buy.get(bi)||{All:[0,0,0],AOP:[0,0,0],Inhouse:[0,0,0],Outside:[0,0,0]}; bk.All[0]+=p;bk.All[1]+=r;bk.All[2]+=k; if(bk[m]){bk[m][0]+=p;bk[m][1]+=r;bk[m][2]+=k;} o.buy.set(bi,bk); }
+  for(const [d,bi,mi,p,r,k,ad] of PP.cells){ if(bsel!==null&&bi!==bsel) continue; const o=by.get(d); if(!o) continue; const m=PP.mills[mi]; const a=+ad||0;
+    o.All[0]+=p;o.All[1]+=r;o.All[2]+=k;o.All[3]+=a; if(o[m]){o[m][0]+=p;o[m][1]+=r;o[m][2]+=k;o[m][3]+=a;}
+    const bk=o.buy.get(bi)||{All:[0,0,0,0],AOP:[0,0,0,0],Inhouse:[0,0,0,0],Outside:[0,0,0,0]}; bk.All[0]+=p;bk.All[1]+=r;bk.All[2]+=k;bk.All[3]+=a; if(bk[m]){bk[m][0]+=p;bk[m][1]+=r;bk[m][2]+=k;bk[m][3]+=a;} o.buy.set(bi,bk); }
   return by;
 }
 const inR=d=>d>=S.from&&d<=S.to;
@@ -473,14 +479,15 @@ function drawTable(){
 function drawBuyers(){
   const k=BV, agg=new Map();
   document.querySelectorAll("[data-bv]").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.bv===BV)));
-  for(const [d,o] of BYD){ if(!inR2d(d)) continue; for(const [bi,b] of o.buy){ const a=agg.get(bi)||[0,0,0]; a[0]+=b[k][0];a[1]+=b[k][1];a[2]+=b[k][2]; agg.set(bi,a); } }
+  for(const [d,o] of BYD){ if(!inR2d(d)) continue; for(const [bi,b] of o.buy){ const a=agg.get(bi)||[0,0,0,0]; a[0]+=b[k][0];a[1]+=b[k][1];a[2]+=b[k][2];a[3]+=b[k][3]; agg.set(bi,a); } }
   const rows=[...agg.entries()].filter(([,a])=>a[0]||a[1]).sort((a,b)=>(a[1][1]-a[1][0])-(b[1][1]-b[1][0]));
   $("tb2").textContent=`Buyer-wise · ${S2.day!=null?dm(S2.day):dm(S2.from)+" – "+dm(S2.to)} · ${k}`;
   if(!rows.length){ $("btbl").innerHTML='<tbody><tr><td class="empty">No lines for this view and dates.</td></tr></tbody>'; return; }
-  const T=rows.reduce((t,[,a])=>[t[0]+a[0],t[1]+a[1],t[2]+a[2]],[0,0,0]);
-  $("btbl").innerHTML=`<thead><tr><th>Buyer</th><th>Plan Qty (Mtr)</th><th>RFD Qty (Mtr)</th><th>RFD Bal. (Mtr)</th><th>RFD Bal. (Kg)</th><th class="ach" style="text-align:left">Achieve % (RFD ÷ Plan)</th><th>Balance %</th></tr></thead><tbody>`
-    +rows.map(([bi,[p,r,kg]])=>`<tr class="bh" data-bi="${bi}"><td>${esc(PP.buyers[bi])}</td><td>${fmt(p)}</td><td>${fmt(r)}</td><td class="bp">${bal(r-p)}</td><td class="bp">${bal(kg)}</td><td><div class="achc"><span class="bar"><b style="width:${p?Math.max(0,Math.min(100,r/p*100)):0}%;background:${COL[k]}"></b></span><span class="pc ${p?cls(r/p):""}">${pctTxt(r,p)}</span></div></td><td>${balPc(r,p)}</td></tr>`).join("")
-    +`</tbody><tfoot><tr><td>Total</td><td>${fmt(T[0])}</td><td>${fmt(T[1])}</td><td>${bal(T[1]-T[0])}</td><td>${bal(T[2])}</td><td style="text-align:right"><span class="pc ${T[0]?cls(T[1]/T[0]):""}">${pctTxt(T[1],T[0])}</span></td><td>${balPc(T[1],T[0])}</td></tr></tfoot>`;
+  const T=rows.reduce((t,[,a])=>[t[0]+a[0],t[1]+a[1],t[2]+a[2],t[3]+a[3]],[0,0,0,0]);
+  const HA=PP.cells.some(c=>c.length>6), addT=x=>!HA?'<span style="color:var(--muted)">–</span>':Math.abs(x)<0.5?"0":(x>0?'<span style="color:var(--inh);font-weight:700">+'+fmt(x)+"</span>":'<span style="color:var(--bad,#AF4F5A)">'+fmt(x)+"</span>");
+  $("btbl").innerHTML=`<thead><tr><th>Buyer</th><th>Plan Qty (Mtr)</th><th>RFD Qty (Mtr)</th><th title="RFD qty (m) added since the last file (this update vs the uploaded file)">Added (Mtr)</th><th>RFD Bal. (Mtr)</th><th>RFD Bal. (Kg)</th><th class="ach" style="text-align:left">Achieve % (RFD ÷ Plan)</th><th>Balance %</th></tr></thead><tbody>`
+    +rows.map(([bi,[p,r,kg,ad]])=>`<tr class="bh" data-bi="${bi}"><td>${esc(PP.buyers[bi])}</td><td>${fmt(p)}</td><td>${fmt(r)}</td><td>${addT(ad)}</td><td class="bp">${bal(r-p)}</td><td class="bp">${bal(kg)}</td><td><div class="achc"><span class="bar"><b style="width:${p?Math.max(0,Math.min(100,r/p*100)):0}%;background:${COL[k]}"></b></span><span class="pc ${p?cls(r/p):""}">${pctTxt(r,p)}</span></div></td><td>${balPc(r,p)}</td></tr>`).join("")
+    +`</tbody><tfoot><tr><td>Total</td><td>${fmt(T[0])}</td><td>${fmt(T[1])}</td><td>${addT(T[3])}</td><td>${bal(T[1]-T[0])}</td><td>${bal(T[2])}</td><td style="text-align:right"><span class="pc ${T[0]?cls(T[1]/T[0]):""}">${pctTxt(T[1],T[0])}</span></td><td>${balPc(T[1],T[0])}</td></tr></tfoot>`;
 }
 /* ---------- tooltip ---------- */
 const tip=$("tip");
@@ -621,7 +628,7 @@ window.ppDownload=async()=>{ if(typeof html2canvas==="undefined"){ alert("Pictur
     const a=document.createElement("a"); a.href=URL.createObjectURL(b); a.download=nm; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500); return nm; }
   catch(e){ console.error(e); return null; }
   finally{ H.classList.remove("shot"); if(!was) H.classList.remove("present"); try{ draw(); }catch(e){} } };
-$("dlBtn").addEventListener("click",()=>window.ppDownload());
+
 </script>
 </body>
 </html>
