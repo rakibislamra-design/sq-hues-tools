@@ -107,7 +107,6 @@
   .nv:hover{opacity:1;background:rgba(255,255,255,.06)}
   .nv.on{opacity:1;background:rgba(255,255,255,.12);border-left-color:#fff;font-weight:700}
   .nv .n{width:22px;font-size:11.5px;opacity:.8;text-align:right}
-  .nv:not(.ready) .t::after{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;border:1px solid rgba(255,255,255,.6);margin-left:7px;vertical-align:middle}
   .main{flex:1;display:flex;flex-direction:column;min-width:0}
   .bar{display:flex;align-items:center;gap:10px;padding:10px 24px;border-bottom:1px solid var(--qp10);font-size:13px;color:var(--muted)}
   .bar .pt{flex:1;color:var(--qp);font-weight:700}
@@ -386,6 +385,11 @@ body.present .pubchip,body.present .gear{display:none!important}
 body.viewer .edtools,body.viewer .ag .up,body.viewer .uplbar button,body.viewer .pic-empty button,body.viewer .nv .add,body.viewer .nv.hid,body.viewer .newrow,body.viewer .ctx,body.viewer .edit-only,body.viewer #lpPasteBtn,body.viewer .lp-pastebox,body.viewer #lpReset{display:none!important}
 body.viewer .bar .modes{display:inline-flex!important}
 .uplwait{padding:28px 6px;color:var(--muted);font-size:14px}
+/* ---- sidebar alignment ---- */
+.nv{align-items:flex-start;gap:12px;padding:8px 18px 8px 16px;line-height:1.35}
+.nv .n{flex:0 0 22px;width:22px;text-align:right;font-size:11.5px;line-height:1.35rem;font-variant-numeric:tabular-nums}
+.nv .t{flex:1;min-width:0;line-height:1.35rem}
+.nv .add,.nv .eye{align-self:center}
 </style>
 </head>
 <body>
@@ -729,23 +733,41 @@ if(SITE_STATE&&SITE_STATE.t) EMB=SITE_STATE;   // the site copy wins over the co
   const SEGC={AOP:'var(--qt)',Inhouse:'var(--qp)',Outside:'var(--qb)',Cumulative:'var(--qg)'};
   // date, then [plan mtr, RFD mtr, balance kg] per segment (balance mtr = RFD - plan)
   const BASE=[
-    {d:'2026-11-01',e:'2026-11-18',agg:true,AOP:[68216,68216,0],Inhouse:[394720,392057,-888],Outside:[563017,550990,-4010]},
-    {d:'2026-11-19',AOP:[5537,5537,0],Inhouse:[28971,26971,-667],Outside:[23000,23000,0]},
-    {d:'2026-11-20',AOP:[5201,5201,0],Inhouse:[9674,9674,0],Outside:[20000,20000,0]},
-    {d:'2026-11-21',AOP:[382,382,0],Inhouse:[21660,18660,-1000],Outside:[21000,21000,0]},
-    {d:'2026-11-22',AOP:[3139,3139,0],Inhouse:[34003,31002,-1000],Outside:[22517,22510,-2]},
-    {d:'2026-11-23',AOP:[933,933,0],Inhouse:[20280,18779,-500],Outside:[18795,15194,-1200]},
-    {d:'2026-11-24',AOP:[7676,5032,-881],Inhouse:[27637,11480,-5386],Outside:[25739,20152,-1862]},
-    {d:'2026-11-25',AOP:[0,0,0],Inhouse:[44324,30124,-4734],Outside:[48834,22988,-8615]},
-    {d:'2026-11-26',AOP:[7,0,-2],Inhouse:[26292,12934,-4453],Outside:[7584,6321,-421]},
-    {d:'2026-11-27',AOP:[100,100,0],Inhouse:[11068,4662,-2135],Outside:[6000,6000,0]},
-    {d:'2026-11-28',AOP:[0,0,0],Inhouse:[10329,2161,-2723],Outside:[20589,20589,0]},
-    {d:'2026-11-29',AOP:[0,0,0],Inhouse:[11218,7606,-1204],Outside:[8316,8252,-21]},
-    {d:'2026-11-30',AOP:[236,0,-79],Inhouse:[8421,5249,-1057],Outside:[90489,85017,-1824]}
+    {"d":"2026-11-01","AOP":[7848,7848,0],"Inhouse":[10449,10449,0],"Outside":[37959,37959,0]},
+    {"d":"2026-11-02","AOP":[2010,2010,0],"Inhouse":[15125,15125,0],"Outside":[23800,23800,0]},
+    {"d":"2026-11-03","AOP":[7593,7593,0],"Inhouse":[6143,6143,0],"Outside":[22877,22877,0]},
+    {"d":"2026-11-04","AOP":[3334,3334,0],"Inhouse":[50812,50812,0],"Outside":[35026,35026,0]},
+    {"d":"2026-11-05","AOP":[3516,3516,0],"Inhouse":[16766,16766,0],"Outside":[30167,30167,0]},
+    {"d":"2026-11-06","AOP":[0,0,0],"Inhouse":[3315,3315,0],"Outside":[20651,20651,0]},
+    {"d":"2026-11-07","AOP":[1071,1071,0],"Inhouse":[10591,10591,0],"Outside":[17812,17812,0]},
+    {"d":"2026-11-08","AOP":[2283,2283,0],"Inhouse":[46095,46095,0],"Outside":[32219,32219,0]},
+    {"d":"2026-11-09","AOP":[1720,1720,0],"Inhouse":[13472,13472,0],"Outside":[35681,35681,0]},
+    {"d":"2026-11-10","AOP":[6010,6010,0],"Inhouse":[24864,24864,0],"Outside":[48389,46849,-513]},
+    {"d":"2026-11-11","AOP":[2190,2190,0],"Inhouse":[16718,16718,0],"Outside":[33341,33341,0]},
+    {"d":"2026-11-12","AOP":[8867,8867,0],"Inhouse":[25734,25734,0],"Outside":[41750,40122,-543]},
+    {"d":"2026-11-13","AOP":[3383,3383,0],"Inhouse":[21639,21639,0],"Outside":[30142,30142,0]},
+    {"d":"2026-11-14","AOP":[7455,7455,0],"Inhouse":[13701,13701,0],"Outside":[27533,27533,0]},
+    {"d":"2026-11-15","AOP":[3112,3112,0],"Inhouse":[25481,25481,0],"Outside":[49670,42812,-2286]},
+    {"d":"2026-11-16","AOP":[2079,2079,0],"Inhouse":[47282,47282,0],"Outside":[29846,29846,0]},
+    {"d":"2026-11-17","AOP":[1617,1617,0],"Inhouse":[28766,26407,-787],"Outside":[23154,23154,0]},
+    {"d":"2026-11-18","AOP":[4126,4126,0],"Inhouse":[17306,17306,0],"Outside":[23000,23000,0]},
+    {"d":"2026-11-19","AOP":[5537,5537,0],"Inhouse":[28971,26971,-667],"Outside":[23000,23000,0]},
+    {"d":"2026-11-20","AOP":[5201,5201,0],"Inhouse":[9674,9674,0],"Outside":[20000,20000,0]},
+    {"d":"2026-11-21","AOP":[382,382,0],"Inhouse":[21660,18660,-1000],"Outside":[21000,21000,0]},
+    {"d":"2026-11-22","AOP":[3139,3139,0],"Inhouse":[34003,31002,-1000],"Outside":[22517,22510,-2]},
+    {"d":"2026-11-23","AOP":[933,933,0],"Inhouse":[20280,18779,-500],"Outside":[18795,15194,-1200]},
+    {"d":"2026-11-24","AOP":[2237,2237,0],"Inhouse":[16243,14742,-500],"Outside":[25739,20152,-1862]},
+    {"d":"2026-11-25","AOP":[5440,2795,-881],"Inhouse":[52017,33828,-6063],"Outside":[48834,22988,-8615]},
+    {"d":"2026-11-26","AOP":[7,0,-2],"Inhouse":[30329,13089,-5747],"Outside":[7584,6321,-421]},
+    {"d":"2026-11-27","AOP":[100,100,0],"Inhouse":[11191,5915,-1759],"Outside":[6000,6000,0]},
+    {"d":"2026-11-28","AOP":[0,0,0],"Inhouse":[10329,2161,-2723],"Outside":[20589,20589,0]},
+    {"d":"2026-11-29","AOP":[0,0,0],"Inhouse":[11218,7606,-1204],"Outside":[8316,8252,-21]},
+    {"d":"2026-11-30","AOP":[236,0,-79],"Inhouse":[8421,5249,-1057],"Outside":[90489,85017,-1824]}
   ];
+  const DATA_VER='2026-11-25-full';  // bump when the built-in data changes, so older saved copies are replaced
   const K='lp_perf_v1';
   let S;try{S=JSON.parse(localStorage.getItem(K)||'null');}catch(e){S=null;}
-  if(!S||!Array.isArray(S.rows)) S={rows:BASE,from:'2026-11-01',to:'2026-11-24',view:'all'};
+  if(!S||!Array.isArray(S.rows)||S.ver!==DATA_VER) S={ver:DATA_VER,rows:BASE,from:'2026-11-01',to:'2026-11-24',view:'all'};
   const sv=()=>{try{localStorage.setItem(K,JSON.stringify(S));}catch(e){}};
   const $=id=>document.getElementById(id);
   const n0=v=>Math.round(v).toLocaleString('en-US');
@@ -793,13 +815,13 @@ if(SITE_STATE&&SITE_STATE.t) EMB=SITE_STATE;   // the site copy wins over the co
   $('lpView').addEventListener('click',e=>{const b=e.target.closest('button');if(b){S.view=b.dataset.v;sv();render();}});
   $('lpPasteBtn').onclick=()=>{$('lpPasteBox').classList.toggle('show');$('lpPasteTxt').focus();};
   $('lpPasteCancel').onclick=()=>$('lpPasteBox').classList.remove('show');
-  $('lpReset').onclick=()=>{S={rows:BASE,from:'2026-11-01',to:'2026-11-24',view:'all'};sv();render();$('lpPasteBox').classList.remove('show');};
+  $('lpReset').onclick=()=>{S={ver:DATA_VER,rows:BASE,from:'2026-11-01',to:'2026-11-24',view:'all'};sv();render();$('lpPasteBox').classList.remove('show');};
   const num=v=>{v=String(v||'').trim().replace(/,/g,'');if(/^\(.*\)$/.test(v))v='-'+v.slice(1,-1);const x=parseFloat(v);return isNaN(x)?0:x;};
   function pdate(s){s=String(s).trim();const m=s.match(/^(\d{1,2})[-\/ ]([A-Za-z]{3})/);if(m){const mo=M.findIndex(x=>x.toLowerCase()===m[2].toLowerCase());if(mo>=0)return S.from.slice(0,4)+'-'+String(mo+1).padStart(2,'0')+'-'+m[1].padStart(2,'0');}
     const d=new Date(s);return isNaN(d)?null:d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
   $('lpPasteGo').onclick=()=>{
     const lines=$('lpPasteTxt').value.replace(/\r/g,'').split('\n').filter(l=>l.trim());let n=0;
-    lines.forEach(l=>{const c=l.split('\t');const d=pdate(c[0]);if(!d||c.length<15) return;
+    lines.forEach(l=>{const c=l.split('\t');const d=pdate(c[0]);if(!d||c.length<15||!/\d/.test(c[1]||'')) return;
       // Excel layout: Date | AOP plan, RFD, bal mtr, bal kg, ach | Inhouse ×5 | Outside ×5 | Cumulative ×5
       const r={d,AOP:[num(c[1]),num(c[2]),num(c[4])],Inhouse:[num(c[6]),num(c[7]),num(c[9])],Outside:[num(c[11]),num(c[12]),num(c[14])]};
       S.rows=S.rows.filter(x=>x.d!==d);n++;S.rows.push(r);
