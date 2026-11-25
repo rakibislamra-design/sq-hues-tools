@@ -512,7 +512,7 @@ header.fover::after{background:rgba(239,230,235,.92)}
       <button class="qi" data-act="export"><span>⤓</span>Export File<em>Loading plan with your plan</em></button>
       <button class="qi" data-act="update"><span>⟳</span>Update File<em>Loading plan + DOC 280+217 + Line Plan</em></button>
       <div class="qsep"></div><a class="qi" href="index.html"><span>←</span>SQ Hues Tools</a>
-      <div class="qver">Version 26 Nov 02:20</div>
+      <div class="qver">Version 26 Nov 02:30</div>
     </div>
   </div>
   <div class="hcol">
@@ -1784,6 +1784,10 @@ function unmerge(ids){ for(const id of ids){ if(!String(id).startsWith('MG:')) c
   saveMerge(); savePin(); save(); build(); refreshView(); }
 function build(){
   injectAdds();
+  /* Plan Type tags the file may not have yet: CONVERT / PP when Workorder Category (O) or Note 1 (P) says so — shown here and written to C on Export */
+  for(const b in D.batches){ const x=D.batches[b]; if(x.pt0===undefined) x.pt0=x.pt||''; let p=String(x.pt0||'').trim(); const on=(x.cat||'')+' '+(x.n1||'');
+    const add=t=>{ if(!new RegExp('\\b'+t+'\\b','i').test(p)) p=p?p+'/'+t:t; };
+    if(/convert/i.test(on)) add('CONVERT'); if(/\bPP\b/i.test(on)) add('PP'); x.pt=p; }
   HASDL=Object.values(D.batches||{}).some(x=>x.dl);
   for(const b in S.ed){ const x=D.batches[b]; if(x) Object.assign(x,S.ed[b]); }
   for(const b in S.cx){ const x=D.batches[b]; if(x) for(const L in S.cx[b]) setCell(x,L,S.cx[b][L]); }
@@ -2784,6 +2788,7 @@ $('xls').addEventListener('click',async()=>{
     const inPl=new Set(lists[k]); const rest=[...C.values()].filter(c=>c.mc===k&&!inPl.has(c.id)).sort((a,b)=>cmpAuto(a,b,true));
     const restRows=[]; let ns=0; for(const c of rest){ ns++; for(const b of c.m){ const x=D.batches[b]; if(x&&x.row){ restRows.push(x.row); { const r=row(b); if(r) r.B=ns; }   /* not planned: the suggested serial shown in the list (1, 2, 3 … per machine, Auto-order rules) */ if(S.over[c.id]||String(x.mc0||'').trim()!==k){ const r=row(b); if(r) r.A=k; } } } }   // M/C cell = the machine it is listed under
     order.push({mc:k,rows,rest:restRows}); }
+  for(const b in D.batches){ const x=D.batches[b]; if(x.pt0!==undefined&&x.pt!==x.pt0&&!(S.cx[b]&&S.cx[b].C!=null)){ const r=row(b); if(r) r.C=x.pt; } }   /* CONVERT / PP added to Plan Type */
   order.add=[]; for(const b in D.batches){ const x=D.batches[b]; if(!x.manual) continue; const c=[...C.values()].find(c=>c.m.includes(b)); if(!c||S.del[c.id]) continue;
     order.add.push({r:x.row,mc:c.mc}); Object.assign(row(b),{A:c.mc,D:b,E:x.by,F:x.sh,G:x.fb,H:x.ld,K:x.q,AF:x.po}); }   /* batches added by hand: a new row under their machine */
   for(const b in D.batches){ const f=D.batches[b].fix280; if(!f) continue; const r=row(b); if(r) Object.assign(r,f); }   // Buyer / Shade / Fabric as in the 280 sheet
