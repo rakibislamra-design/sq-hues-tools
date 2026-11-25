@@ -512,7 +512,7 @@ header.fover::after{background:rgba(239,230,235,.92)}
       <button class="qi" data-act="export"><span>⤓</span>Export File<em>Loading plan with your plan</em></button>
       <button class="qi" data-act="update"><span>⟳</span>Update File<em>Loading plan + DOC 280+217 + Line Plan</em></button>
       <div class="qsep"></div><a class="qi" href="index.html"><span>←</span>SQ Hues Tools</a>
-      <div class="qver">Version 26 Nov 01:10</div>
+      <div class="qver">Version 26 Nov 02:20</div>
     </div>
   </div>
   <div class="hcol">
@@ -521,7 +521,7 @@ header.fover::after{background:rgba(239,230,235,.92)}
   <span class="hb">
     <button class="hb2 home" id="home" title="Back to the top of the list (Ctrl + Home)">↑ Top</button>
     <button class="hb2" id="refresh" title="Move ticked combos up into the plan by priority">Refresh</button>
-    <button class="hb2" id="auto" title="Sort every machine: FOC (and buyer Rawbought) → Hanger → PSI → AOP with Line Plan backlog → Line Plan by DL delivery date (today, tomorrow, day after, backlog, later dates nearest first) → AOP → Urgent → other Plan Type → rest">Auto-order</button>
+    <button class="hb2" id="auto" title="Sort every machine: FOC (and buyer Rawbought) → Hanger / PP → PSI → AOP with Line Plan backlog → Line Plan by DL delivery date (today, tomorrow, day after, backlog, later dates nearest first) → AOP → Convert → Urgent → other Plan Type → rest">Auto-order</button>
     <button class="hb2" id="clrF" title="Remove all column filters">Clear filters</button>
   </span>
   <span class="qf" id="qf"></span>
@@ -1382,6 +1382,9 @@ function DateStyler(xml) {
       if (/foc/i.test(txt(isE(c.O) ? '' : c.O))) { const n = add(C, 'FOC', true); if (n !== C.trim()) rep.foc++; C = n; }
       if (/urgent/i.test(txt(isE(c.BQ280) || c.BQ280 == null ? '' : c.BQ280))) { const n = add(C, 'URGENT', false); if (n !== C.trim()) rep.urgent++; C = n; }
       if (/aop/i.test(txt(isE(o.F) ? '' : o.F))) { const n = add(C, 'AOP', false); if (n !== C.trim()) rep.aop++; C = n; }
+      { const on = txt(isE(c.O) ? '' : c.O) + ' ' + txt(isE(c.P) ? '' : c.P);   // Convert / PP in Workorder Category (O) or Note 1 (P)
+        if (/convert/i.test(on)) { const n = add(C, 'CONVERT', false); if (n !== C.trim()) rep.convert = (rep.convert || 0) + 1; C = n; }
+        if (/\bPP\b/i.test(on)) { const n = add(C, 'PP', false); if (n !== C.trim()) rep.pp = (rep.pp || 0) + 1; C = n; } }
       // line plan
       if (lineBuf) {
         let k = lc(o.D.trim());
@@ -2135,7 +2138,7 @@ let BMC={};
 const cval=(c,k)=>k==='s'?[c.can?'Can dye':'Not ready']:c.p.map(x=>String(cellText(k,x)||'(blank)'));
 // quick type filters (any of the chosen types)
 let QF=new Set(store.get('mclp-qf')||[]);
-const QFDEF=[['FOC','FOC',c=>c.p.some(x=>/FOC/i.test((x.pt||'')+' '+(x.cat||''))||/raw\s*bought/i.test(x.by||''))],['HANGER','Hanger',c=>c.p.some(x=>/HANGER/i.test((x.pt||'')+' '+(x.cat||'')))],['PSI','PSI',c=>c.p.some(x=>/\bPSI\b/i.test((x.pt||'')+' '+(x.cat||'')+' '+(x.n1||'')))],['AOP','AOP',c=>c.p.some(x=>/AOP/i.test((x.sh||'')+' '+(x.pt||'')))],['LP','Line Plan',c=>c.p.some(x=>x.lp||x.lpt||/LINE\s*PLAN/i.test(x.pt||''))],['URG','Urgent',c=>c.p.some(x=>/URGENT/i.test(x.pt||''))],['PIN','📌 Pinned',c=>!!PIN[c.id]],['NKQ','Not in KQ',c=>c.p.some(x=>/not\s*in\s*kq/i.test((x.cat||'')+' '+(x.rmk||'')))],['LDP','LD Pending',c=>c.p.some(x=>!String(x.ld||'').trim())],['PROB','Problematic Batch',c=>overReq(c)]];
+const QFDEF=[['FOC','FOC',c=>c.p.some(x=>/FOC/i.test((x.pt||'')+' '+(x.cat||''))||/raw\s*bought/i.test(x.by||''))],['HANGER','Hanger',c=>c.p.some(x=>/HANGER/i.test((x.pt||'')+' '+(x.cat||'')))],['PSI','PSI',c=>c.p.some(x=>/\bPSI\b/i.test((x.pt||'')+' '+(x.cat||'')+' '+(x.n1||'')))],['AOP','AOP',c=>c.p.some(x=>/AOP/i.test((x.sh||'')+' '+(x.pt||'')))],['LP','Line Plan',c=>c.p.some(x=>x.lp||x.lpt||/LINE\s*PLAN/i.test(x.pt||''))],['URG','Urgent',c=>c.p.some(x=>/URGENT/i.test(x.pt||''))],['CONVERT','Convert',c=>c.p.some(x=>/convert/i.test((x.pt||'')+' '+(x.cat||'')+' '+(x.n1||'')))],['PP','PP',c=>c.p.some(x=>/\bPP\b/i.test((x.pt||'')+' '+(x.cat||'')+' '+(x.n1||'')))],['PIN','📌 Pinned',c=>!!PIN[c.id]],['NKQ','Not in KQ',c=>c.p.some(x=>/not\s*in\s*kq/i.test((x.cat||'')+' '+(x.rmk||'')))],['LDP','LD Pending',c=>c.p.some(x=>!String(x.ld||'').trim())],['PROB','Problematic Batch',c=>overReq(c)]];
 function qfPass(c){ if(!QF.size) return true; for(const [k,,f] of QFDEF) if(QF.has(k)&&f(c)) return true; return false; }
 function drawQF(){ const pool=[...C.values()].filter(c=>cur==='ALL'||c.mc===cur);
   const nSug=mergeSuggest().length;
@@ -2475,7 +2478,7 @@ document.addEventListener('dragover',e=>{
 // Auto-order: 1 FOC · 2 Hanger (both by Plan Date) · AOP with a passed Line Plan date (oldest first) · 3 Line Plan: today, tomorrow, day after, backlog, later
 //             4 AOP (shade says AOP) · 5 Urgent · 6 other Plan Type comments · 7 rest — groups 4–7 by Plan Date, then OTT
 const addDays=n=>{const d=new Date();d.setDate(d.getDate()+n);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
-const AUTO_NOTE='Auto-ordered: FOC (and buyer Rawbought) → Hanger → PSI → AOP with Line Plan backlog → Line Plan by DL delivery date (today, tomorrow, day after, backlog, later dates nearest first) → AOP → Urgent → other Plan Type → rest. Pinned SLs stay where you put them.';
+const AUTO_NOTE='Auto-ordered: FOC (and buyer Rawbought) → Hanger / PP → PSI → AOP with Line Plan backlog → Line Plan by DL delivery date (today, tomorrow, day after, backlog, later dates nearest first) → AOP → Convert → Urgent → other Plan Type → rest. Pinned SLs stay where you put them.';
 let HASDL=false;   // the file has a DL (Delivery Date) column filled → Line Plan order follows DL instead of BF
 function autoKey(c,simple){
   const t0=addDays(0),t1=addDays(1),t2=addDays(2);
@@ -2484,11 +2487,12 @@ function autoKey(c,simple){
   const has=re=>c.p.some(x=>re.test(x.pt||'')||re.test(x.cat||''));
   let g,sub=0,d=pd;
   if(has(/FOC/i)||c.p.some(x=>/raw\s*bought/i.test(x.by||''))) g=0;   // Buyer Rawbought = FOC priority
-  else if(has(/HANGER/i)) g=1;
+  else if(has(/HANGER/i)||c.p.some(x=>/\bPP\b/i.test((x.pt||'')+' '+(x.cat||'')+' '+(x.n1||'')))) g=1;   // PP: same priority as Hanger
   else if(c.p.some(x=>/\bPSI\b/i.test((x.pt||'')+' '+(x.cat||'')+' '+(x.n1||'')))) g=1.2;   // PSI: right after Hanger
   else if(lp&&lp<t0&&c.p.some(x=>/AOP/i.test((x.sh||'')+' '+(x.pt||'')))){ g=1.5; d=lp; }   // AOP with a Line Plan date already passed: right after FOC/Hanger, oldest first
   else if(lp){ g=2; d=lp; if(!simple) sub=lp===t0?0:lp===t1?1:lp===t2?2:lp<t0?3:4; }  // planned: today, tomorrow, day after, backlog, later · not planned: oldest first
   else if(c.p.some(x=>/AOP/i.test(x.sh||''))) g=3;
+  else if(c.p.some(x=>/convert/i.test((x.pt||'')+' '+(x.cat||'')+' '+(x.n1||'')))) g=3.5;   // Convert: right after the rest of AOP
   else if(c.p.some(x=>/URGENT/i.test(x.pt||''))) g=4;
   else if(c.p.some(x=>String(x.pt||'').trim())) g=5;
   else g=6;
@@ -2556,7 +2560,7 @@ function bcard(c,sl,day){
 // all labels of a combo: main group first, then FOC / Hanger / Line Plan / AOP / Urgent / other Plan Type words / Additional / Last Batch
 function tagsOf(c){
   const out=[]; const add=t=>{t=String(t||'').trim(); if(!t) return; const u=t.toUpperCase(); if(!out.some(o=>o.toUpperCase()===u)) out.push(t);};
-  const nice=t=>{const u=t.trim().toUpperCase(); return u==='FOC'?'FOC':u==='AOP'?'AOP':u==='PSI'?'PSI':u==='LINE PLAN'?'Line Plan':u.toLowerCase().replace(/\b\w/g,ch=>ch.toUpperCase());};
+  const nice=t=>{const u=t.trim().toUpperCase(); return u==='PP'?'PP':u==='FOC'?'FOC':u==='AOP'?'AOP':u==='PSI'?'PSI':u==='LINE PLAN'?'Line Plan':u.toLowerCase().replace(/\b\w/g,ch=>ch.toUpperCase());};
   const g=Math.min(autoKey(c)[0],6);
   const pts=[]; for(const y of c.p) for(const t of String(y.pt||'').split('/')) if(t.trim()) pts.push(nice(t));
   const cats=[]; for(const y of c.p) if(String(y.cat||'').trim()) cats.push(nice(y.cat));
@@ -2871,7 +2875,7 @@ async function runUpdate(){
       ${rp.noDoc?'<li class="uw">No DOC 280+217 file — old 280 kept, no Add Plan</li>':li('added from Dye Q (Add Plan)',rp.added.length)}${rp.addSkipped.length?`<li class="uw">${rp.addSkipped.length} not added: ${esc(rp.addSkipped.slice(0,6).join(' · '))}${rp.addSkipped.length>6?' …':''}</li>`:''}
       ${li('removed — already dyed',rp.delDyed)}${li('removed — no longer in Dye Q',rp.delNotQ)}
       ${li('KOK — Greige from (M = P)',rp.kokGreige)}${li('KOK — knit qty (M = D)',rp.kokKnit)}${li('Not in KQ (noted in Remarks)',rp.notInKQ)}${li('KBL',rp.kbl)}
-      ${li('FOC added to Plan Type',rp.foc)}${li('Urgent added',rp.urgent)}${li('PSI added to Plan Type',rp.psi||0)}${li('HANGER added to Plan Type',rp.hanger||0)}${li('AOP added',rp.aop)}${li('LINE PLAN added to Plan Type',rp.lpTag||0)}
+      ${li('FOC added to Plan Type',rp.foc)}${li('Urgent added',rp.urgent)}${li('PSI added to Plan Type',rp.psi||0)}${li('HANGER added to Plan Type',rp.hanger||0)}${li('AOP added',rp.aop)}${li('CONVERT added to Plan Type',rp.convert||0)}${li('PP added to Plan Type',rp.pp||0)}${li('LINE PLAN added to Plan Type',rp.lpTag||0)}
       ${lineBuf?li('Line Plan dyeing dates in BF',rp.lpDate)+li('Line Plan-TBC (no date yet)',rp.lpTBC)+(rp.lpPartner?li('gusset/body took its partner’s Line Plan',rp.lpPartner):'')+(rp.lpCleared?li('old Line Plan dates cleared',rp.lpCleared):''):'<li class="uw">No Line Plan file — BF left as it was</li>'}
       </ul><button class="hb2" id="updDl">⤓ Download ${esc(name)}</button></div>`;
     $('updDl').onclick=()=>{ $('xls').click(); };   // same as Export: the updated file with the re-ordered plan
